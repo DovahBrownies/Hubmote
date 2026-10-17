@@ -5,6 +5,7 @@
 #include <string.h>
 #include "esp_log.h"
 #include "esp_lvgl_port.h"
+#include "hub_time.h"
 #include "kv.h"
 
 static const char *TAG = "hub";
@@ -99,6 +100,7 @@ static void start(size_t i)
 
 void hub_modules_init(void)
 {
+    hub_time_init(); /* the time zone, before any module reads the time */
     /* Constructors run in link order; sort so lists don't depend on it. */
     qsort(s_modules, s_count, sizeof(s_modules[0]), by_name);
     size_t kept = 0;

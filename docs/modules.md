@@ -304,9 +304,15 @@ start-up. Keep showing it, marked as old, when the network is down.
 The clock is set over the network (SNTP) once Wi-Fi is up.
 `hub_time_valid()` says whether it has been set yet.
 
-There is no time-zone setting yet. Weather reports its place's UTC offset
-with `hub_time_set_utc_offset()`, and `hub_time_local()` and
-`hub_time_to_local()` follow it. `hub_time_utc_offset()` reads it.
+`hub_time_local()` and `hub_time_to_local()` give local time, following
+the time zone in **Settings > Modules**:
+
+- **Automatic** (the default): the UTC offset a module reports for its
+  place with `hub_time_set_utc_offset()`. Weather does this.
+- **A zone from the list:** that zone's rules, daylight saving included.
+
+`hub_time_utc_offset()` gives the offset in use now. A module that knows a
+place should still report its offset, for remotes left on Automatic.
 
 ## The look (`ui_kit.h`)
 
@@ -331,6 +337,10 @@ follow its theme ([themes.md](themes.md)). `#include "ui_kit.h"` gives:
   [Loading, errors and empty screens](#loading-errors-and-empty-screens)).
 - **Messages:** `ui_toast(icon, text)` shows a short message under the top
   bar.
+- **Dialogs:** `ui_modal(title, message, buttons, count, done, user_data)`
+  asks a question with up to three buttons, and `ui_modal_list(...)` lets
+  the user pick from a list. `done` gets the choice, or -1 if the dialog
+  was dismissed.
 - **Text entry:** `ui_kb_open_local(value, title, max_len, done, cancel)`
   opens the remote's own keyboard, for text such as a city or a stop
   number. When it closes, show your screen again with

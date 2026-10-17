@@ -288,6 +288,11 @@ static void handle_ui(const ctrl_ui_t *a)
     case UI_ACT_MODULE_ENABLE:
         hub_module_set_enabled(a->text, a->index != 0);
         return;
+    case UI_ACT_TIME_ZONE:
+        if (hub_time_set_zone(a->text)) {
+            ui_set_time_zone(hub_time_zone());
+        }
+        return;
     default:
         break;
     }
@@ -410,6 +415,7 @@ static void controller_task(void *arg)
     companion_set_cache_dir(STORAGE_MOUNT "/icons", 640 * 1024);
     controller_log_heap("after IR");
     hub_modules_init();
+    ui_set_time_zone(hub_time_zone());
     controller_log_heap("after modules");
 
     ctrl_setup_start(on_net);

@@ -220,6 +220,7 @@ ICONS = [
     ("PALETTE",          "palette",            "Settings > Appearance (themes)"),
     ("GRID",             "layout-grid",        "Home tab: modules"),
     ("MAP_PIN",          "map-pin",            "location"),
+    ("CLOCK",            "clock",              "time zone"),
     # Weather (WMO codes map to these in modules/weather)
     ("W_SUN",            "sun",                ""),
     ("W_MOON",           "moon",               ""),

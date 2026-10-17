@@ -10,6 +10,7 @@
 
 #include "hub_module.h"
 #include "hub_time.h"
+#include "hub_tz.h"
 #include "weather.h"
 
 size_t sim_strlcpy(char *dst, const char *src, size_t size)
@@ -113,6 +114,22 @@ bool hub_time_local(struct tm *out)
 {
     (void)out;
     return false;
+}
+
+/* The real zone list (hub_tz.c); the zone itself stays Automatic. */
+size_t hub_time_zone_count(void)
+{
+    return hub_tz_count;
+}
+
+const char *hub_time_zone_name(size_t index)
+{
+    return index < hub_tz_count ? hub_tz[index].name : NULL;
+}
+
+const char *hub_time_zone(void)
+{
+    return "";
 }
 
 /* --- Weather's data -------------------------------------------------------------- */

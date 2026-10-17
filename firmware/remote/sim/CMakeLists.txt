@@ -34,6 +34,7 @@ file(GLOB FONT_SRCS "${FONT_DIR}/*.c")
 add_executable(hubmote_sim
     sim_main.c sim_hub.c
     ${UI_SRCS} ${FONT_SRCS}
+    "${REMOTE_DIR}/components/hub/hub_tz.c"
     "${REMOTE_DIR}/modules/weather/weather_ui.c"
     "${REMOTE_DIR}/modules/weather/weather_data.c"
     "${CJSON_DIR}/cJSON.c")
@@ -42,6 +43,7 @@ target_include_directories(hubmote_sim PRIVATE
     "${REMOTE_DIR}/components/ui"
     "${REMOTE_DIR}/components/ui/include"
     "${REMOTE_DIR}/components/hub/include"
+    "${REMOTE_DIR}/components/hub"
     "${REMOTE_DIR}/modules/weather"
     "${CJSON_DIR}")
 target_compile_definitions(hubmote_sim PRIVATE

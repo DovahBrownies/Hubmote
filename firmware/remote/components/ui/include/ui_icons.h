@@ -60,6 +60,7 @@
 #define ICON_PALETTE          "\xEE\x87\x9D"  /* U+E1DD lucide: palette (Settings > Appearance (themes)) */
 #define ICON_GRID             "\xEE\x83\xBF"  /* U+E0FF lucide: layout-grid (Home tab: modules) */
 #define ICON_MAP_PIN          "\xEE\x84\x91"  /* U+E111 lucide: map-pin (location) */
+#define ICON_CLOCK            "\xEE\x82\x87"  /* U+E087 lucide: clock (time zone) */
 #define ICON_W_SUN            "\xEE\x85\xB8"  /* U+E178 lucide: sun */
 #define ICON_W_MOON           "\xEE\x84\x9E"  /* U+E11E lucide: moon */
 #define ICON_W_CLOUD          "\xEE\x82\x88"  /* U+E088 lucide: cloud */

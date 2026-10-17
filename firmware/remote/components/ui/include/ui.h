@@ -99,6 +99,7 @@ typedef enum {
     UI_ACT_SCREEN_OFF_AFTER_CHARGING,
     UI_ACT_SLEEP_AFTER,      /* .index = idle hours before the remote turns off, 0 = never */
     UI_ACT_MODULE_ENABLE,    /* .text = module id, .index = 1 on, 0 off */
+    UI_ACT_TIME_ZONE,        /* .text = IANA name, "" = Automatic: set it, then ui_set_time_zone() */
     UI_ACT_THEME,            /* .text = theme id: save it and restart to apply */
     UI_ACT_TV_BRAND,         /* .text = brand: send its code sets with ui_tv_setup_sets() */
     UI_ACT_TV_TRY,           /* .index = code set n of that brand: send its test key */
@@ -261,6 +262,8 @@ void ui_set_screen_timeouts(const ui_timeouts_t *t);
 void ui_set_board_caps(bool dims, bool battery);
 /* Settings > About: the remote's network name, e.g. "hubmote.local". */
 void ui_set_hostname(const char *name);
+/* The time zone in Settings > Modules: an IANA name, "" = Automatic. */
+void ui_set_time_zone(const char *name);
 /* Settings > About: the token updates and developer tools need (shown on
  * request). */
 void ui_set_update_token(const char *token);

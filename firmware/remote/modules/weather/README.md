@@ -26,8 +26,8 @@ Both settings are on the Weather screen:
 They are kept in NVS (`m_weather`: `name`, `region`, `lat`, `lon`,
 `imperial`), so they survive restarts and firmware updates.
 
-The remote has no time-zone setting of its own yet. So the place's UTC
-offset also sets the remote's local time (`hub_time`). The offset is
+While the time zone in **Settings > Modules** is Automatic, the place's
+UTC offset also sets the remote's local time (`hub_time`). The offset is
 updated with each forecast, so a daylight-saving change applies at the
 next refresh.
 

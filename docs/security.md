@@ -194,7 +194,7 @@ In NVS (the `nvs` partition), not encrypted:
 | `wifi` | The Wi-Fi network name and password |
 | `ota` | The update token (developer builds) |
 | `companion` | The companion token |
-| `ctrl`, `hub_off`, `m_<module>` | Settings; Weather's include the chosen place's name and coordinates |
+| `ctrl`, `hub`, `hub_off`, `m_<module>` | Settings, the time zone (`hub`); Weather's include the chosen place's name and coordinates |
 
 In the `storage` partition (LittleFS):
 

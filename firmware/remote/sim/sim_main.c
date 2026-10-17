@@ -142,6 +142,7 @@ static void sample_data(void)
     ui_set_inputs(inputs, learned);
     ui_set_volume(12, 100, false);
     hub_glance_changed(); /* Weather's glance in the top bar, as when its data arrives */
+    ui_settings_modules_changed(); /* as hub_modules_init() does on the remote */
 }
 
 /* --- The screens ---------------------------------------------------------------- */
@@ -220,6 +221,22 @@ static void screens(void)
         snprintf(name, sizeof(name), "settings_%s", sections[i]);
         shot(name);
     }
+
+    /* Dialogs: the time-zone picker, and a message with buttons */
+    ui_settings_show_section(SEC_MODULES);
+    ui_settings_pick_time_zone(NULL);
+    shot("time_zone");
+    ui_settings_set_time_zone("America/New_York");
+    ui_settings_pick_time_zone("America");
+    shot("time_zone_americas");
+    ui_modal_close();
+    ui_settings_show_section(SEC_MODULES);
+    shot("settings_modules_zone");
+    ui_settings_set_time_zone("");
+    static const char *const dialog_buttons[] = {"Cancel", "Turn off"};
+    ui_modal("Turn off the remote?", "Touch the screen or press BOOT to turn it on again.", dialog_buttons, 2, NULL, NULL);
+    shot("modal");
+    ui_modal_close();
 
     /* A plain board (the 5B, the 4.3B): no pins for IR, a backlight that is
      * only on or off, no battery reading */

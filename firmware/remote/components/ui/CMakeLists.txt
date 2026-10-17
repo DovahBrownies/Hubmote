@@ -8,7 +8,7 @@ file(GLOB FONT_SRCS "${FONT_DIR}/*.c")
 idf_component_register(SRCS "ui.c" "ui_kit.c" "ui_apps.c" "ui_topbar.c" "ui_rail.c" "ui_pad.c"
                             "ui_tv_home.c" "ui_app.c" "ui_keyboard.c" "ui_settings.c"
                             "ui_setup.c" "ui_ir.c" "ui_learn.c" "ui_inputs.c" "ui_mem.c"
-                            "ui_switcher.c" "ui_dash.c" "ui_status.c" "ui_themes.c" "ui_tv_setup.c" "ui_wifi.c" ${FONT_SRCS}
+                            "ui_switcher.c" "ui_dash.c" "ui_status.c" "ui_themes.c" "ui_tv_setup.c" "ui_wifi.c" "ui_modal.c" ${FONT_SRCS}
                        INCLUDE_DIRS "include"
                        REQUIRES hub
                        PRIV_INCLUDE_DIRS ".")

@@ -199,6 +199,10 @@ void ui_settings_set_build(const char *version, const char *date, const char *ti
 void ui_settings_set_about(const ui_about_t *about);
 const char *ui_settings_version_text(void);
 void ui_settings_modules_changed(void);
+void ui_settings_set_time_zone(const char *name);
+/* Opens the time-zone picker: the regions (region NULL), or one region's
+ * zones ("Europe"). */
+void ui_settings_pick_time_zone(const char *region);
 void ui_settings_wifi_changed(void);
 /* ui_set_ir_caps(): what the IR wiring allows (learning implies sending),
  * and the screens that hide what it doesn't. */

@@ -84,6 +84,11 @@ Flipper-IRDB (https://github.com/Lucaslhm/Flipper-IRDB)
 Data
 ----
 
+IANA Time Zone Database (https://www.iana.org/time-zones)
+  Public domain. firmware/remote/components/hub/hub_tz.c, the time zones
+  and their rules, is generated from it by
+  firmware/remote/tools/time/gen_zones.py.
+
 Open-Meteo (https://open-meteo.com)
   The Weather module's forecasts come from the Open-Meteo API, whose data is
   licensed under CC BY 4.0. The module shows the attribution "Weather data

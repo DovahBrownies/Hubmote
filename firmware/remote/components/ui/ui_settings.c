@@ -8,13 +8,14 @@
  *  - Screen: brightness, Rotate 180°, and when the screen dims, goes dark
  *    and the remote turns itself off.
  *  - Appearance: the theme (applied with a restart).
- *  - Modules: each one on or off.
+ *  - Modules: the time zone, and each module on or off.
  *  - About: version, build, network, uptime, memory.
  * Turn off remote and Done sit under the sections.
  */
 #include <stdio.h>
 #include <string.h>
 #include "hub_module.h"
+#include "hub_time.h"
 #include "ui_internal.h"
 
 #define NAV_W   UI_S(248)
@@ -916,8 +917,169 @@ void ui_settings_modules_changed(void)
     lv_obj_set_hidden(s_mod_none, s_mod_count > 0);
 }
 
+/* --- Time zone (at the top of Modules) -------------------------------------------- */
+
+#define TZ_REGIONS_MAX 16
+#define TZ_LABEL_MAX   40
+
+static lv_obj_t *s_tz_value;
+static char s_tz[48];                            /* the zone in use; "" = Automatic */
+static char s_tz_regions[TZ_REGIONS_MAX][16];    /* "Africa" ... "UTC", in the list's order */
+static size_t s_tz_region_count;
+static char s_tz_region[16];                     /* the region whose zones are listed */
+static char (*s_tz_labels)[TZ_LABEL_MAX];        /* its zones' labels ("New York") */
+static size_t *s_tz_index;                       /* and their hub_time_zone_name() index */
+
+/* How a region is shown: IANA's names, with "America" covering both. */
+static const char *region_label(const char *region)
+{
+    return strcmp(region, "America") == 0  ? "Americas"
+           : strcmp(region, "Indian") == 0 ? "Indian Ocean"
+                                           : region;
+}
+
+/* "America/Argentina/Buenos_Aires" -> "Argentina / Buenos Aires"; "UTC" stays. */
+static void zone_label(const char *name, char *out, size_t len)
+{
+    const char *city = strchr(name, '/');
+    city = city ? city + 1 : name;
+    size_t n = 0;
+    for (; *city && n + 4 < len; city++) {
+        if (*city == '/') {
+            n += (size_t)snprintf(out + n, len - n, " / ");
+        } else {
+            out[n++] = *city == '_' ? ' ' : *city;
+        }
+    }
+    out[n] = '\0';
+}
+
+static bool in_region(const char *name, const char *region)
+{
+    size_t n = strlen(region);
+    return strncmp(name, region, n) == 0 && (name[n] == '/' || name[n] == '\0');
+}
+
+static void tz_emit(const char *name)
+{
+    ui_action_t a = {.type = UI_ACT_TIME_ZONE, .text = name};
+    ui_emit(&a);
+}
+
+static void on_tz_zone(int choice, void *user_data)
+{
+    if (choice >= 0) {
+        tz_emit(hub_time_zone_name(s_tz_index[choice]));
+    }
+}
+
+static void on_tz_region(int choice, void *user_data)
+{
+    if (choice == 0) {
+        tz_emit(""); /* Automatic */
+    } else if (choice > 0) {
+        const char *region = s_tz_regions[choice - 1];
+        if (strcmp(region, "UTC") == 0) {
+            tz_emit("UTC"); /* a zone of its own, no cities */
+        } else {
+            ui_settings_pick_time_zone(region);
+        }
+    }
+}
+
+void ui_settings_pick_time_zone(const char *region)
+{
+    size_t total = hub_time_zone_count();
+    if (!region) {
+        /* Automatic, then each region once (the names are sorted). */
+        static const char *items[TZ_REGIONS_MAX + 1];
+        items[0] = "Automatic";
+        s_tz_region_count = 0;
+        int selected = s_tz[0] ? -1 : 0;
+        for (size_t i = 0; i < total && s_tz_region_count < TZ_REGIONS_MAX; i++) {
+            const char *name = hub_time_zone_name(i);
+            size_t n = strcspn(name, "/");
+            char *last = s_tz_region_count ? s_tz_regions[s_tz_region_count - 1] : NULL;
+            if (last && strlen(last) == n && strncmp(last, name, n) == 0) {
+                continue;
+            }
+            char *r = s_tz_regions[s_tz_region_count];
+            snprintf(r, sizeof(s_tz_regions[0]), "%.*s", (int)n, name);
+            if (s_tz[0] && in_region(s_tz, r)) {
+                selected = (int)s_tz_region_count + 1;
+            }
+            items[++s_tz_region_count] = region_label(r);
+        }
+        ui_modal_list("Time zone", items, s_tz_region_count + 1, selected, on_tz_region, NULL);
+        return;
+    }
+    if (!s_tz_labels) {
+        s_tz_labels = lv_malloc(total * sizeof(*s_tz_labels));
+        s_tz_index = lv_malloc(total * sizeof(*s_tz_index));
+        if (!s_tz_labels || !s_tz_index) {
+            return;
+        }
+    }
+    static const char **items;
+    if (!items) {
+        items = lv_malloc(total * sizeof(*items));
+        if (!items) {
+            return;
+        }
+    }
+    strlcpy(s_tz_region, region, sizeof(s_tz_region));
+    size_t count = 0;
+    int selected = -1;
+    for (size_t i = 0; i < total; i++) {
+        const char *name = hub_time_zone_name(i);
+        if (!in_region(name, region)) {
+            continue;
+        }
+        zone_label(name, s_tz_labels[count], TZ_LABEL_MAX);
+        s_tz_index[count] = i;
+        if (strcmp(name, s_tz) == 0) {
+            selected = (int)count;
+        }
+        items[count] = s_tz_labels[count];
+        count++;
+    }
+    ui_modal_list(region_label(region), items, count, selected, on_tz_zone, NULL);
+}
+
+void ui_settings_set_time_zone(const char *name)
+{
+    strlcpy(s_tz, name, sizeof(s_tz));
+    if (s_tz_value) {
+        char label[TZ_LABEL_MAX];
+        zone_label(name, label, sizeof(label));
+        lv_label_set_text(s_tz_value, name[0] ? label : "Automatic");
+    }
+}
+
+static void on_tz_row(lv_event_t *e)
+{
+    ui_settings_pick_time_zone(NULL);
+}
+
+static void build_time_zone(lv_obj_t *page)
+{
+    lv_obj_t *row = ui_btn(page, LV_PCT(100), UI_S(64), 16, COL_SURFACE2);
+    lv_obj_set_style_pad_hor(row, UI_S(14), 0);
+    ui_flex(row, LV_FLEX_FLOW_ROW, UI_S(12));
+    lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    icon_box(row, ICON_CLOCK, COL_ACCENT_TEXT);
+    lv_obj_t *title = ui_label(row, &font_sora_15m, COL_TEXT, "Time zone");
+    lv_obj_set_flex_grow(title, 1);
+    s_tz_value = ui_label(row, &font_sora_15m, COL_TEXT2, "Automatic");
+    ui_label(row, &font_icons_20, COL_TEXT3, ICON_CHEVRON_RIGHT);
+    lv_obj_add_event_cb(row, on_tz_row, LV_EVENT_CLICKED, NULL);
+    ui_settings_set_time_zone(s_tz);
+}
+
 static void build_modules(lv_obj_t *page)
 {
+    build_time_zone(page);
+    subhead(page, "Modules");
     s_mod_none = ui_label(page, &font_sora_15m, COL_TEXT3, "No modules");
     s_mod_list = ui_box(page);
     lv_obj_set_width(s_mod_list, LV_PCT(100));

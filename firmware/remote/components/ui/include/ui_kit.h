@@ -10,6 +10,7 @@
  */
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include "lvgl.h"
 #include "ui_fonts.h"
@@ -149,6 +150,28 @@ typedef void (*ui_kb_done_cb_t)(const char *text);
 typedef void (*ui_kb_cancel_cb_t)(void);
 void ui_kb_open_local(const char *value, const char *title, size_t max_len, ui_kb_done_cb_t done,
                       ui_kb_cancel_cb_t cancel);
+
+/*
+ * Dialogs over the whole screen, one at a time: opening one closes the one
+ * before it. done runs after the dialog has closed, with the index of the
+ * button or item tapped, or -1 when it was dismissed (Cancel, a tap
+ * outside it, or another dialog opening). done may open another dialog.
+ *
+ *  - ui_modal(): a title, a message (may be NULL), and 1 to 3 buttons left
+ *    to right; the last is the main one, filled with COL_ACCENT.
+ *  - ui_modal_list(): a title and items to pick from, scrolling when long,
+ *    with Cancel. selected (or -1) is marked and scrolled into view.
+ *
+ * The texts are copied.
+ */
+typedef void (*ui_modal_cb_t)(int choice, void *user_data);
+void ui_modal(const char *title, const char *message, const char *const *buttons, size_t count,
+              ui_modal_cb_t done, void *user_data);
+void ui_modal_list(const char *title, const char *const *items, size_t count, int selected,
+                   ui_modal_cb_t done, void *user_data);
+/* Closes the open dialog, if any (its done gets -1). */
+void ui_modal_close(void);
+bool ui_modal_open(void);
 
 /* Opens a module's screen by id. */
 void ui_module_open(const char *id);

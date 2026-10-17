@@ -418,7 +418,7 @@ UI then leaves out what can't work (`ui_set_ir_caps()`).
 - **`components/ui`** holds the LVGL 9 screens. The main files are below.
 - **`components/hub`** is the module platform: the registry
   (`HUB_MODULE()`), events, glances, one HTTP worker, per-module NVS and
-  files, and SNTP time ([docs/modules.md](../../docs/modules.md)).
+  files, SNTP time and the time zone ([docs/modules.md](../../docs/modules.md)).
 - **`components/kv`** reads and writes one NVS value per call (`kv.h`).
   Settings in `main/`, the companion's token and the hub's module storage
   use it; `atv_remote` keeps its own NVS code.
@@ -470,6 +470,9 @@ There are more files besides these.
 - **`tools/web/make_site.py`** assembles the installer site and
   `update.json` from release builds, one folder per board, optionally with
   the companion. CI and `hm-web.ps1` use it.
+- **`tools/time/gen_zones.py`** builds `components/hub/hub_tz.c`, the
+  time zones and their rules, from the IANA tz database (needs the
+  `tzdata` Python package).
 - **`tools/ir/import_tv_codes.py`** builds `main/tv_codes.c` from SmartIR
   (MIT) and CC0 Flipper-IRDB files ([docs/ir-tvs.md](../../docs/ir-tvs.md)).
 - **`tools/check_themes.py`** checks every theme's contrast

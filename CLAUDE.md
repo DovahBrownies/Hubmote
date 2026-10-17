@@ -257,11 +257,16 @@ untested: their facts and sources are in their headers in
   `tools/check_themes.py`, and screenshot changes in Daylight too.
 - **Loading, error and empty states** use `ui_status` and `ui_spinner`
   (`ui_kit.h`) everywhere, for one look; don't hand-roll spinners or
-  "Loading..." labels. Refreshes keep data on screen.
+  "Loading..." labels. Refreshes keep data on screen. Questions and
+  pick-lists use `ui_modal()` / `ui_modal_list()`.
 - **Threads.** Module `init`/`event` run on the controller task; LVGL only
   on the LVGL task or through `hub_ui_async()`.
 - **Weather** (Open-Meteo, no key): the place's UTC offset sets the
-  remote's local time (`hub_time`), as there is no time-zone setting yet.
+  remote's local time (`hub_time`) while the time zone (Settings >
+  Modules, NVS `hub`/`tz`) is Automatic. The zones and their POSIX rules
+  are generated into `components/hub/hub_tz.c` by
+  `tools/time/gen_zones.py` (IANA tz, public domain); don't edit it by
+  hand.
   The attribution line "Weather data by Open-Meteo.com" is a license
   requirement and stays.
 - **Updates from the releases** (`main/update.c`): Settings > About checks

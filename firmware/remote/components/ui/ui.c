@@ -687,6 +687,13 @@ void ui_set_hostname(const char *name)
     UNLOCK();
 }
 
+void ui_set_time_zone(const char *name)
+{
+    LOCK();
+    ui_settings_set_time_zone(name);
+    UNLOCK();
+}
+
 /* An update waits: firmware (Settings > About) or the companion (Settings >
  * Remotes). Dots on the gear and those sections say so. */
 static bool s_update_waits;

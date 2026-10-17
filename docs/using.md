@@ -197,6 +197,10 @@ under Google TV's Home, or **HDMI switch** in the switcher.
 Each module has a card on the Home tab. **Settings > Modules** switches
 modules on and off.
 
+**Time zone.** At the top of **Settings > Modules**. **Automatic** follows
+Weather's place. To choose a zone instead, tap **Time zone**, pick a
+region, then the city whose time you use.
+
 **Weather.** To choose the place:
 
 1. Tap the place's name, or **Set location** if there isn't one yet.
