@@ -5,7 +5,9 @@
  * What it shows as a starting point:
  *  - a Home card and a full screen built from the UI kit (ui_kit.h),
  *    with sizes in UI_S() so they follow the screen's size;
- *  - a setting kept in NVS (hub_kv_*), here a tap counter;
+ *  - a value kept in NVS (hub_kv_*), here a tap counter;
+ *  - a setting in Settings > Modules (hub_setting_t), here how much a tap
+ *    adds;
  *  - reacting to events (screen on/off, network, once a minute);
  *  - where a web request would go (hub_http_get), commented out; while
  *    waiting, show ui_status (loading, error, empty: see docs/modules.md).
@@ -34,9 +36,14 @@ static void show_value(void *arg)
     }
 }
 
+/* Settings > Modules shows these under the module (docs/modules.md). */
+static const hub_setting_t k_settings[] = {
+    {.key = "step", .label = "Each tap adds", .type = HUB_SETTING_NUMBER, .def = 1, .min = 1, .max = 10, .step = 1},
+};
+
 static void on_tap(lv_event_t *e)
 {
-    s_taps++;
+    s_taps += hub_setting_i32(hub_module_find(MODULE_ID), "step");
     hub_kv_set_i32(MODULE_ID, "taps", s_taps);
     show_value(NULL);
 }
@@ -104,5 +111,8 @@ static const hub_module_t s_module = {
     .create_view = create_view,
     .create_card = create_card,
     /* .glance: a short summary for the top bar and switcher (see Weather) */
+    .settings = k_settings,
+    .settings_count = sizeof(k_settings) / sizeof(k_settings[0]),
+    /* .setting_changed: called when one changes (see Weather) */
 };
 HUB_MODULE(s_module);

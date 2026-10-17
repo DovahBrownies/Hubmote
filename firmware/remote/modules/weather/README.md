@@ -24,7 +24,9 @@ Both settings are on the Weather screen:
   instant and needs no new request.
 
 They are kept in NVS (`m_weather`: `name`, `region`, `lat`, `lon`,
-`imperial`), so they survive restarts and firmware updates.
+`imperial`), so they survive restarts and firmware updates. The units are
+also a module setting: **Settings > Modules > Weather > Units** changes the
+same `imperial` value.
 
 While the time zone in **Settings > Modules** is Automatic, the place's
 UTC offset also sets the remote's local time (`hub_time`). The offset is

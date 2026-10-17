@@ -277,6 +277,24 @@ static void weather_event(hub_event_t event)
     }
 }
 
+/* Units in Settings > Modules, the same value as the screen's °C / °F. */
+static const char *const k_units[] = {"\xC2\xB0" "C, km/h", "\xC2\xB0" "F, mph"};
+static const hub_setting_t k_settings[] = {
+    {.key = "imperial", .label = "Units", .type = HUB_SETTING_CHOICE, .choices = k_units, .count = 2},
+};
+
+static void weather_setting_changed(const char *key)
+{
+    if (!s_state || strcmp(key, "imperial") != 0) {
+        return;
+    }
+    bool imperial = hub_setting_i32(hub_module_find(WEATHER_ID), "imperial") != 0;
+    lock();
+    s_state->imperial = imperial;
+    unlock();
+    ui_update();
+}
+
 static const hub_module_t s_weather = {
     .id = WEATHER_ID,
     .name = "Weather",
@@ -287,5 +305,8 @@ static const hub_module_t s_weather = {
     .show = weather_show,
     .create_card = weather_ui_create_card,
     .glance = weather_ui_glance,
+    .settings = k_settings,
+    .settings_count = sizeof(k_settings) / sizeof(k_settings[0]),
+    .setting_changed = weather_setting_changed,
 };
 HUB_MODULE(s_weather);

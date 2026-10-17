@@ -39,6 +39,31 @@ typedef enum {
     HUB_EV_MINUTE,       /* once a minute */
 } hub_event_t;
 
+/*
+ * Settings a module declares. Settings > Modules shows them under the
+ * module while it is on, and saves each in the module's NVS namespace
+ * (m_<id>) under its key. Read them with hub_setting_i32() and
+ * hub_setting_str(); setting_changed() says when the user changed one.
+ */
+typedef enum {
+    HUB_SETTING_SWITCH, /* on (1) or off (0) */
+    HUB_SETTING_CHOICE, /* one of choices: its index */
+    HUB_SETTING_NUMBER, /* min to max, in steps of step */
+    HUB_SETTING_TEXT,   /* up to max_len characters, typed on the remote's keyboard */
+} hub_setting_type_t;
+
+typedef struct {
+    const char *key;   /* its NVS key, 15 characters at most */
+    const char *label; /* "Units" */
+    hub_setting_type_t type;
+    int32_t def;                /* the default: SWITCH 0 or 1, CHOICE an index, NUMBER a value */
+    const char *const *choices; /* CHOICE: the labels, and how many: 2 or 3 show side by */
+    size_t count;               /* side, more as a list */
+    int32_t min, max, step;     /* NUMBER */
+    const char *unit;           /* NUMBER: after the value ("min"), or NULL */
+    size_t max_len;             /* TEXT: the longest value, 63 at most */
+} hub_setting_t;
+
 /* A one-line summary for the top bar and the switcher, e.g. a weather icon
  * and "18°". */
 typedef struct {
@@ -61,6 +86,10 @@ typedef struct {
     void (*hide)(void);                          /* its screen left */
     lv_obj_t *(*create_card)(lv_obj_t *parent); /* its card on the Home tab */
     bool (*glance)(hub_glance_t *out);          /* false: nothing to show yet */
+
+    const hub_setting_t *settings; /* shown in Settings > Modules; may be NULL */
+    size_t settings_count;
+    void (*setting_changed)(const char *key); /* the user changed it; controller task, after it is saved */
 } hub_module_t;
 
 /* Registers a module before app_main() runs. Use once per module, at file
@@ -84,12 +113,21 @@ const hub_module_t *hub_module_find(const char *id);
  * nowhere: no card, switcher row or glance. */
 bool hub_module_enabled(const hub_module_t *module);
 
+/* A setting's value: as saved, or its default. Any task. */
+int32_t hub_setting_i32(const hub_module_t *module, const char *key);
+/* A TEXT setting's value: "" until set. Any task. */
+void hub_setting_str(const hub_module_t *module, const char *key, char *out, size_t len);
+const hub_setting_t *hub_setting_find(const hub_module_t *module, const char *key);
+
 /* For the platform (main/ and the UI), not for modules. */
 void hub_modules_init(void);
 void hub_modules_event(hub_event_t event);
 /* Controller task. Switching a module on runs its init (the first time)
  * and tells it the network is up, if it is. */
 void hub_module_set_enabled(const char *id, bool on);
+/* Saves a setting the user chose (text for TEXT, value for the rest) and
+ * tells the module. Controller task. */
+void hub_setting_save(const char *module_id, const char *key, int32_t value, const char *text);
 /* Which modules are on changed. Any task. */
 void hub_set_modules_listener(void (*listener)(void));
 

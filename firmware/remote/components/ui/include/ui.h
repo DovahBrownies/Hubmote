@@ -100,6 +100,7 @@ typedef enum {
     UI_ACT_SLEEP_AFTER,      /* .index = idle hours before the remote turns off, 0 = never */
     UI_ACT_MODULE_ENABLE,    /* .text = module id, .index = 1 on, 0 off */
     UI_ACT_TIME_ZONE,        /* .text = IANA name, "" = Automatic: set it, then ui_set_time_zone() */
+    UI_ACT_MODULE_SETTING,   /* .name = "<module id>/<key>", .index = value, .text = a TEXT setting's value */
     UI_ACT_THEME,            /* .text = theme id: save it and restart to apply */
     UI_ACT_TV_BRAND,         /* .text = brand: send its code sets with ui_tv_setup_sets() */
     UI_ACT_TV_TRY,           /* .index = code set n of that brand: send its test key */

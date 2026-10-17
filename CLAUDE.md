@@ -242,6 +242,11 @@ untested: their facts and sources are in their headers in
   with the screen dark an unplug isn't detected, so a charging-only "never"
   could drain the battery. Switched-off
   modules in `hub_off` (`hub_module_set_enabled()`, controller task).
+- **Module settings** are declared in the module (`hub_setting_t`, kinds
+  switch, choice, number, text) and drawn by Settings > Modules
+  (`ui_settings.c`); values live in the module's NVS namespace (`m_<id>`),
+  `setting_changed()` runs on the controller task. Weather's Units is the
+  first.
 - **Modules self-register** with `HUB_MODULE()` (a constructor) and are
   linked with `WHOLE_ARCHIVE`. After adding or removing a folder in
   `modules/`, run `hm-idf.ps1 reconfigure` before building. A module's

@@ -171,6 +171,7 @@ Every callback is optional.
 | `create_view(parent)` | the first time your screen is opened | LVGL |
 | `show()` / `hide()` | your screen came into view / left | LVGL |
 | `glance(out)` | when the top bar or switcher redraws | LVGL |
+| `setting_changed(key)` | the user changed one of your [settings](#settings), after it is saved | controller |
 
 - `create_card()` returns your card.
 - `create_view()` builds into `parent`, which is already `HUB_VIEW_W` x
@@ -283,11 +284,51 @@ hub_http_get("https://api.example.com/v1/now?stop=123", 8 * 1024, on_answer, NUL
 Parse JSON with cJSON (`REQUIRES json`). Its allocations already go to
 PSRAM.
 
+### Settings
+
+Declare the settings people should be able to change, and **Settings >
+Modules** shows them under your module while it is on. You don't build
+any UI for them.
+
+```c
+static const char *const k_units[] = {"Metric", "Imperial"};
+static const hub_setting_t k_settings[] = {
+    {.key = "units", .label = "Units", .type = HUB_SETTING_CHOICE, .choices = k_units, .count = 2},
+    {.key = "every", .label = "Refresh every", .type = HUB_SETTING_NUMBER,
+     .def = 15, .min = 5, .max = 60, .step = 5, .unit = "min"},
+    {.key = "stop", .label = "Stop", .type = HUB_SETTING_TEXT, .max_len = 40},
+};
+
+static const hub_module_t s_module = {
+    ...
+    .settings = k_settings,
+    .settings_count = sizeof(k_settings) / sizeof(k_settings[0]),
+    .setting_changed = on_setting,
+};
+```
+
+- **Kinds:** `HUB_SETTING_SWITCH` (on or off), `HUB_SETTING_CHOICE` (one of
+  `choices`: two or three show side by side, more open a list),
+  `HUB_SETTING_NUMBER` (`min` to `max` in steps of `step`, with an
+  optional `unit`) and `HUB_SETTING_TEXT` (typed on the remote's keyboard,
+  `max_len` characters, 63 at most).
+- **Reading them:** `hub_setting_i32(module, key)` gives the saved value
+  or the default `def`, kept within what the setting allows.
+  `hub_setting_str(module, key, out, len)` gives a TEXT setting, or "".
+  Both work from any task. `hub_module_find(id)` gives your `module`.
+- **Changes:** `setting_changed(key)` runs on the controller task after
+  the value is saved. Read it again there and update your state.
+- **Where they're kept:** in your NVS namespace, `m_<id>`, under each
+  `key` (15 characters at most). So `hub_kv_*` reads and writes the same
+  values, for example from a control on your own screen.
+- **Labels only:** a setting's `label` names it ("Units"), with no hints.
+
 ### Storage (`hub_store.h`)
 
-- **Settings:** `hub_kv_get_str/set_str/get_i32/set_i32(module_id, key, ...)`
-  store small values in NVS, in the namespace `m_<id>`. Keys are at most
-  15 characters. The values survive firmware updates.
+- **Small values:** `hub_kv_get_str/set_str/get_i32/set_i32(module_id,
+  key, ...)` store small values in NVS, in the namespace `m_<id>`. Keys
+  are at most 15 characters. The values survive firmware updates.
+  For what people choose, declare [settings](#settings) instead.
 - **Files:** `hub_file_path(id, "cache.json", path, sizeof(path))` gives
   `/storage/<id>/cache.json` and creates the folder. `hub_file_write()`
   writes a whole file safely: to a temporary file, then a rename.

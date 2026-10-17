@@ -11,6 +11,7 @@
 #include "hub_module.h"
 #include "hub_time.h"
 #include "hub_tz.h"
+#include "ui_icons.h"
 #include "weather.h"
 
 size_t sim_strlcpy(char *dst, const char *src, size_t size)
@@ -26,6 +27,10 @@ size_t sim_strlcpy(char *dst, const char *src, size_t size)
 
 /* --- Modules ----------------------------------------------------------------- */
 
+static const char *const k_units[] = {"\xC2\xB0" "C, km/h", "\xC2\xB0" "F, mph"};
+static const hub_setting_t k_weather_settings[] = {
+    {.key = "imperial", .label = "Units", .type = HUB_SETTING_CHOICE, .choices = k_units, .count = 2},
+};
 static const hub_module_t s_weather = {
     .id = WEATHER_ID,
     .name = "Weather",
@@ -33,22 +38,50 @@ static const hub_module_t s_weather = {
     .create_view = weather_ui_create_view,
     .create_card = weather_ui_create_card,
     .glance = weather_ui_glance,
+    .settings = k_weather_settings,
+    .settings_count = 1,
 };
+
+/* A module with a setting of each kind, so Settings draws them all. */
+static const char *const k_lines[] = {"T1 Northern", "T2 Inner West", "T3 Bankstown", "T4 Eastern Suburbs"};
+static const hub_setting_t k_demo_settings[] = {
+    {.key = "line", .label = "Line", .type = HUB_SETTING_CHOICE, .choices = k_lines, .count = 4, .def = 1},
+    {.key = "walk", .label = "Walk to the stop", .type = HUB_SETTING_NUMBER, .def = 6, .min = 0, .max = 30,
+     .step = 1, .unit = "min"},
+    {.key = "stop", .label = "Stop", .type = HUB_SETTING_TEXT, .max_len = 40},
+    {.key = "late", .label = "Show late services", .type = HUB_SETTING_SWITCH, .def = 1},
+};
+static const hub_module_t s_demo = {
+    .id = "transit",
+    .name = "Transit",
+    .icon = ICON_MAP_PIN,
+    .settings = k_demo_settings,
+    .settings_count = sizeof(k_demo_settings) / sizeof(k_demo_settings[0]),
+};
+static bool s_demo_on; /* only while drawing Settings, so the other screens stay as they were */
 static void (*s_glance_listener)(void);
+
+void sim_show_demo_module(bool on)
+{
+    s_demo_on = on;
+}
 
 size_t hub_module_count(void)
 {
-    return 1;
+    return s_demo_on ? 2 : 1;
 }
 
 const hub_module_t *hub_module_get(size_t index)
 {
-    return index == 0 ? &s_weather : NULL;
+    return index == 0 ? &s_weather : index == 1 && s_demo_on ? &s_demo : NULL;
 }
 
 const hub_module_t *hub_module_find(const char *id)
 {
-    return id && strcmp(id, WEATHER_ID) == 0 ? &s_weather : NULL;
+    return !id                                  ? NULL
+           : strcmp(id, WEATHER_ID) == 0        ? &s_weather
+           : s_demo_on && strcmp(id, "transit") == 0 ? &s_demo
+                                                : NULL;
 }
 
 bool hub_module_enabled(const hub_module_t *module)
@@ -181,4 +214,27 @@ void weather_set_place(const wx_place_t *place)
 void weather_set_imperial(bool imperial)
 {
     s_state.imperial = imperial;
+}
+
+/* --- Module settings: their defaults --------------------------------------------- */
+
+const hub_setting_t *hub_setting_find(const hub_module_t *module, const char *key)
+{
+    for (size_t i = 0; module && i < module->settings_count; i++) {
+        if (strcmp(module->settings[i].key, key) == 0) {
+            return &module->settings[i];
+        }
+    }
+    return NULL;
+}
+
+int32_t hub_setting_i32(const hub_module_t *module, const char *key)
+{
+    const hub_setting_t *s = hub_setting_find(module, key);
+    return s ? s->def : 0;
+}
+
+void hub_setting_str(const hub_module_t *module, const char *key, char *out, size_t len)
+{
+    snprintf(out, len, "%s", strcmp(key, "stop") == 0 ? "Central Station" : "");
 }

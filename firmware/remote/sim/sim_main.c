@@ -18,6 +18,8 @@
 #include "ui.h"
 #include "ui_internal.h"
 
+void sim_show_demo_module(bool on); /* sim_hub.c */
+
 void sim_weather_load(void);
 void hub_glance_changed(void);
 
@@ -212,7 +214,9 @@ static void screens(void)
     ui_tv_setup_open_keys();
     shot("tv_keys");
 
-    /* Settings */
+    /* Settings, with a module that has a setting of each kind */
+    sim_show_demo_module(true);
+    ui_settings_modules_changed();
     static const char *const sections[SEC_COUNT] = {"remotes", "wifi", "screen", "appearance", "modules",
                                                      "about"};
     for (int i = 0; i < SEC_COUNT; i++) {
@@ -237,6 +241,8 @@ static void screens(void)
     ui_modal("Turn off the remote?", "Touch the screen or press BOOT to turn it on again.", dialog_buttons, 2, NULL, NULL);
     shot("modal");
     ui_modal_close();
+    sim_show_demo_module(false);
+    ui_settings_modules_changed();
 
     /* A plain board (the 5B, the 4.3B): no pins for IR, a backlight that is
      * only on or off, no battery reading */

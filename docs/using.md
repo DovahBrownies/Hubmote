@@ -195,7 +195,8 @@ under Google TV's Home, or **HDMI switch** in the switcher.
 ## Modules
 
 Each module has a card on the Home tab. **Settings > Modules** switches
-modules on and off.
+modules on and off. A module's settings, such as Weather's **Units**, show
+under it while it is on.
 
 **Time zone.** At the top of **Settings > Modules**. **Automatic** follows
 Weather's place. To choose a zone instead, tap **Time zone**, pick a

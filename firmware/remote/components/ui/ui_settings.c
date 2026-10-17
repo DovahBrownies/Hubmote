@@ -8,7 +8,7 @@
  *  - Screen: brightness, Rotate 180°, and when the screen dims, goes dark
  *    and the remote turns itself off.
  *  - Appearance: the theme (applied with a restart).
- *  - Modules: the time zone, and each module on or off.
+ *  - Modules: the time zone, each module on or off, and its settings.
  *  - About: version, build, network, uptime, memory.
  * Turn off remote and Done sit under the sections.
  */
@@ -110,8 +110,21 @@ static size_t s_theme_pending;
 static lv_obj_t *s_mod_list;
 static lv_obj_t *s_mod_none;
 static lv_obj_t *s_mod_switch[HUB_MODULES_MAX];
+static lv_obj_t *s_mod_settings[HUB_MODULES_MAX]; /* its settings, shown while it is on */
 static const hub_module_t *s_mod_of[HUB_MODULES_MAX];
 static size_t s_mod_count;
+/* Each module setting on screen, with what shows its value. */
+#define MOD_SETTINGS_MAX 32
+typedef struct {
+    const hub_module_t *module;
+    const hub_setting_t *setting;
+    lv_obj_t *control; /* SWITCH: the switch; NUMBER, TEXT, CHOICE as a list: the value's label */
+    lv_obj_t *seg[3];  /* CHOICE side by side: its buttons */
+    int32_t value;
+} mod_setting_t;
+static mod_setting_t s_mset[MOD_SETTINGS_MAX];
+static size_t s_mset_count;
+static mod_setting_t *s_mset_editing; /* the TEXT setting on the keyboard */
 
 /* About */
 enum { AB_VERSION, AB_BUILT, AB_SLOT, AB_ADDRESS, AB_NAME, AB_SIGNAL, AB_UPTIME, AB_MEMORY, AB_TOKEN, AB_COUNT };
@@ -185,6 +198,7 @@ static lv_obj_t *icon_box(lv_obj_t *parent, const char *icon, lv_color_t color)
 /* --- Sections ------------------------------------------------------------------ */
 
 static void about_refresh(void);
+static void module_settings_refresh(void);
 
 static void select_section(ui_section_t sec)
 {
@@ -201,6 +215,9 @@ static void select_section(ui_section_t sec)
     }
     if (sec == SEC_ABOUT) {
         about_refresh();
+    }
+    if (sec == SEC_MODULES) {
+        module_settings_refresh(); /* a module's own screen may have changed one */
     }
 }
 
@@ -881,6 +898,200 @@ static lv_obj_t *module_switch(lv_obj_t *parent)
     return sw;
 }
 
+/* --- A module's settings ------------------------------------------------------ */
+
+static void mset_emit(const mod_setting_t *ms, int32_t value, const char *text)
+{
+    char name[HUB_MODULE_ID_MAX + 18];
+    snprintf(name, sizeof(name), "%s/%s", ms->module->id, ms->setting->key);
+    ui_action_t a = {.type = UI_ACT_MODULE_SETTING, .name = name, .index = (int)value, .text = text ? text : ""};
+    ui_emit(&a);
+}
+
+/* Shows ms's value; text for a TEXT setting (NULL: read it). */
+static void mset_paint(mod_setting_t *ms, const char *text)
+{
+    const hub_setting_t *s = ms->setting;
+    switch (s->type) {
+    case HUB_SETTING_SWITCH:
+        lv_obj_set_state(ms->control, LV_STATE_CHECKED, ms->value != 0);
+        break;
+    case HUB_SETTING_CHOICE:
+        if (s->count <= 3) {
+            for (size_t i = 0; i < s->count; i++) {
+                bool on = (int32_t)i == ms->value;
+                lv_obj_set_style_bg_color(ms->seg[i], on ? COL_SURFACE3 : COL_SURFACE1, 0);
+                lv_obj_set_style_text_color(lv_obj_get_child(ms->seg[i], 0), on ? COL_ACCENT_TEXT : COL_TEXT2, 0);
+            }
+        } else {
+            lv_label_set_text(ms->control, s->choices[ms->value]);
+        }
+        break;
+    case HUB_SETTING_NUMBER:
+        lv_label_set_text_fmt(ms->control, "%ld%s%s", (long)ms->value, s->unit ? " " : "", s->unit ? s->unit : "");
+        break;
+    case HUB_SETTING_TEXT: {
+        char value[64];
+        if (!text) {
+            hub_setting_str(ms->module, s->key, value, sizeof(value));
+            text = value;
+        }
+        lv_label_set_text(ms->control, text[0] ? text : "Not set");
+        lv_obj_set_style_text_color(ms->control, text[0] ? COL_TEXT2 : COL_TEXT3, 0);
+        break;
+    }
+    }
+}
+
+static void module_settings_refresh(void)
+{
+    for (size_t i = 0; i < s_mset_count; i++) {
+        mod_setting_t *ms = &s_mset[i];
+        ms->value = hub_setting_i32(ms->module, ms->setting->key);
+        mset_paint(ms, NULL);
+    }
+}
+
+static void mset_set(mod_setting_t *ms, int32_t value)
+{
+    ms->value = value;
+    mset_paint(ms, NULL);
+    mset_emit(ms, value, NULL);
+}
+
+static void on_mset_switch(lv_event_t *e)
+{
+    mod_setting_t *ms = lv_event_get_user_data(e);
+    mset_set(ms, lv_obj_has_state(ms->control, LV_STATE_CHECKED));
+}
+
+static void on_mset_seg(lv_event_t *e)
+{
+    mod_setting_t *ms = lv_event_get_user_data(e);
+    lv_obj_t *btn = lv_event_get_current_target(e);
+    for (size_t i = 0; i < ms->setting->count; i++) {
+        if (ms->seg[i] == btn) {
+            mset_set(ms, (int32_t)i);
+        }
+    }
+}
+
+static void on_mset_picked(int choice, void *user_data)
+{
+    if (choice >= 0) {
+        mset_set(user_data, choice);
+    }
+}
+
+static void on_mset_list(lv_event_t *e)
+{
+    mod_setting_t *ms = lv_event_get_user_data(e);
+    ui_modal_list(ms->setting->label, ms->setting->choices, ms->setting->count, ms->value, on_mset_picked, ms);
+}
+
+static void on_mset_step(lv_event_t *e)
+{
+    lv_obj_t *btn = lv_event_get_current_target(e);
+    mod_setting_t *ms = lv_event_get_user_data(e);
+    const hub_setting_t *s = ms->setting;
+    int32_t step = s->step > 0 ? s->step : 1;
+    int32_t v = ms->value + (int32_t)(intptr_t)lv_obj_get_user_data(btn) * step; /* -1 or +1 */
+    mset_set(ms, v < s->min ? s->min : v > s->max ? s->max : v);
+}
+
+static void on_mset_text_done(const char *text)
+{
+    mod_setting_t *ms = s_mset_editing;
+    s_mset_editing = NULL;
+    ui_show_view(VIEW_SETTINGS);
+    if (ms) {
+        mset_paint(ms, text);
+        mset_emit(ms, 0, text);
+    }
+}
+
+static void on_mset_text_cancel(void)
+{
+    s_mset_editing = NULL;
+    ui_show_view(VIEW_SETTINGS);
+}
+
+static void on_mset_text(lv_event_t *e)
+{
+    mod_setting_t *ms = lv_event_get_user_data(e);
+    char value[64];
+    hub_setting_str(ms->module, ms->setting->key, value, sizeof(value));
+    s_mset_editing = ms;
+    size_t max_len = ms->setting->max_len && ms->setting->max_len < sizeof(value) ? ms->setting->max_len
+                                                                                  : sizeof(value) - 1;
+    ui_kb_open_local(value, ms->setting->label, max_len, on_mset_text_done, on_mset_text_cancel);
+}
+
+/* The value on the right of a row, with a chevron: tapping the row edits it. */
+static lv_obj_t *mset_value_btn(lv_obj_t *row, mod_setting_t *ms, lv_event_cb_t cb)
+{
+    lv_obj_set_clickable(row, true);
+    lv_obj_add_event_cb(row, cb, LV_EVENT_CLICKED, ms);
+    lv_obj_t *value = ui_label(row, &font_sora_15m, COL_TEXT2, "");
+    lv_label_set_long_mode(value, LV_LABEL_LONG_MODE_DOTS);
+    lv_obj_set_style_max_width(value, PANE_W / 2, 0);
+    ui_label(row, &font_icons_20, COL_TEXT3, ICON_CHEVRON_RIGHT);
+    return value;
+}
+
+/* One setting's row: its label, and the control for its type. */
+static void mset_row(lv_obj_t *box, mod_setting_t *ms)
+{
+    const hub_setting_t *s = ms->setting;
+    lv_obj_t *row = ui_box(box);
+    lv_obj_set_size(row, LV_PCT(100), UI_S(56));
+    ui_flex(row, LV_FLEX_FLOW_ROW, UI_S(12));
+    lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_t *label = ui_label(row, &font_sora_15m, COL_TEXT, s->label);
+    lv_obj_set_flex_grow(label, 1);
+    switch (s->type) {
+    case HUB_SETTING_SWITCH:
+        ms->control = module_switch(row);
+        lv_obj_add_event_cb(ms->control, on_mset_switch, LV_EVENT_VALUE_CHANGED, ms);
+        break;
+    case HUB_SETTING_CHOICE:
+        if (s->count <= 3) {
+            lv_obj_t *seg = ui_box(row);
+            lv_obj_set_size(seg, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_obj_set_style_bg_color(seg, COL_SURFACE1, 0);
+            lv_obj_set_style_bg_opa(seg, LV_OPA_COVER, 0);
+            lv_obj_set_style_radius(seg, ui_radius(12), 0);
+            lv_obj_set_style_pad_all(seg, UI_S(3), 0);
+            ui_flex(seg, LV_FLEX_FLOW_ROW, UI_S(2));
+            for (size_t i = 0; i < s->count; i++) {
+                ms->seg[i] = ui_btn_text(seg, UI_S(110), UI_S(40), 10, COL_SURFACE1, &font_sora_13m, COL_TEXT2,
+                                         s->choices[i]);
+                lv_obj_add_event_cb(ms->seg[i], on_mset_seg, LV_EVENT_CLICKED, ms);
+            }
+        } else {
+            ms->control = mset_value_btn(row, ms, on_mset_list);
+        }
+        break;
+    case HUB_SETTING_NUMBER: {
+        lv_obj_t *minus = ui_btn_icon(row, UI_S(40), UI_S(40), 10, COL_SURFACE1, &font_icons_20, ICON_MINUS, COL_TEXT,
+                                      NULL, false);
+        ms->control = ui_label(row, &font_sora_15m, COL_TEXT, "");
+        lv_obj_set_style_min_width(ms->control, UI_S(64), 0);
+        lv_obj_set_style_text_align(ms->control, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_t *plus = ui_btn_icon(row, UI_S(40), UI_S(40), 10, COL_SURFACE1, &font_icons_20, ICON_PLUS, COL_TEXT,
+                                     NULL, false);
+        lv_obj_set_user_data(minus, (void *)(intptr_t)-1);
+        lv_obj_set_user_data(plus, (void *)(intptr_t)1);
+        lv_obj_add_event_cb(minus, on_mset_step, LV_EVENT_CLICKED, ms);
+        lv_obj_add_event_cb(plus, on_mset_step, LV_EVENT_CLICKED, ms);
+        break;
+    }
+    case HUB_SETTING_TEXT:
+        ms->control = mset_value_btn(row, ms, on_mset_text);
+        break;
+    }
+}
+
 /* Called whenever the modules or their on/off state change. The rows are
  * built once the module list is final (after the modules started). */
 void ui_settings_modules_changed(void)
@@ -892,16 +1103,20 @@ void ui_settings_modules_changed(void)
     }
     if (!same) {
         lv_obj_clean(s_mod_list);
+        s_mset_count = 0;
         s_mod_count = n < HUB_MODULES_MAX ? n : HUB_MODULES_MAX;
         for (size_t i = 0; i < s_mod_count; i++) {
             const hub_module_t *m = hub_module_get(i);
             s_mod_of[i] = m;
-            lv_obj_t *row = ui_box(s_mod_list);
+            lv_obj_t *card = ui_box(s_mod_list);
+            lv_obj_set_size(card, LV_PCT(100), LV_SIZE_CONTENT);
+            lv_obj_set_style_bg_color(card, COL_SURFACE2, 0);
+            lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
+            lv_obj_set_style_radius(card, ui_radius(16), 0);
+            lv_obj_set_style_pad_hor(card, UI_S(14), 0);
+            ui_flex(card, LV_FLEX_FLOW_COLUMN, 0);
+            lv_obj_t *row = ui_box(card);
             lv_obj_set_size(row, LV_PCT(100), UI_S(64));
-            lv_obj_set_style_bg_color(row, COL_SURFACE2, 0);
-            lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
-            lv_obj_set_style_radius(row, ui_radius(16), 0);
-            lv_obj_set_style_pad_hor(row, UI_S(14), 0);
             ui_flex(row, LV_FLEX_FLOW_ROW, UI_S(12));
             lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
             icon_box(row, m->icon ? m->icon : ICON_GRID, COL_ACCENT_TEXT);
@@ -909,10 +1124,30 @@ void ui_settings_modules_changed(void)
             lv_obj_set_flex_grow(name, 1);
             s_mod_switch[i] = module_switch(row);
             lv_obj_add_event_cb(s_mod_switch[i], on_module_switch, LV_EVENT_VALUE_CHANGED, (void *)m);
+
+            s_mod_settings[i] = NULL;
+            if (m->settings_count == 0) {
+                continue;
+            }
+            lv_obj_t *box = ui_box(card);
+            lv_obj_set_size(box, LV_PCT(100), LV_SIZE_CONTENT);
+            ui_flex(box, LV_FLEX_FLOW_COLUMN, 0);
+            s_mod_settings[i] = box;
+            for (size_t k = 0; k < m->settings_count && s_mset_count < MOD_SETTINGS_MAX; k++) {
+                mod_setting_t *ms = &s_mset[s_mset_count++];
+                *ms = (mod_setting_t){.module = m, .setting = &m->settings[k]};
+                divider(box);
+                mset_row(box, ms);
+            }
         }
+        module_settings_refresh();
     }
     for (size_t i = 0; i < s_mod_count; i++) {
-        lv_obj_set_state(s_mod_switch[i], LV_STATE_CHECKED, hub_module_enabled(s_mod_of[i]));
+        bool on = hub_module_enabled(s_mod_of[i]);
+        lv_obj_set_state(s_mod_switch[i], LV_STATE_CHECKED, on);
+        if (s_mod_settings[i]) {
+            lv_obj_set_hidden(s_mod_settings[i], !on);
+        }
     }
     lv_obj_set_hidden(s_mod_none, s_mod_count > 0);
 }

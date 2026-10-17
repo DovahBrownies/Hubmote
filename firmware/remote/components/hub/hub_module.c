@@ -5,6 +5,7 @@
 #include <string.h>
 #include "esp_log.h"
 #include "esp_lvgl_port.h"
+#include "hub_store.h"
 #include "hub_time.h"
 #include "kv.h"
 
@@ -191,5 +192,71 @@ void hub_ui_async(void (*fn)(void *arg), void *arg)
     if (lvgl_port_lock(0)) {
         lv_async_call(fn, arg);
         lvgl_port_unlock();
+    }
+}
+
+/* --- Settings ---------------------------------------------------------------- */
+
+const hub_setting_t *hub_setting_find(const hub_module_t *module, const char *key)
+{
+    for (size_t i = 0; module && i < module->settings_count; i++) {
+        if (strcmp(module->settings[i].key, key) == 0) {
+            return &module->settings[i];
+        }
+    }
+    return NULL;
+}
+
+/* A value the setting allows: the nearest one, or the default. */
+static int32_t allowed(const hub_setting_t *s, int32_t v)
+{
+    switch (s->type) {
+    case HUB_SETTING_SWITCH:
+        return v != 0;
+    case HUB_SETTING_CHOICE:
+        return v >= 0 && (size_t)v < s->count ? v : s->def;
+    case HUB_SETTING_NUMBER:
+        return v < s->min ? s->min : v > s->max ? s->max : v;
+    default:
+        return v;
+    }
+}
+
+int32_t hub_setting_i32(const hub_module_t *module, const char *key)
+{
+    const hub_setting_t *s = hub_setting_find(module, key);
+    if (!s) {
+        return 0;
+    }
+    int32_t v = s->def;
+    hub_kv_get_i32(module->id, key, &v);
+    return allowed(s, v);
+}
+
+void hub_setting_str(const hub_module_t *module, const char *key, char *out, size_t len)
+{
+    if (!hub_setting_find(module, key) || hub_kv_get_str(module->id, key, out, len) != ESP_OK) {
+        if (len > 0) {
+            out[0] = '\0';
+        }
+    }
+}
+
+void hub_setting_save(const char *module_id, const char *key, int32_t value, const char *text)
+{
+    const hub_module_t *m = hub_module_find(module_id);
+    const hub_setting_t *s = hub_setting_find(m, key);
+    if (!s) {
+        return;
+    }
+    if (s->type == HUB_SETTING_TEXT) {
+        hub_kv_set_str(m->id, key, text ? text : "");
+    } else {
+        hub_kv_set_i32(m->id, key, allowed(s, value));
+    }
+    ESP_LOGI(TAG, "module %s: %s changed", m->id, key); /* not the value: it may be a key or a name */
+    int i = index_of(m);
+    if (i >= 0 && !s_off[i] && s_started[i] && m->setting_changed) {
+        m->setting_changed(key);
     }
 }

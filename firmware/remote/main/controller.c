@@ -293,6 +293,15 @@ static void handle_ui(const ctrl_ui_t *a)
             ui_set_time_zone(hub_time_zone());
         }
         return;
+    case UI_ACT_MODULE_SETTING: {
+        char id[HUB_MODULE_ID_MAX + 1];
+        const char *slash = strchr(a->name, '/');
+        if (slash && (size_t)(slash - a->name) < sizeof(id)) {
+            snprintf(id, sizeof(id), "%.*s", (int)(slash - a->name), a->name);
+            hub_setting_save(id, slash + 1, a->index, a->text);
+        }
+        return;
+    }
     default:
         break;
     }
