@@ -270,7 +270,7 @@ untested: their facts and sources are in their headers in
   `-D HM_NO_SECRETS=1` (make_site refuses images with secrets.env values),
   and put the remote back on its normal developer build afterwards.
 - **Version.** `firmware/remote/version.txt` sets the app version
-  (`0.1.0-dev`); reconfigure after changing it. Settings shows version and
+  (the coming release with `-dev`, `0.1.1-dev` after 0.1.0); reconfigure after changing it. Settings shows version and
   build time in the context chip (`ui_settings_version_text()`), and TV
   updates don't overwrite it there (`tv_context()`). The build time comes
   from `main/build_info.c`, stamped every build: ESP-IDF's

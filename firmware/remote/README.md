@@ -24,8 +24,8 @@ pieces work:
     `ota_mark_good()`, logged as `ota: new firmware confirmed`.
   - `GET /version` shows the running build and slot; Settings shows the
     version and build time in the top bar's chip.
-- **Version** comes from `version.txt` (`0.1.0-dev` until the first
-  release). ESP-IDF reads it at configure time, so run
+- **Version** comes from `version.txt` (the coming release with `-dev`:
+  `0.1.1-dev` after 0.1.0). ESP-IDF reads it at configure time, so run
   `.\scripts\hm-idf.ps1 reconfigure` after changing it.
 - **Flash layout** (`partitions.csv`):
   - `nvs` at 0x9000 and `storage` at 0x620000 must never move, so updates
