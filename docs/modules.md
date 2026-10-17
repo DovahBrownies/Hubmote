@@ -12,8 +12,8 @@ firmware has to change to add one.
 
 These are native modules. They are compiled into the firmware, and
 switched on or off in menuconfig. Card modules, which are data files
-installed on the device without reflashing, are planned (see
-[PLAN.md, section 4](PLAN.md#4-two-kinds-of-modules-so-the-catalog-can-grow-to-dozens)).
+installed on the device without reflashing, are planned
+([issue #26](https://github.com/DovahBrownies/Hubmote/issues/26)).
 
 `modules/weather/` is the complete example. It has web requests, a cache
 file, settings, a glance, a Home card, a full screen and a host test (see

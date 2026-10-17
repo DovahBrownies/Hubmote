@@ -16,8 +16,8 @@ Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md).
 - **Security problems.** Don't report them in an issue. See
   [SECURITY.md](SECURITY.md).
 - **Bigger changes.** Describe what you have in mind in an issue first,
-  so the approach can be agreed on before you spend the time. The plan
-  and the decisions so far are in [docs/PLAN.md](docs/PLAN.md).
+  so the approach can be agreed on before you spend the time. Planned
+  work is in the [issues](https://github.com/DovahBrownies/Hubmote/issues).
 
 ## Building
 

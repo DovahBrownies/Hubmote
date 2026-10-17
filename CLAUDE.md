@@ -29,9 +29,10 @@ LF, and CRLF for `.ps1`.
   details. Put each fact in one place and link to it; keep the guide that
   covers a change current.
 - Open problems and pending work are GitHub issues (`gh issue list`).
-- `docs/PLAN.md`: the plan for modules, TVs over IR beyond Samsung, and
-  the open-source release (as Hubmote), with the decisions taken and the
-  state of each phase.
+- `private/PLAN.md` (gitignored, may not exist): the original plan and
+  the decisions behind the design (modules, navigation, themes, IR TVs,
+  setup, the release), taken out of the repo on 2026-10-17. The public
+  roadmap is the issues.
 - `docs/modules.md`: how to write a module (API, threads, rules, testing,
   PR checklist). Keep it current when `components/hub` or `ui_kit.h`
   change.
@@ -228,7 +229,7 @@ untested: their facts and sources are in their headers in
   every size; at 1024x600 its pictures match the remote's screenshots
   pixel for pixel, so a change meant to keep the 7B's screens the same
   can be checked by comparing them before and after.
-- **Navigation** (design A with E's switcher, `docs/PLAN.md` section 5):
+- **Navigation:**
   the top bar has a remote tab (current remote; its chevron opens the
   switcher sheet, `ui_switcher.c`), a Home tab (module cards,
   `ui_dash.c`), a context pill, a module glance, Wi-Fi, battery and a gear

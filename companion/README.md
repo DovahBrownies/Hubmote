@@ -70,8 +70,7 @@ notifications.
 - **From the remote:** it is meant to install by itself where the
   companion may install apps, which the install scripts allow. Otherwise
   Android asks on the TV. See [Updating itself](#updating-itself).
-- [PLAN 9.3](../docs/PLAN.md#93-installing-the-companion-app) covers the
-  Downloader route, the phone-app fallback and the remote installing it.
+- [Issue #17](https://github.com/DovahBrownies/Hubmote/issues/17) tracks trying the Downloader route.
 
 ### TVs that block installs from apps
 

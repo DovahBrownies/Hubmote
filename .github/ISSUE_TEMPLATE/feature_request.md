@@ -12,8 +12,8 @@ labels: enhancement
 <!-- For example: which devices or web services (APIs) it would use, and
 whether it works on your home network alone or needs the internet. A module is an
 extra screen on the remote's Home tab, like Weather. Module ideas so far
-are in section 15 of the plan:
-https://github.com/DovahBrownies/Hubmote/blob/main/docs/PLAN.md -->
+are the issues labeled "module":
+https://github.com/DovahBrownies/Hubmote/issues?q=label%3Amodule -->
 
 
 **Would you build it, or test it on your hardware?**

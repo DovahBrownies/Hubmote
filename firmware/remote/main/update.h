@@ -1,7 +1,7 @@
 #pragma once
 
 /*
- * Updates from the published releases (main/update.c, docs/PLAN.md 9.4).
+ * Updates from the published releases (main/update.c).
  * The remote reads update.json next to the web installer
  * (CONFIG_HM_UPDATE_URL), and on request installs the newer image over
  * HTTPS into the spare app slot. Rollback stays on (ota_mark_good()).

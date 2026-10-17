@@ -553,10 +553,8 @@ Not checked on hardware yet:
 
 ## What's next
 
-The plan (modules, the setup experience, more TVs, releases) and its
-progress are in [docs/PLAN.md](../../docs/PLAN.md). Open problems are in
-the [GitHub issues](https://github.com/DovahBrownies/Hubmote/issues). On
-the hardware side, these are next:
+Planned work and open problems are in the
+[GitHub issues](https://github.com/DovahBrownies/Hubmote/issues). On the hardware side, these are next:
 
 - A MOSFET transmit stage for IR range ([docs/hardware.md](../../docs/hardware.md)).
 - Wake on pickup, with an accelerometer such as a BMA400. But GPIO6, the

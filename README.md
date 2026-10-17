@@ -107,7 +107,7 @@ For developers:
   and [TVs over IR](docs/ir-tvs.md).
 - **The project:** [security](docs/security.md) (what it protects),
   [releasing](docs/releasing.md) (how releases go out) and the
-  [plan](docs/PLAN.md) (what's next).
+  [issues](https://github.com/DovahBrownies/Hubmote/issues) (what's next).
 - **The code:** the [firmware](firmware/remote/README.md) and the
   [companion](companion/README.md).
 
