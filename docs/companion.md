@@ -73,7 +73,8 @@ blocks scripts until you allow them once:
 Not tried yet: if you try it, please say how it went in
 [issue #17](https://github.com/DovahBrownies/Hubmote/issues/17).
 
-1. **Install Downloader** (by AFTVnews) from Google Play on the Streamer.
+1. **Install [Downloader](https://play.google.com/store/apps/details?id=com.esaba.downloader)**
+   (by AFTVnews) from Google Play on the Streamer.
 2. **Let it install apps:** Settings > Apps > Security & restrictions >
    Unknown sources > **Downloader** on. If that page is greyed out, the TV
    blocks installs from apps: use the PC.
