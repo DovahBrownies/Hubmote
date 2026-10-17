@@ -5,6 +5,8 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
+#include "esp_err.h"
 #include "esp_http_server.h"
 
 /* In developer builds (CONFIG_HM_LOCAL_OTA), starts the update server; call
@@ -28,3 +30,19 @@ const char *ota_token(void);
  * sent as X-OTA-Body and copied to body_sha256: the handler must check the
  * body against it. Hex is lowercase. tools/hm_auth.py does the client side. */
 bool ota_authorized(httpd_req_t *req, char body_sha256[65]);
+
+/* Reads the next part of an image into buf, at most len bytes: returns how
+ * many it read, or 0 or less when the data stopped. */
+typedef int (*ota_read_t)(void *ctx, uint8_t *buf, size_t len);
+/* Called after each part with how much of the image is written. */
+typedef void (*ota_progress_t)(void *ctx, size_t done, size_t size);
+
+/* Writes an image of size bytes into the spare app slot, reading it with
+ * read(ctx) and telling progress(ctx) (may be NULL). Every build has it:
+ * the update server and updates from the releases (update.c) both use it.
+ * It checks the image against sha256 (hex, either case) and checks the
+ * image itself, then makes it the next boot; restart to run it. Errors:
+ * ESP_ERR_INVALID_SIZE (no spare slot, or the image doesn't fit), ESP_FAIL
+ * (the data stopped early), ESP_ERR_INVALID_CRC (a different image), and
+ * the esp_ota_* errors. */
+esp_err_t ota_write_image(size_t size, const char *sha256, ota_read_t read, ota_progress_t progress, void *ctx);

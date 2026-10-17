@@ -9,12 +9,16 @@
  * GET /version tells which build is running; GET /nonce hands out the
  * one-time value a signed request needs.
  *
- * In every build, ota_mark_good() confirms a freshly updated image.
+ * In every build, ota_write_image() writes an image into the spare slot
+ * (update.c uses it too), and ota_mark_good() confirms a freshly updated
+ * image.
  */
 #include "ota.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include "build_info.h"
 #include "devtools.h"
 #include "esp_app_desc.h"
@@ -34,9 +38,72 @@
 
 static const char *TAG = "ota";
 
+/* --- Writing an image (every build) -------------------------------------------- */
+
+#define IMAGE_CHUNK 4096
+
+esp_err_t ota_write_image(size_t size, const char *sha256, ota_read_t read, ota_progress_t progress, void *ctx)
+{
+    const esp_partition_t *part = esp_ota_get_next_update_partition(NULL);
+    if (!part || size == 0 || size > part->size) {
+        ESP_LOGE(TAG, "no update slot, or the image doesn't fit");
+        return ESP_ERR_INVALID_SIZE;
+    }
+    uint8_t *buf = heap_caps_malloc(IMAGE_CHUNK, MALLOC_CAP_SPIRAM);
+    esp_ota_handle_t ota = 0;
+    esp_err_t err = buf ? esp_ota_begin(part, size, &ota) : ESP_ERR_NO_MEM;
+    ESP_LOGI(TAG, "writing %u bytes into %s", (unsigned)size, part->label);
+    mbedtls_sha256_context sha;
+    mbedtls_sha256_init(&sha);
+    mbedtls_sha256_starts(&sha, 0);
+    size_t done = 0;
+    while (err == ESP_OK && done < size) {
+        size_t want = size - done < IMAGE_CHUNK ? size - done : IMAGE_CHUNK;
+        int r = read(ctx, buf, want);
+        if (r <= 0 || (size_t)r > want) {
+            err = ESP_FAIL; /* the data stopped early */
+            break;
+        }
+        mbedtls_sha256_update(&sha, buf, (size_t)r);
+        err = esp_ota_write(ota, buf, (size_t)r);
+        done += (size_t)r;
+        if (err == ESP_OK && progress) {
+            progress(ctx, done, size);
+        }
+    }
+    free(buf);
+    uint8_t digest[32];
+    mbedtls_sha256_finish(&sha, digest);
+    mbedtls_sha256_free(&sha);
+    if (err == ESP_OK) {
+        char hex[65];
+        for (int i = 0; i < 32; i++) {
+            snprintf(hex + 2 * i, 3, "%02x", digest[i]);
+        }
+        if (strcasecmp(hex, sha256) != 0) {
+            err = ESP_ERR_INVALID_CRC;
+        }
+    }
+    if (err == ESP_OK) {
+        err = esp_ota_end(ota); /* also checks the image */
+        ota = 0;
+    }
+    if (err == ESP_OK) {
+        err = esp_ota_set_boot_partition(part);
+    }
+    if (err != ESP_OK) {
+        if (ota) {
+            esp_ota_abort(ota);
+        }
+        ESP_LOGE(TAG, "writing the image failed: %s", esp_err_to_name(err));
+        return err;
+    }
+    ESP_LOGI(TAG, "image written to %s", part->label);
+    return ESP_OK;
+}
+
 #if CONFIG_HM_LOCAL_OTA
 
-#define CHUNK 4096
 #define RECV_TIMEOUTS 3 /* of recv_wait_timeout each: a stalled upload gives up */
 #define NONCES        4
 #define NONCE_US      (60 * 1000000LL)
@@ -205,6 +272,28 @@ bool ota_authorized(httpd_req_t *req, char body_sha256[65])
 
 /* --- Updates ------------------------------------------------------------------- */
 
+/* The upload, read for ota_write_image(): a few receive timeouts in a row
+ * mean it stalled. */
+typedef struct {
+    httpd_req_t *req;
+    int timeouts;
+} upload_t;
+
+static int upload_read(void *ctx, uint8_t *buf, size_t len)
+{
+    upload_t *u = ctx;
+    for (;;) {
+        int r = httpd_req_recv(u->req, (char *)buf, len);
+        if (r == HTTPD_SOCK_ERR_TIMEOUT && ++u->timeouts < RECV_TIMEOUTS) {
+            continue;
+        }
+        if (r > 0) {
+            u->timeouts = 0;
+        }
+        return r; /* 0 or less: cut short, or stalled */
+    }
+}
+
 static esp_err_t ota_post(httpd_req_t *req)
 {
     char want[65];
@@ -215,53 +304,16 @@ static esp_err_t ota_post(httpd_req_t *req)
     if (!part || req->content_len == 0 || req->content_len > part->size) {
         return reply(req, "400 Bad Request", "no update slot, or the image doesn't fit\n");
     }
-    char *buf = heap_caps_malloc(CHUNK, MALLOC_CAP_SPIRAM);
-    esp_ota_handle_t ota = 0;
-    esp_err_t err = buf ? esp_ota_begin(part, req->content_len, &ota) : ESP_ERR_NO_MEM;
-    ESP_LOGI(TAG, "receiving %u bytes into %s", (unsigned)req->content_len, part->label);
-    mbedtls_sha256_context sha;
-    mbedtls_sha256_init(&sha);
-    mbedtls_sha256_starts(&sha, 0);
-    int timeouts = 0;
-    for (size_t left = req->content_len; err == ESP_OK && left > 0;) {
-        int r = httpd_req_recv(req, buf, left < CHUNK ? left : CHUNK);
-        if (r == HTTPD_SOCK_ERR_TIMEOUT && ++timeouts < RECV_TIMEOUTS) {
-            continue;
-        }
-        if (r <= 0) {
-            err = ESP_FAIL; /* upload cut short, or stalled */
-            break;
-        }
-        timeouts = 0;
-        mbedtls_sha256_update(&sha, (const unsigned char *)buf, (size_t)r);
-        err = esp_ota_write(ota, buf, (size_t)r);
-        left -= (size_t)r;
-    }
-    free(buf);
-    uint8_t digest[32];
-    char got[65];
-    mbedtls_sha256_finish(&sha, digest);
-    mbedtls_sha256_free(&sha);
-    to_hex(digest, sizeof(digest), got);
-    if (err == ESP_OK && strcmp(got, want) != 0) {
+    ESP_LOGI(TAG, "receiving an update");
+    upload_t upload = {.req = req};
+    esp_err_t err = ota_write_image(req->content_len, want, upload_read, NULL, &upload);
+    if (err == ESP_ERR_INVALID_CRC) {
         ESP_LOGE(TAG, "the image isn't the one that was signed");
-        err = ESP_ERR_INVALID_CRC;
-    }
-    if (err == ESP_OK) {
-        err = esp_ota_end(ota); /* also checks the image */
-        ota = 0;
-    }
-    if (err == ESP_OK) {
-        err = esp_ota_set_boot_partition(part);
     }
     if (err != ESP_OK) {
-        if (ota) {
-            esp_ota_abort(ota);
-        }
-        ESP_LOGE(TAG, "update failed: %s", esp_err_to_name(err));
         return reply(req, "500 Internal Server Error", esp_err_to_name(err));
     }
-    ESP_LOGI(TAG, "update written to %s; restarting", part->label);
+    ESP_LOGI(TAG, "update written; restarting");
     reply(req, "200 OK", "ok, restarting\n");
     xTaskCreate(restart_task, "ota_restart", 2048, NULL, 5, NULL);
     return ESP_OK;

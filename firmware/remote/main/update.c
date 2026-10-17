@@ -26,19 +26,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 #include "cJSON.h"
 #include "esp_app_desc.h"
 #include "esp_crt_bundle.h"
 #include "esp_heap_caps.h"
 #include "esp_http_client.h"
 #include "esp_log.h"
-#include "esp_ota_ops.h"
 #include "esp_system.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "mbedtls/sha256.h"
+#include "ota.h"
 #include "sdkconfig.h"
 
 static const char *TAG = "update";
@@ -49,7 +47,6 @@ static const char *TAG = "update";
 #define FIRST_CHECK_US (60LL * 1000000)
 #define CHECK_EVERY_US (24LL * 3600 * 1000000)
 #define JSON_MAX       8192 /* update.json's size limit: tools/web/make_site.py checks it */
-#define CHUNK          4096
 #define TASK_STACK     8192 /* TLS; internal RAM, as it writes flash */
 
 static TaskHandle_t s_task;
@@ -292,79 +289,53 @@ static bool check(void)
 
 /* --- Install ----------------------------------------------------------------- */
 
+/* The download, read for ota_write_image(), with progress in 5 % steps. */
+typedef struct {
+    esp_http_client_handle_t client;
+    int shown;
+} download_t;
+
+static int download_read(void *ctx, uint8_t *buf, size_t len)
+{
+    download_t *d = ctx;
+    return esp_http_client_read(d->client, (char *)buf, (int)len);
+}
+
+static void download_progress(void *ctx, size_t done, size_t size)
+{
+    download_t *d = ctx;
+    int percent = (int)((uint64_t)done * 100 / size);
+    if (percent >= d->shown + 5) {
+        d->shown = percent;
+        report(UPDATE_INSTALLING, percent < 100 ? percent : 99);
+    }
+}
+
 static void install(void)
 {
     if (s_status.state != UPDATE_AVAILABLE && !check()) {
         return;
     }
     report(UPDATE_INSTALLING, 0);
-    const esp_partition_t *part = esp_ota_get_next_update_partition(NULL);
-    if (!part || s_size > (int)part->size) {
-        ESP_LOGE(TAG, "no update slot, or the image doesn't fit");
-        report(UPDATE_FAILED, 0);
-        return;
-    }
     char url[256];
     update_file_url(url, sizeof(url), s_image);
     int64_t length = -1;
     int status;
-    esp_http_client_handle_t c = open_get(url, &length, &status);
-    uint8_t *buf = heap_caps_malloc(CHUNK, MALLOC_CAP_SPIRAM);
-    esp_ota_handle_t ota = 0;
-    esp_err_t err = (!c || !buf) ? ESP_FAIL : (length >= 0 && length != s_size) ? ESP_ERR_INVALID_SIZE
-                                                                                  : esp_ota_begin(part, s_size, &ota);
-    mbedtls_sha256_context sha;
-    mbedtls_sha256_init(&sha);
-    mbedtls_sha256_starts(&sha, 0);
-    int got = 0;
-    int shown = 0;
-    ESP_LOGI(TAG, "installing %s (%d bytes) into %s", s_status.version, s_size, part->label);
-    while (err == ESP_OK && got < s_size) {
-        int r = esp_http_client_read(c, (char *)buf, CHUNK);
-        if (r <= 0) {
-            err = ESP_FAIL; /* the download stopped early */
-            break;
-        }
-        mbedtls_sha256_update(&sha, buf, (size_t)r);
-        err = esp_ota_write(ota, buf, (size_t)r);
-        got += r;
-        int percent = (int)((int64_t)got * 100 / s_size);
-        if (percent >= shown + 5) {
-            shown = percent;
-            report(UPDATE_INSTALLING, percent < 100 ? percent : 99);
-        }
-    }
-    uint8_t digest[32];
-    mbedtls_sha256_finish(&sha, digest);
-    mbedtls_sha256_free(&sha);
-    free(buf);
-    if (c) {
-        esp_http_client_cleanup(c);
-    }
-    if (err == ESP_OK && got != s_size) {
-        err = ESP_ERR_INVALID_SIZE;
-    }
+    download_t download = {.client = open_get(url, &length, &status)};
+    esp_err_t err = !download.client                     ? ESP_FAIL
+                    : (length >= 0 && length != s_size) ? ESP_ERR_INVALID_SIZE
+                                                        : ESP_OK;
     if (err == ESP_OK) {
-        char hex[65];
-        for (int i = 0; i < 32; i++) {
-            snprintf(hex + 2 * i, 3, "%02x", digest[i]);
-        }
-        if (strcasecmp(hex, s_sha256) != 0) {
+        ESP_LOGI(TAG, "installing %s (%d bytes)", s_status.version, s_size);
+        err = ota_write_image((size_t)s_size, s_sha256, download_read, download_progress, &download);
+        if (err == ESP_ERR_INVALID_CRC) {
             ESP_LOGE(TAG, "SHA-256 doesn't match update.json");
-            err = ESP_ERR_INVALID_CRC;
         }
     }
-    if (err == ESP_OK) {
-        err = esp_ota_end(ota); /* also checks the image */
-        ota = 0;
-    }
-    if (err == ESP_OK) {
-        err = esp_ota_set_boot_partition(part);
+    if (download.client) {
+        esp_http_client_cleanup(download.client);
     }
     if (err != ESP_OK) {
-        if (ota) {
-            esp_ota_abort(ota);
-        }
         ESP_LOGE(TAG, "install failed: %s", esp_err_to_name(err));
         report(UPDATE_FAILED, 0);
         return;
