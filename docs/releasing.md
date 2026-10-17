@@ -129,13 +129,26 @@ before the next version), and give it to the workflow:
 $kt = "$env:LOCALAPPDATA\Android\jdk-17\bin\keytool.exe"
 & $kt -genkeypair -keystore hubmote-release.keystore -alias hubmote -keyalg RSA -keysize 4096 `
     -validity 10000 -dname "CN=Hubmote"
-[Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path hubmote-release.keystore))) | Set-Clipboard
 ```
 
-Then Settings > Secrets and variables > Actions > New repository secret:
-- `COMPANION_KEYSTORE_BASE64`: the clipboard (the keystore in base64);
-- `COMPANION_KEYSTORE_PASSWORD`: its password (used for the key too);
-- `COMPANION_KEY_ALIAS`: `hubmote`.
+keytool asks for a password, which protects the key too: keep it with the
+keystore's backup (a password manager, say). Then the three repository
+secrets, with `gh` (the second command asks for the password without
+showing it):
+
+```powershell
+$R = "DovahBrownies/Hubmote"
+gh secret set COMPANION_KEYSTORE_BASE64 -R $R -b ([Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path hubmote-release.keystore))))
+gh secret set COMPANION_KEYSTORE_PASSWORD -R $R
+gh secret set COMPANION_KEY_ALIAS -R $R -b hubmote
+```
+
+Or in Settings > Secrets and variables > Actions > New repository secret:
+`COMPANION_KEYSTORE_BASE64` (the keystore in base64:
+`[Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path
+hubmote-release.keystore))) | Set-Clipboard` copies it),
+`COMPANION_KEYSTORE_PASSWORD` (the password) and `COMPANION_KEY_ALIAS`
+(`hubmote`).
 
 A tag build fails without them, rather than publishing an APK signed with a
 throwaway key.
