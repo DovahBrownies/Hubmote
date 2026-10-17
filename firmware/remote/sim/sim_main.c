@@ -177,6 +177,9 @@ static void screens(void)
     ui_set_app("com.google.android.youtube.tv");
     ui_set_media("com.google.android.youtube.tv", "How the Moon formed", "Science Channel", true);
     shot("app_youtube");
+    ui_set_app("com.android.tv.settings"); /* nothing to play: no playback keys */
+    shot("app_settings");
+    ui_set_app("com.google.android.youtube.tv"); /* the keyboard opens over YouTube, as before */
     ui_ime_show("", "Search");
     shot("keyboard");
     ui_kb_close();

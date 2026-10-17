@@ -1,7 +1,8 @@
 /*
  * App context: the panel shown while an app is in the foreground. One panel
- * serves every app; it changes its header, the note about what is playing
- * and whether the previous/next keys show.
+ * serves every app; it changes its header, the note about what is playing,
+ * whether the previous/next keys show, and, for apps with nothing to play
+ * (Settings...), leaves out the playback keys and Captions.
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -31,6 +32,10 @@ static struct {
 } s_media;
 static lv_obj_t *s_prev;
 static lv_obj_t *s_next;
+static lv_obj_t *s_transport;
+static lv_obj_t *s_captions;
+static lv_obj_t *s_exit;
+static bool s_media_app; /* the app in front may play something */
 
 /* The +-10 s buttons send D-pad left/right, which seek in nearly every TV
  * app (Netflix treats the media rewind/fast-forward keys as "scrub until
@@ -143,6 +148,7 @@ lv_obj_t *ui_app_create(lv_obj_t *parent)
 
     /* Transport */
     lv_obj_t *transport = ui_box(p);
+    s_transport = transport;
     lv_obj_set_size(transport, LV_PCT(100), LV_SIZE_CONTENT);
     lv_obj_set_style_pad_ver(transport, UI_S(8), 0);
     ui_flex(transport, LV_FLEX_FLOW_ROW, UI_S(16));
@@ -174,11 +180,12 @@ lv_obj_t *ui_app_create(lv_obj_t *parent)
     /* No Search: the Search key opens voice search, which a remote without a
      * microphone can't use, and apps' own search screens can't be opened
      * from outside. Typing reaches them once they are open. */
-    lv_obj_t *b = ui_btn_icon(actions, ACTION_W, UI_S(64), 14, COL_SURFACE2, &font_icons_20, ICON_CAPTIONS, COL_TEXT,
-                              "Captions", true);
-    ui_btn_bind_key(b, UI_KEY_CAPTIONS, UI_KEYMODE_TAP);
-    b = ui_btn_icon(actions, ACTION_W, UI_S(64), 14, COL_SURFACE2, &font_icons_20, ICON_EXIT, COL_TEXT, "Exit app", true);
-    ui_btn_bind_key(b, UI_KEY_HOME, UI_KEYMODE_TAP);
+    s_captions = ui_btn_icon(actions, ACTION_W, UI_S(64), 14, COL_SURFACE2, &font_icons_20, ICON_CAPTIONS, COL_TEXT,
+                             "Captions", true);
+    ui_btn_bind_key(s_captions, UI_KEY_CAPTIONS, UI_KEYMODE_TAP);
+    s_exit = ui_btn_icon(actions, ACTION_W, UI_S(64), 14, COL_SURFACE2, &font_icons_20, ICON_EXIT, COL_TEXT, "Exit app",
+                         true);
+    ui_btn_bind_key(s_exit, UI_KEY_HOME, UI_KEYMODE_TAP);
     return p;
 }
 
@@ -213,7 +220,7 @@ static void paint_note(void)
 {
     bool session = s_media.pkg[0] && strcmp(s_media.pkg, s_pkg) == 0;
     bool media = session && s_media.title[0] && !names_app(s_media.title, s_app_name);
-    lv_obj_set_hidden(s_note, !media && !session && !s_hides_title);
+    lv_obj_set_hidden(s_note, !s_media_app || (!media && !session && !s_hides_title));
     lv_label_set_text(s_note_head, media && !s_media.playing ? "PAUSED" : "NOW PLAYING");
     lv_label_set_text(s_note_title, media ? s_media.title : "This app doesn't share the title");
     lv_label_set_text(s_note_sub, media ? s_media.subtitle : "");
@@ -258,8 +265,12 @@ void ui_app_set(const ui_app_info_t *app, const char *package)
     strlcpy(s_pkg, package ? package : "", sizeof(s_pkg));
     strlcpy(s_app_name, app ? app->name : "", sizeof(s_app_name));
     s_hides_title = app && app->hides_title;
+    s_media_app = ui_app_plays_media(package);
     paint_note();
     bool no_skip = app && app->no_skip;
     lv_obj_set_hidden(s_prev, no_skip);
     lv_obj_set_hidden(s_next, no_skip);
+    lv_obj_set_hidden(s_transport, !s_media_app);
+    lv_obj_set_hidden(s_captions, !s_media_app);
+    lv_obj_set_width(s_exit, s_media_app ? ACTION_W : LV_PCT(100));
 }

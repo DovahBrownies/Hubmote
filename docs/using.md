@@ -80,6 +80,9 @@ The middle panel follows the app on the TV.
   - the title of what's playing, where the app shares it;
   - **Captions** and **Exit app**.
 
+  Apps with nothing to play, such as the Streamer's Settings and the Play
+  Store, show only **Exit app**.
+
   If the remote guessed the app wrong, tap **Wrong app?** to show Google
   TV's Home.
 - **The screensaver, the Assistant and system panels** don't count. The

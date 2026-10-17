@@ -55,6 +55,28 @@ bool ui_app_is_system_screen(const char *package)
     return strstr(package, ".dream") != NULL; /* other screensavers */
 }
 
+/* Apps with nothing to play: their panel leaves out the playback keys,
+ * Captions and what's playing. Every other app keeps them: most apps on a
+ * TV play something, and many never say so (Plex has no media session). */
+static const char *const NOT_MEDIA[] = {
+    "com.android.tv.settings",             /* Settings */
+    "com.android.vending",                 /* Play Store */
+    "com.google.android.gms",              /* Google account screens */
+    "com.android.packageinstaller",        /* install dialogs */
+    "com.google.android.packageinstaller",
+    "com.android.documentsui",             /* files */
+};
+
+bool ui_app_plays_media(const char *package)
+{
+    for (size_t i = 0; package && i < sizeof(NOT_MEDIA) / sizeof(NOT_MEDIA[0]); i++) {
+        if (strcmp(NOT_MEDIA[i], package) == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static const char *const LAUNCHERS[] = {
     "com.google.android.apps.tv.launcherx",
     "com.google.android.tvlauncher",

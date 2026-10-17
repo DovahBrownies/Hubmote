@@ -582,9 +582,13 @@ void ui_set_apps(const ui_app_t *apps, size_t count)
     LOCK();
     ui_apps_set_tv(apps, count);
     ui_tv_home_refresh();
-    /* The app panel may show an icon from the old list. */
+    /* The app panel may show an icon from the old list, and the context
+     * the package of an app the list now names. */
     if (s_app[0] && !ui_apps_is_launcher(s_app)) {
         ui_app_set(ui_apps_find(s_app), s_app);
+        if (tv_context()) {
+            apply_context();
+        }
     }
     UNLOCK();
 }
