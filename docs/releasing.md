@@ -76,6 +76,9 @@ Every run keeps the site, the screenshots and the APK as run artifacts
 
 The actions the workflow uses are pinned to commits, with their tag in a
 comment. That way a moved tag can't change what runs with the signing key.
+Espressif's build container is pinned the same way, by digest
+(`IDF_IMAGE` in the firmware job, with how to update it). Dependabot
+doesn't update the container: do it by hand when moving to a new ESP-IDF.
 Dependabot (`.github/dependabot.yml`) proposes updates weekly, as pull
 requests. Check what changed before you merge one. Each one runs the
 whole workflow: seven firmware jobs, in about 10 minutes.
