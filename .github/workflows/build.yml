@@ -68,6 +68,10 @@ jobs:
           "$RUNNER_TEMP/atvgen/bin/pip" install --quiet protobuf==7.36.2 grpcio-tools==1.84.0
           "$RUNNER_TEMP/atvgen/bin/python" firmware/remote/components/atv_remote/tools/gen_golden.py
           git diff --exit-code -- firmware/remote/components/atv_remote/src/atv_golden.h
+          # The time zones, from the tz database release tools/time/gen_zones.py names.
+          "$RUNNER_TEMP/atvgen/bin/pip" install --quiet tzdata==2026.5
+          "$RUNNER_TEMP/atvgen/bin/python" firmware/remote/tools/time/gen_zones.py
+          git diff --exit-code -- firmware/remote/components/hub/hub_tz.c
 
   # The UI on the PC (firmware/remote/sim): every screen at every board's
   # screen size, in two themes, kept as an artifact to look at.

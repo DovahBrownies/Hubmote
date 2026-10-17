@@ -6,9 +6,11 @@ rule, which carries its daylight-saving changes. The remote's C library
 applies the rule (setenv("TZ", ...)), so the table needs no updates for
 daylight saving; it does when a country changes its rules.
 
-The tz database is public domain. It comes from the `tzdata` package:
+The tz database is public domain. It comes from the `tzdata` package, at
+the version CI checks hub_tz.c with (.github/workflows/build.yml); to move
+to a newer tz release, raise it in both places:
 
-    python -m pip install tzdata
+    python -m pip install tzdata==2026.5
     python tools/time/gen_zones.py
 
 The rule is the last line of each zone's TZif file (version 2 and later).

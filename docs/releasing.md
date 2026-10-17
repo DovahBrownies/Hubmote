@@ -31,6 +31,8 @@ A tag's run is never cancelled.
   - a check that `atv_keycodes.h` and `atv_golden.h` match their
     generators. The golden vectors are made with protobuf 7.36.2 and
     grpcio-tools 1.84.0, the versions `gen_golden.py` names.
+  - a check that `hub_tz.c`, the time zones, matches
+    `tools/time/gen_zones.py` with tzdata 2026.5.
 - **UI simulator** builds the UI for the PC (`firmware/remote/sim`), with
   LVGL at the version `dependencies.lock` names. It draws every screen at
   every board's screen size, in Midnight and Daylight, and keeps them as
