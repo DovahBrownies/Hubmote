@@ -1,5 +1,6 @@
-# Builds and tests everything on every push and pull request: the firmware
-# for every board, the UI simulator, the companion app. A version tag
+# Builds and tests everything on every push to main and every pull request
+# that changes more than the docs: the firmware for every board, the UI
+# simulator, the companion app. A version tag
 # (v0.1.0) also publishes: the web installer goes to GitHub Pages with every
 # board's firmware, the companion APK and update.json (what remotes update
 # from), and a GitHub release gets each board's images and the companion
@@ -15,11 +16,21 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
+    # Docs alone build nothing. GitHub doesn't apply path filters to tags,
+    # so a tag always builds.
+    paths-ignore: ["**.md", "docs/**", "hardware/**"]
   pull_request:
+    paths-ignore: ["**.md", "docs/**", "hardware/**"]
   workflow_dispatch:
 
 permissions:
   contents: read
+
+# A newer push to main or to a pull request cancels the run it replaces; a
+# tag's run is never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
   host-tests:

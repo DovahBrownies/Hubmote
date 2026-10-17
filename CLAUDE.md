@@ -43,7 +43,8 @@ LF, and CRLF for `.ps1`.
   board-specific settings change.
 - `.github/workflows/build.yml` and `docs/releasing.md`: CI (host tests,
   the UI simulator, developer and release firmware for every board,
-  installer site, companion APK), Pages and
+  installer site, companion APK; skipped when a push or pull request
+  only changes Markdown, `docs/` or `hardware/`), Pages and
   releases on `v*` tags, the first publish with a fresh history, the
   companion's release key in repository secrets.
 - `CONTRIBUTING.md` and `.github/ISSUE_TEMPLATE/`, `pull_request_template.md`:

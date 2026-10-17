@@ -38,7 +38,8 @@ Check before sending a pull request (paths from `firmware/remote`):
   draws every screen at each (`python sim/run_sim.py`,
   [sim/README.md](firmware/remote/sim/README.md)).
 
-The GitHub workflow runs the same builds and tests on every pull request.
+The GitHub workflow runs the same builds and tests on every pull request
+that changes more than documentation.
 
 ## How the code is written
 

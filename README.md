@@ -1,6 +1,6 @@
 # Hubmote
 
-A touchscreen remote for the **Google TV Streamer**, built on Waveshare's
+A touchscreen remote for the **[Google TV Streamer](https://store.google.com/product/google_tv_streamer)**, built on Waveshare's
 ESP32-S3 touch boards. It talks to the Streamer over Wi-Fi with the same
 protocol as Google's phone app, follows whatever app is on the TV, and
 controls the TV and other devices over IR.
@@ -27,7 +27,7 @@ controls the TV and other devices over IR.
 - A Waveshare ESP32-S3 touch board: the **ESP32-S3-Touch-LCD-7B** (7",
   the one Hubmote is made on), or the 7, 5B, 5, 4.3, 4.3B or 4.3C
   (supported, not yet tried: [what each can do](docs/porting.md#the-boards)).
-- A Google TV Streamer, and a 2.4 GHz Wi-Fi network.
+- A [Google TV Streamer](https://store.google.com/product/google_tv_streamer), and a 2.4 GHz Wi-Fi network.
 - Optional: an IR receiver and transmitter, a LiPo battery, and the
   [3D-printed case](hardware/enclosure).
 

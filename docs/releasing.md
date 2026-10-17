@@ -5,8 +5,11 @@ workflow builds, and how a release goes out.
 
 ## What the workflow does
 
-`.github/workflows/build.yml` runs on every push to `main`, on pull
-requests, on version tags and by hand (Actions > Build > Run workflow):
+`.github/workflows/build.yml` runs on every push to `main` and every pull
+request that changes more than the docs (Markdown files, `docs/`,
+`hardware/`), on version tags (always) and by hand (Actions > Build > Run
+workflow). A newer push to `main` or to a pull request cancels the run it
+replaces; a tag's run is never cancelled.
 
 | Job | What it does |
 |---|---|
@@ -25,9 +28,7 @@ The actions the workflow uses are pinned to commits, with their tag in a
 comment, so a moved tag can't change what runs with the signing key.
 Dependabot (`.github/dependabot.yml`) proposes updates weekly as pull
 requests; check what changed before merging one. Each pull request runs
-the whole workflow (seven firmware jobs), which on a private repository
-uses Actions minutes. A force-push of `main` closes Dependabot's open pull
-requests, and Dependabot then skips those versions: bump them by hand.
+the whole workflow (seven firmware jobs, about 15 minutes).
 
 ## Once, before the first release
 
