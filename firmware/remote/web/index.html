@@ -29,8 +29,10 @@
     background: var(--s1); border: 1px solid var(--line); border-radius: 16px;
     padding: 18px 20px; display: grid; grid-template-columns: 32px 1fr; gap: 4px 14px;
   }
+  /* The number beside the heading; everything else in the text column. */
+  li > :not(.n) { grid-column: 2; }
   .n {
-    grid-row: span 2; width: 32px; height: 32px; border-radius: 50%;
+    grid-row: 1 / span 2; width: 32px; height: 32px; border-radius: 50%;
     background: var(--s2); color: var(--accent-text); font-weight: 600;
     display: flex; align-items: center; justify-content: center;
   }
