@@ -1,147 +1,274 @@
 # Using the remote
 
-Two "Homes" appear below: **the Home tab** in the top bar (module cards),
-and **Google TV's Home**, the app grid the remote shows while the TV is on
-its Home screen.
+This page explains the remote's screens and settings, for everyday use. To
+set the remote up the first time, see [getting started](getting-started.md).
+
+> [!NOTE]
+> Two different "Homes" come up on this page:
+>
+> - **The Home tab** is in the remote's top bar. It shows a card for each
+>   module (an extra feature, such as the weather).
+> - **Google TV's Home** is the grid of apps the remote shows while the TV
+>   is on its Home screen.
+
+On this page:
+
+- [The top bar](#the-top-bar)
+- [The Google TV](#the-google-tv)
+- [The keyboard](#the-keyboard)
+- [The TV and other devices (IR)](#the-tv-and-other-devices-ir)
+- [Modules](#modules)
+- [Settings](#settings)
+- [Sleep and turning off](#sleep-and-turning-off)
 
 ## The top bar
 
-- **The remote tab** (top left) shows the remote in use: the Google TV, the
-  TV over IR, or a learned remote. Tap it for the **switcher**: your
-  remotes (with Add a TV and Add a remote), modules, and Settings. From the
-  Home tab or Settings, a tap goes back to the remote.
-- **The Home tab** shows a card for each module; tap one to open it.
-- In the middle, what's on: the app, *Typing*, a module.
-- On the right: a module's glance (the weather), Wi-Fi, the battery, and
-  the **gear** for Settings (tap it again to go back).
-- **The battery** turns green with a bolt while charging and red below 30%.
-  When it falls below 20% on battery, a "Battery low" card appears. `--%`
-  means no cell is connected (or its switch is off).
+From left to right:
+
+- **The remote tab.** It shows the remote you're using: the Google TV, the
+  TV over IR (infrared, like the TV's own remote), or a learned remote.
+  Tap it to open the **switcher**. The switcher lists your remotes (with
+  **Add a TV** and **Add a remote**), your modules, and **Settings**. If
+  you're on the Home tab or in Settings, tapping the remote tab takes you
+  back to the remote instead.
+- **The Home tab** shows a card for each module. Tap one to open it.
+- **What's on**, in the middle: the app on the TV, **Typing** while you
+  type, or the module you have open.
+- **On the right:** a module's glance (the weather), Wi-Fi, the battery,
+  and the **gear**. The gear opens Settings. Tap it again to go back.
+
+The battery icon:
+
+- **Green with a bolt** means it's charging.
+- **Red** means it's below 30%.
+- **`--%`** means no battery is connected, or its power switch is off.
+
+When the battery falls below 20% while the remote runs on it, a
+**Battery low** card appears.
 
 ## The Google TV
 
-- **The rail** (left): Power, Back, Home, Keyboard, and volume with mute.
-  Volume: a tap is one step, and holding is a real key hold that stops
-  when you let go (over the TV's IR, a hold sends a short burst instead).
-  The mute icon shows a crossed-out speaker while the TV reports it's
-  muted.
-- **The middle panel** follows the app on the TV:
-  - **Google TV's Home:** your apps. Under them, **Search** (types into
-    Google TV's search, with the companion app), **Inputs** (an HDMI switch
-    over IR) and **Settings** (the Streamer's).
-  - **An app:** play/pause, skip back and forward (the D-pad's left and
-    right: about 10 s in most apps; holding keeps skipping, faster and
-    faster), previous and next where the app has them, the title of
-    what's playing where the app shares it, **Captions** and **Exit app**.
-    **Wrong app?** shows Google TV's Home if the remote guessed the app
-    wrong.
-  - The screensaver, the Assistant and system panels don't count: the
-    panel stays on the app underneath.
-- **Arranging Google TV's Home:** tap **Edit**. Tap an app to hide or show
-  it; press and hold to drag it somewhere else; **Done** when finished. New
-  apps appear after the ones you placed.
-- **The right side:** a **D-pad** (holding an arrow is a long press) or a
-  **touchpad**: each swipe sticks to one direction, slow movement steps one
-  item, a flick several, and holding still at the end keeps going. Tap for
-  OK.
+These screens control the Google TV Streamer: the rail on the left, the
+middle panel, and the D-pad or touchpad on the right.
+
+### The rail
+
+The rail is the column of keys on the left: **Power**, **Back**, **Home**,
+**Keyboard**, and volume with mute.
+
+- **Volume:** a tap is one step. Holding a volume key holds it down on the
+  TV until you let go. When volume goes to the TV over IR, a hold sends a
+  short burst instead.
+- **Mute:** the icon shows a crossed-out speaker while the TV reports that
+  it's muted.
+
+### The middle panel
+
+The middle panel follows the app on the TV.
+
+- **On Google TV's Home**, it shows your apps. Under them are three
+  buttons:
+  - **Search** types into Google TV's search. It needs the
+    [companion app](companion.md), an optional app for the Streamer.
+  - **Inputs** controls an HDMI switch over IR.
+  - **Settings** opens the Streamer's settings.
+- **In an app**, it shows:
+  - play/pause;
+  - skip back and forward, about 10 seconds in most apps. They send the
+    D-pad's left and right. Hold one to keep skipping, faster and faster;
+  - previous and next, where the app has them;
+  - the title of what's playing, where the app shares it;
+  - **Captions** and **Exit app**.
+
+  If the remote guessed the app wrong, tap **Wrong app?** to show Google
+  TV's Home.
+- **The screensaver, the Assistant and system panels** don't count. The
+  panel stays on the app underneath.
 
 Without the [companion app](companion.md), Google TV's Home shows five
 built-in apps instead of everything installed on the TV.
 
+To arrange Google TV's Home:
+
+1. Tap **Edit**.
+2. Tap an app to hide or show it.
+3. Press and hold an app, then drag it somewhere else.
+4. Tap **Done** when you're finished.
+
+New apps appear after the ones you placed.
+
+### The D-pad and touchpad
+
+The right side is a **D-pad** or a **touchpad**. Switch between them with
+the **D-pad** and **Touchpad** buttons above it.
+
+- **D-pad:** holding an arrow is a long press.
+- **Touchpad:** each swipe sticks to one direction. Move slowly to step one
+  item, or flick to move several. Hold still at the end of a swipe to keep
+  going. Tap for OK.
+
 ## The keyboard
 
-It opens by itself when the TV asks for a keyboard (Google TV's own fields,
-YouTube's search). Elsewhere, in browsers and apps with their own keyboard,
-tap the rail's **Keyboard** key; the same key, Back or Home close it. It has
-QWERTY, a symbols layer (`#+=`) and a number pad. Apps take text in
-different ways, and the keyboard picks the one that works:
+The keyboard opens by itself when the TV asks for one, as in Google TV's
+own fields or YouTube's search. Elsewhere, as in browsers and apps with
+their own keyboard, tap **Keyboard** on the rail. To close it, tap
+**Keyboard** again, **Back** or **Home**.
 
-- **A text field** (one the TV announces, or one the companion sees, such
-  as in a browser): what you type replaces the field's text, **Clear**
-  empties it (the TV's field too with the companion; without it, the TV's
-  field keeps its text), and the **Search** key (bottom right) is the
-  field's own Enter. Number fields get a large number pad; passwords show as `*`. With
-  the companion, the Streamer's own on-screen keyboard is hidden meanwhile.
-- **An app's own keyboard** (Plex, with the companion): the companion
-  presses its letters for you, about three a second.
-- **Google TV's Home** (with the companion): *Search Google TV*. Pause
-  typing after three or more letters (or tap Search) and Google TV's search
-  opens with your text, with results from every app.
-- **Anything else:** characters go to the app as keys. YouTube takes them;
-  Netflix only while its keyboard has focus (move onto its letters first);
-  Prime Video ignores them, so search from Google TV's Home.
+It has QWERTY letters, a symbols layer (**#+=**) and a number pad.
+
+Apps take text in different ways, and the keyboard picks the one that
+works:
+
+- **A text field** that the TV announces, or that the companion sees (as
+  in a browser):
+  - What you type replaces the field's text.
+  - **Clear** empties the field. With the companion it empties the TV's
+    field too. Without it, the TV's field keeps its text.
+  - The **Search** key (bottom right) is the field's own Enter.
+  - Number fields get a large number pad, and passwords show as `*`.
+  - With the companion, the Streamer's own on-screen keyboard is hidden
+    while you type.
+- **An app's own on-screen keyboard**, as in Plex, with the companion. The
+  companion presses its letters for you, about three a second.
+- **Google TV's Home**, with the companion. The keyboard shows **Search
+  Google TV**. Pause after three or more letters, or tap **Search**. Google
+  TV's search then opens with your text, with results from every app.
+- **Anything else.** Characters go to the app as key presses:
+  - YouTube takes them.
+  - Netflix takes them only while its keyboard has focus, so move onto its
+    letters first.
+  - Prime Video ignores them, so search from Google TV's Home instead.
 
 ## The TV and other devices (IR)
 
-These need the IR receiver and transmitter ([hardware](hardware.md)). On a
-board without free pins for IR they don't appear. With only a transmitter
-(the 4.3), Add a TV works with its built-in codes, and learning is left
-out.
+These screens need an IR (infrared) transmitter and receiver wired to the
+board ([hardware](hardware.md)). The transmitter sends codes to your
+devices. The receiver learns buttons from their own remotes.
 
-- **The TV:** Add a TV (switcher, or Settings > Remotes). Pick the brand,
-  then try its code sets: **Send**, then **It worked** or **Next set**. Or
-  learn every key from the TV's own remote. Its panel has power, HDMI
-  1-4, Source, channels, Back, Home, Menu, Settings, Info, Exit and volume.
-  Dimmed keys have no code yet: tap one to learn it. **Keys** lists them
-  all (arrows, OK and digits too); **Change** picks another set or removes
-  the TV. The D-pad or touchpad next to it drives the TV, and its volume
-  follows Settings > Remotes > TV volume. More in [TVs over IR](ir-tvs.md).
-- **Learned remotes** (a soundbar, a fan...): Learn a remote (Settings >
-  Remotes, or Add a remote in the switcher). Pick the kind of device (it
-  becomes the remote's name; rename it later with Edit) and a button, press
-  the original remote's button three times at the receiver, test, save. A
-  learned remote is a grid of its buttons with **Learn a button**; **Edit**
-  renames or deletes the remote, or a button you select (deleting asks
-  twice).
-- **Inputs:** the four inputs of an HDMI switch, from **Inputs** under
-  Google TV's Home or *HDMI switch* in the switcher. Tap one to switch (or
-  to learn it); **Edit** renames or learns them again.
+- On a board without free pins for IR, these screens don't appear.
+- With only a transmitter (the 4.3), **Add a TV** works with its built-in
+  codes, and learning is left out.
 
-On these screens the Streamer's rail is hidden, so its keys can't be
-pressed by mistake.
+On these screens the Streamer's rail is hidden, so you can't press its
+keys by mistake.
+
+### Your TV
+
+Tap **Add a TV**, in the switcher or in **Settings > Remotes**. Pick your
+TV's brand, then try its code sets until the TV reacts. If none works, the
+remote can learn every key from the TV's own remote instead.
+
+The TV then gets its own panel, with power, HDMI inputs, channels, menus
+and volume. [TVs over IR](ir-tvs.md#adding-a-tv) has the steps, the
+panel's keys, how to learn missing keys, and where the volume keys go.
+
+### Learned remotes
+
+A learned remote copies another device's remote, such as a soundbar's or
+a fan's. To learn one:
+
+1. Tap **Learn a remote** in **Settings > Remotes**, or **Add a remote**
+   in the switcher.
+2. Pick the kind of device. It becomes the remote's name, and you can
+   rename it later with **Edit**.
+3. Pick a button, then tap **Start learning**.
+4. Point the device's own remote at the IR receiver and press that button
+   three times.
+5. Tap **Test** and check that the device reacts, then tap **Save**.
+
+A learned remote's screen is a grid of its buttons.
+
+- **Learn a button** adds another button.
+- **Edit** renames or deletes the remote, or a button you select.
+  Deleting takes two taps: **Delete**, then **Confirm delete**.
+
+### Inputs
+
+**Inputs** controls the four inputs of an HDMI switch (a box that lets
+several devices share one HDMI port on the TV). Open it with **Inputs**
+under Google TV's Home, or **HDMI switch** in the switcher.
+
+- Tap an input to switch to it. If it isn't learned yet, tapping it
+  starts learning it.
+- **Edit** renames the inputs or learns them again.
 
 ## Modules
 
-The Home tab has a card for each module. **Weather:** tap the place (or
-*Set location*), type a city and pick it; the °C/°F switch is next to it.
-It refreshes every 30 minutes while the screen is on. Settings > Modules
-switches modules on and off.
+Each module has a card on the Home tab. **Settings > Modules** switches
+modules on and off.
+
+**Weather.** To choose the place:
+
+1. Tap the place's name, or **Set location** if there isn't one yet.
+2. Type a city and pick it.
+
+The °C/°F switch is next to the place. The weather refreshes every 30
+minutes while the screen is on.
 
 ## Settings
 
-The gear (or Settings in the switcher). The chip at the top shows the
-firmware version.
+Open Settings with the gear, or with **Settings** in the switcher. While
+it's open, the middle of the top bar shows the firmware version (the
+version of the remote's software).
 
-- **Remotes:** the Google TV (**Pair again**: pair with it anew; **Find
-  TVs**: pick another), the companion app (**Pair companion** when it
-  isn't paired yet, **Update companion** when a newer one can be
-  installed), the TV and learned remotes over IR, TV volume (once a TV is
-  added over IR: through Google TV or the TV's IR), Learn a remote.
-- **Wi-Fi:** the network in use; Scan or Other network to switch. A new
-  network is kept only once it connects; if it doesn't, restart the remote
-  (Turn off remote, then touch the screen) to go back to the old one.
-- **Screen:** brightness, **Rotate 180°**, **Turn off after** (1, 4, 12 or
-  24 hours, or never), and when the screen dims and goes dark, on battery
-  and while charging.
+- **Remotes:**
+  - **Pair again** pairs with the Google TV anew.
+  - **Find TVs** lets you pick another Google TV.
+  - **Pair companion** shows when the companion app isn't paired yet.
+  - **Update companion** shows when a newer companion app can be
+    installed.
+  - The TV and learned remotes over IR.
+  - **TV volume** shows once a TV is added over IR. Pick **Google TV** to
+    send volume through the Streamer, or **TV's IR** to send it to the TV
+    over IR.
+  - **Learn a remote**.
+- **Wi-Fi:** shows the network in use. To switch, tap **Scan** or **Other
+  network**. The remote keeps a new network only once it connects. If it
+  doesn't connect, restart the remote to go back to the old one: tap
+  **Turn off remote**, then touch the screen.
+- **Screen:**
+  - **Brightness**.
+  - **Rotate 180°** turns the picture upside down.
+  - **Turn off after**: 1, 4, 12 or 24 hours, or never.
+  - **Dim after** and **Screen off after** set when the screen dims and
+    goes dark. **Timeouts** switches between the times **On battery** and
+    while **Charging**.
 - **Appearance:** Midnight, Daylight, Black, Dusk or Terminal. Tap one,
-  then **Restart to apply** ([themes](themes.md)).
-- **Modules:** each one on or off.
-- **About:** the version (**Check** for updates, **Install** a new one),
-  the build time and update slot, the network address and name
-  (`hubmote.local`), Wi-Fi signal, uptime, free memory, and in developer
-  builds the update token (Show).
-- **Turn off remote** and **Done**.
+  then **Restart to apply**. More in [themes](themes.md).
+- **Modules:** switches each one on or off.
+- **About:**
+  - the version, with **Check** to look for updates and **Install** for a
+    new one;
+  - the build time, and the update slot (which of the remote's two
+    firmware copies is running);
+  - the network address and name (`hubmote.local`);
+  - Wi-Fi signal, uptime and free memory;
+  - in developer builds ([building from source](building.md) explains
+    them), the update token, behind **Show**.
+
+**Turn off remote** and **Done** are at the bottom of the list. **Done**
+takes you back to the remote.
 
 Boards that can't dim, or can't read their battery, leave those settings
 out.
 
 ## Sleep and turning off
 
-- After 30 s without a touch the screen dims, after 60 s it goes dark; on
-  the charger after 5 and 30 minutes. Settings > Screen changes these. The
-  first tap on a dark screen only wakes it.
-- **Turn off remote** (Settings), or 12 hours without a touch, puts it in
-  deep sleep. Touch the screen (or press BOOT) to wake it; it restarts and
-  reconnects in about 10 seconds.
-- Deep sleep still draws a little from the battery; a
-  [power switch](hardware.md#power-switch) is the real off.
+When you don't touch the remote, the screen dims, then goes dark:
+
+| Power | Dims after | Goes dark after |
+|---|---|---|
+| On battery | 30 seconds | 60 seconds |
+| Charging | 5 minutes | 30 minutes |
+
+You can change these in **Settings > Screen**. The first tap on a dark
+screen only wakes it.
+
+**Turn off remote** in Settings, or 12 hours without a touch, puts the
+remote in deep sleep, a low-power state. To wake it, touch the screen or
+press the board's **BOOT** button. It restarts and reconnects in about 10
+seconds.
+
+> [!NOTE]
+> Deep sleep still draws a little from the battery. For a real off, fit a
+> [power switch](hardware.md#power-switch).

@@ -62,24 +62,24 @@
 <body>
 <main>
   <h1>Install Hubmote</h1>
-  <p class="lead">Puts the remote's firmware on a Waveshare ESP32-S3 touch screen board straight from this page. Use Chrome or Edge on a computer.</p>
+  <p class="lead">This page puts Hubmote's firmware, the software that runs the remote, on a Waveshare ESP32-S3 touch screen board. Use Chrome or Edge on a computer.</p>
   <ol>
     <li>
       <span class="n">1</span>
       <h2>Pick your board</h2>
       <select id="board" aria-label="Board"></select>
-      <p class="note" id="untested" hidden>Nobody has run Hubmote on this board yet: its support follows Waveshare's documentation and demo code. Whether it works or not, please tell us in an issue on <a href="https://github.com/DovahBrownies/Hubmote/issues">GitHub</a>.</p>
+      <p class="note" id="untested" hidden>Nobody has run Hubmote on this board yet. Its support is based on Waveshare's documentation and demo code. Whether it works or not, please tell us in an issue on <a href="https://github.com/DovahBrownies/Hubmote/issues">GitHub</a>.</p>
     </li>
     <li>
       <span class="n">2</span>
       <h2>Connect the board</h2>
-      <p>Plug its <strong>USB</strong> port (the USB-C socket marked USB, not UART) into this computer with a data cable.</p>
+      <p>Plug the board's <strong>USB</strong> port into this computer with a USB-C cable that carries data, not one that only charges. If the board has two ports, use the one marked USB, not UART.</p>
     </li>
     <li>
       <span class="n">3</span>
       <h2>Install</h2>
-      <p>Click Install, pick the port called <code>USB JTAG/serial debug unit</code> (on Windows it may show as <code>USB Serial Device (COMn)</code>), then <strong>Install Hubmote for</strong> your board.</p>
-      <p>If it can't connect, close the message and click Install again. Still failing: unplug the board, hold its BOOT button while plugging it back in, let go, then Install.</p>
+      <p>Click <strong>Install</strong> and pick the port called <code>USB JTAG/serial debug unit</code>. On Windows it may show as <code>USB Serial Device (COMn)</code>, where n is a number. Then click <strong>Install Hubmote for</strong> your board.</p>
+      <p>If it can't connect, close the message and click <strong>Install</strong> again. If it still fails, unplug the board. Hold its <strong>BOOT</strong> button while you plug it back in, let go, then click <strong>Install</strong>.</p>
       <esp-web-install-button class="install">
         <button slot="activate">Install</button>
         <p slot="unsupported" class="note">This browser can't talk to USB devices. Open this page in Chrome or Edge on a computer.</p>
@@ -89,17 +89,17 @@
     <li>
       <span class="n">4</span>
       <h2>Erase, or keep what's on it</h2>
-      <p>For a new remote, tick <strong>Erase device</strong>. To update one you already use, leave it unticked: its pairing, Wi-Fi, learned remotes and settings stay. Then <strong>Next</strong> and <strong>Install</strong>, and keep this page open until it finishes, about two minutes.</p>
+      <p>For a new remote, tick <strong>Erase device</strong>. To update a remote you already use, leave it unticked, and its pairing, Wi-Fi, learned remotes and settings stay. Then click <strong>Next</strong> and <strong>Install</strong>. Keep this page open until it finishes, which takes about two minutes.</p>
     </li>
     <li>
       <span class="n">5</span>
       <h2>Set it up on the remote</h2>
-      <p>If the board sits upside down (as the 7B does in its 3D-printed case), first tap the gear (top right) &gt; <strong>Screen</strong> &gt; <strong>Rotate 180&deg;</strong>, then <strong>Done</strong>.</p>
-      <p>The remote prepares its pairing key (up to a minute), asks for your Wi-Fi network and lists the Google TVs it finds: tap yours, then type the code the TV shows.</p>
+      <p>If the board sits upside down, as the 7B does in its 3D-printed case, turn the screen first. Tap the gear at the top right, then <strong>Screen</strong> &gt; <strong>Rotate 180&deg;</strong>, then <strong>Done</strong>.</p>
+      <p>The remote first prepares its pairing key, which can take up to a minute. Then it asks for your Wi-Fi network and lists the Google TVs it finds. Tap yours, type the code the TV shows, and tap <strong>Pair</strong>.</p>
     </li>
   </ol>
-  <p class="note update">Already have a remote set up? Update it over Wi-Fi instead: on the remote, <strong>Settings &gt; About</strong>, then <strong>Check</strong> and <strong>Install</strong>. It keeps your pairing and settings.</p>
-  <p class="note" id="companion" hidden>The companion app for the Streamer (optional: the TV's own apps on the remote, and typing in any app): <a href="companion.apk">companion.apk</a>. How to install it: <a href="https://github.com/DovahBrownies/Hubmote/blob/main/docs/companion.md">the companion guide</a>.</p>
+  <p class="note update">Already have a remote set up? You can update it over Wi-Fi instead. On the remote, open <strong>Settings &gt; About</strong>, then tap <strong>Check</strong> and <strong>Install</strong>. It keeps your pairing and settings.</p>
+  <p class="note" id="companion" hidden>The optional companion app for the Streamer shows the TV's own apps on the remote and lets you type into any app. Download it here: <a href="companion.apk">companion.apk</a>. To install it, follow <a href="https://github.com/DovahBrownies/Hubmote/blob/main/docs/companion.md">the companion guide</a>.</p>
   <footer id="version">Firmware</footer>
 </main>
 <script>

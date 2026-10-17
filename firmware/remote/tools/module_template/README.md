@@ -8,13 +8,16 @@ __DESCRIPTION__
 
 ## Data and privacy
 
-Say what it connects to, whether it needs an account or API key, and the
-data source's terms (attribution, commercial use).
+Replace this with what the module needs from the network:
+
+- what it connects to, and what it sends;
+- whether it needs an account or an API key;
+- the data source's terms, such as attribution or commercial use.
 
 ## Credits and licenses
 
-Name the data source, icons or code the module uses and their licenses
-(and add them to the repo's `NOTICE`).
+Name the data source, icons or code the module uses, with their licenses.
+Add them to the repo's `NOTICE` too.
 
 ## Author
 
