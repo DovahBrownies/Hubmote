@@ -2,5 +2,5 @@
 idf_component_register(
     SRCS "companion.c"
     INCLUDE_DIRS "include"
-    PRIV_REQUIRES json lwip log esp_timer nvs_flash esp_rom
+    PRIV_REQUIRES json lwip log esp_timer kv esp_rom
 )

@@ -5,7 +5,7 @@
 #include <string.h>
 #include "esp_log.h"
 #include "esp_lvgl_port.h"
-#include "nvs.h"
+#include "kv.h"
 
 static const char *TAG = "hub";
 
@@ -115,13 +115,9 @@ void hub_modules_init(void)
     }
     s_count = kept;
 
-    nvs_handle_t h;
-    if (nvs_open(NVS_OFF, NVS_READONLY, &h) == ESP_OK) {
-        for (size_t i = 0; i < s_count; i++) {
-            uint8_t v;
-            s_off[i] = nvs_get_u8(h, s_modules[i]->id, &v) == ESP_OK;
-        }
-        nvs_close(h);
+    for (size_t i = 0; i < s_count; i++) {
+        uint8_t v;
+        s_off[i] = kv_get_u8(NVS_OFF, s_modules[i]->id, &v) == ESP_OK;
     }
     for (size_t i = 0; i < s_count; i++) {
         ESP_LOGI(TAG, "module %s%s", s_modules[i]->id, s_off[i] ? " (off)" : "");
@@ -153,15 +149,10 @@ void hub_module_set_enabled(const char *id, bool on)
         return;
     }
     s_off[i] = !on;
-    nvs_handle_t h;
-    if (nvs_open(NVS_OFF, NVS_READWRITE, &h) == ESP_OK) {
-        if (on) {
-            nvs_erase_key(h, id);
-        } else {
-            nvs_set_u8(h, id, 1);
-        }
-        nvs_commit(h);
-        nvs_close(h);
+    if (on) {
+        kv_erase(NVS_OFF, id);
+    } else {
+        kv_set_u8(NVS_OFF, id, 1);
     }
     ESP_LOGI(TAG, "module %s %s", id, on ? "on" : "off");
     if (on) {

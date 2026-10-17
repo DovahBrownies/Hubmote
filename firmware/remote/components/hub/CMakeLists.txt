@@ -2,4 +2,4 @@
 # files and time (docs/modules.md).
 idf_component_register(SRCS "hub_module.c" "hub_http.c" "hub_store.c" "hub_time.c"
                        INCLUDE_DIRS "include"
-                       PRIV_REQUIRES esp_http_client mbedtls esp_netif nvs_flash log)
+                       PRIV_REQUIRES esp_http_client mbedtls esp_netif kv log)

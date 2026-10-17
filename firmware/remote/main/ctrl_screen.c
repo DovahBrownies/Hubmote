@@ -15,7 +15,7 @@
 #include "esp_system.h"
 #include "esp_timer.h"
 #include "hub.h"
-#include "nvs.h"
+#include "kv.h"
 #include "sdkconfig.h"
 #include "ui.h"
 
@@ -51,10 +51,10 @@ static bool s_show_appearance;
 
 /* --- Settings in NVS --------------------------------------------------------------------- */
 
-static void load_pref(nvs_handle_t h, const char *key, int *value, int min, int max)
+static void load_pref(const char *key, int *value, int min, int max)
 {
     int32_t v;
-    if (nvs_get_i32(h, key, &v) == ESP_OK && v >= min && v <= max) {
+    if (kv_get_i32(CTRL_NVS_NS, key, &v) == ESP_OK && v >= min && v <= max) {
         *value = (int)v;
     }
 }
@@ -66,22 +66,15 @@ int controller_brightness(void)
 
 void ctrl_screen_load(void)
 {
-    nvs_handle_t h;
-    if (nvs_open(CTRL_NVS_NS, NVS_READONLY, &h) == ESP_OK) {
-        /* The same ranges as main/Kconfig.projbuild: a saved value outside
-         * them keeps the default. Settings' choices lie inside. */
-        load_pref(h, NVS_BRIGHTNESS, &s_brightness, 1, 100);
-        load_pref(h, NVS_DIM_S, &s_dim_s, 5, 3600);
-        load_pref(h, NVS_OFF_S, &s_off_s, 10, 3600);
-        load_pref(h, NVS_SLEEP_H, &s_sleep_h, 0, 168);
-        load_pref(h, NVS_DIM_C, &s_dim_c_s, 0, 7200);
-        load_pref(h, NVS_OFF_C, &s_off_c_s, 0, 7200);
-        size_t len = sizeof(s_theme);
-        if (nvs_get_str(h, NVS_THEME, s_theme, &len) != ESP_OK) {
-            s_theme[0] = '\0';
-        }
-        nvs_close(h);
-    }
+    /* The same ranges as main/Kconfig.projbuild: a saved value outside them
+     * keeps the default. Settings' choices lie inside. */
+    load_pref(NVS_BRIGHTNESS, &s_brightness, 1, 100);
+    load_pref(NVS_DIM_S, &s_dim_s, 5, 3600);
+    load_pref(NVS_OFF_S, &s_off_s, 10, 3600);
+    load_pref(NVS_SLEEP_H, &s_sleep_h, 0, 168);
+    load_pref(NVS_DIM_C, &s_dim_c_s, 0, 7200);
+    load_pref(NVS_OFF_C, &s_off_c_s, 0, 7200);
+    kv_get_str(CTRL_NVS_NS, NVS_THEME, s_theme, sizeof(s_theme));
     ESP_LOGI(TAG,
              "screen: brightness %d%%, dim after %d s, off after %d s (charging: %d s, %d s; 0 = never), "
              "turn off after %d h, theme %s",
@@ -106,13 +99,7 @@ void ctrl_screen_show(void)
 
 static void save_pref(const char *key, int value)
 {
-    nvs_handle_t h;
-    if (nvs_open(CTRL_NVS_NS, NVS_READWRITE, &h) == ESP_OK) {
-        if (nvs_set_i32(h, key, value) == ESP_OK) {
-            nvs_commit(h);
-        }
-        nvs_close(h);
-    }
+    kv_set_i32(CTRL_NVS_NS, key, value);
     ESP_LOGI(TAG, "setting %s = %d", key, value);
 }
 
@@ -238,13 +225,7 @@ bool ctrl_screen_ui(const ctrl_ui_t *a)
     case UI_ACT_THEME: {
         /* Screens take their colors when they are built, so a new theme
          * applies with a restart (about 10 s back to the TV). */
-        nvs_handle_t h;
-        if (nvs_open(CTRL_NVS_NS, NVS_READWRITE, &h) == ESP_OK) {
-            if (nvs_set_str(h, NVS_THEME, a->text) == ESP_OK) {
-                nvs_commit(h);
-            }
-            nvs_close(h);
-        }
+        kv_set_str(CTRL_NVS_NS, NVS_THEME, a->text);
         ESP_LOGI(TAG, "theme %s: restarting", a->text);
         s_reopen_appearance = REOPEN_MAGIC;
         atv_disconnect();

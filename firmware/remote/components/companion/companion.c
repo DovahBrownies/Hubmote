@@ -18,7 +18,7 @@
 #include "freertos/task.h"
 #include "lwip/sockets.h"
 #include "miniz.h" /* the ROM's deflate and inflate */
-#include "nvs.h"
+#include "kv.h"
 
 static const char *TAG = "companion";
 
@@ -142,27 +142,15 @@ static bool token_ok(const char *t)
 
 static void load_token(void)
 {
-    nvs_handle_t h;
-    size_t len = sizeof(s.token);
-    if (nvs_open(NVS_NS, NVS_READONLY, &h) == ESP_OK) {
-        if (nvs_get_str(h, NVS_TOKEN, s.token, &len) != ESP_OK || !token_ok(s.token)) {
-            s.token[0] = '\0';
-        }
-        nvs_close(h);
+    if (kv_get_str(NVS_NS, NVS_TOKEN, s.token, sizeof(s.token)) != ESP_OK || !token_ok(s.token)) {
+        s.token[0] = '\0';
     }
 }
 
 static void save_token(const char *token)
 {
-    nvs_handle_t h;
-    if (nvs_open(NVS_NS, NVS_READWRITE, &h) == ESP_OK) {
-        esp_err_t err = nvs_set_str(h, NVS_TOKEN, token);
-        if (err == ESP_OK) {
-            err = nvs_commit(h);
-        }
-        nvs_close(h);
-        ESP_LOGI(TAG, "token saved: %s", esp_err_to_name(err));
-    }
+    esp_err_t err = kv_set_str(NVS_NS, NVS_TOKEN, token);
+    ESP_LOGI(TAG, "token saved: %s", esp_err_to_name(err));
 }
 
 /* --- HTTP over a plain socket ---------------------------------------------- */

@@ -32,7 +32,7 @@
 #include "ir_store.h"
 #include "net.h"
 #include "netlog.h"
-#include "nvs.h"
+#include "kv.h"
 #include "ota.h"
 #include "sdkconfig.h"
 #include "storage.h"
@@ -142,19 +142,9 @@ static void load_app_layout(void)
         return;
     }
     char *hidden = order + UI_APP_LIST_MAX;
-    nvs_handle_t h;
-    if (nvs_open(CTRL_NVS_NS, NVS_READONLY, &h) == ESP_OK) {
-        size_t len = UI_APP_LIST_MAX;
-        if (nvs_get_str(h, NVS_APP_ORDER, order, &len) != ESP_OK) {
-            order[0] = '\0';
-        }
-        len = UI_APP_LIST_MAX;
-        if (nvs_get_str(h, NVS_HIDDEN_APPS, hidden, &len) != ESP_OK) {
-            hidden[0] = '\0';
-        }
-        nvs_close(h);
-        ui_set_app_layout(order, hidden);
-    }
+    kv_get_str(CTRL_NVS_NS, NVS_APP_ORDER, order, UI_APP_LIST_MAX);
+    kv_get_str(CTRL_NVS_NS, NVS_HIDDEN_APPS, hidden, UI_APP_LIST_MAX);
+    ui_set_app_layout(order, hidden);
     free(order);
 }
 
@@ -166,12 +156,8 @@ static void save_app_layout(void)
     }
     char *hidden = order + UI_APP_LIST_MAX;
     ui_app_layout(order, hidden);
-    nvs_handle_t h;
-    if (nvs_open(CTRL_NVS_NS, NVS_READWRITE, &h) == ESP_OK) {
-        if (nvs_set_str(h, NVS_APP_ORDER, order) == ESP_OK && nvs_set_str(h, NVS_HIDDEN_APPS, hidden) == ESP_OK) {
-            nvs_commit(h);
-        }
-        nvs_close(h);
+    if (kv_set_str(CTRL_NVS_NS, NVS_APP_ORDER, order) == ESP_OK) {
+        kv_set_str(CTRL_NVS_NS, NVS_HIDDEN_APPS, hidden);
     }
     free(order);
 }

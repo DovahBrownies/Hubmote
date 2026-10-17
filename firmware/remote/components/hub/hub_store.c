@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include "esp_heap_caps.h"
-#include "nvs.h"
+#include "kv.h"
 
 #define MOUNT "/storage" /* the app's LittleFS (main/storage.c, STORAGE_MOUNT) */
 
@@ -13,61 +13,32 @@ static void ns_of(const char *module, char out[16])
     snprintf(out, 16, "m_%s", module);
 }
 
-static esp_err_t open_ns(const char *module, nvs_open_mode_t mode, nvs_handle_t *h)
+esp_err_t hub_kv_get_str(const char *module, const char *key, char *out, size_t len)
 {
     char ns[16];
     ns_of(module, ns);
-    return nvs_open(ns, mode, h);
-}
-
-esp_err_t hub_kv_get_str(const char *module, const char *key, char *out, size_t len)
-{
-    nvs_handle_t h;
-    esp_err_t err = open_ns(module, NVS_READONLY, &h);
-    if (err == ESP_OK) {
-        err = nvs_get_str(h, key, out, &len);
-        nvs_close(h);
-    }
-    return err;
+    return kv_get_str(ns, key, out, len);
 }
 
 esp_err_t hub_kv_set_str(const char *module, const char *key, const char *value)
 {
-    nvs_handle_t h;
-    esp_err_t err = open_ns(module, NVS_READWRITE, &h);
-    if (err == ESP_OK) {
-        err = nvs_set_str(h, key, value);
-        if (err == ESP_OK) {
-            err = nvs_commit(h);
-        }
-        nvs_close(h);
-    }
-    return err;
+    char ns[16];
+    ns_of(module, ns);
+    return kv_set_str(ns, key, value);
 }
 
 esp_err_t hub_kv_get_i32(const char *module, const char *key, int32_t *out)
 {
-    nvs_handle_t h;
-    esp_err_t err = open_ns(module, NVS_READONLY, &h);
-    if (err == ESP_OK) {
-        err = nvs_get_i32(h, key, out);
-        nvs_close(h);
-    }
-    return err;
+    char ns[16];
+    ns_of(module, ns);
+    return kv_get_i32(ns, key, out);
 }
 
 esp_err_t hub_kv_set_i32(const char *module, const char *key, int32_t value)
 {
-    nvs_handle_t h;
-    esp_err_t err = open_ns(module, NVS_READWRITE, &h);
-    if (err == ESP_OK) {
-        err = nvs_set_i32(h, key, value);
-        if (err == ESP_OK) {
-            err = nvs_commit(h);
-        }
-        nvs_close(h);
-    }
-    return err;
+    char ns[16];
+    ns_of(module, ns);
+    return kv_set_i32(ns, key, value);
 }
 
 bool hub_file_path(const char *module, const char *name, char *out, size_t len)

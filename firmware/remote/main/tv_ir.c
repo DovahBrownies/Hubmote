@@ -7,7 +7,7 @@
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "ir_store.h"
-#include "nvs.h"
+#include "kv.h"
 #include "tv_codes.h"
 #include "ui.h"
 
@@ -87,15 +87,10 @@ static void update_detail(void)
 
 static void nvs_put_str(const char *key, const char *value)
 {
-    nvs_handle_t h;
-    if (nvs_open(CTRL_NVS_NS, NVS_READWRITE, &h) == ESP_OK) {
-        if (value) {
-            nvs_set_str(h, key, value);
-        } else {
-            nvs_erase_key(h, key);
-        }
-        nvs_commit(h);
-        nvs_close(h);
+    if (value) {
+        kv_set_str(CTRL_NVS_NS, key, value);
+    } else {
+        kv_erase(CTRL_NVS_NS, key);
     }
 }
 
@@ -103,21 +98,11 @@ void tv_ir_init(void)
 {
     s_learned = heap_caps_calloc(1, sizeof(ir_remote_t), MALLOC_CAP_SPIRAM);
     char id[32] = "";
-    nvs_handle_t h;
-    if (nvs_open(CTRL_NVS_NS, NVS_READONLY, &h) == ESP_OK) {
-        size_t len = sizeof(id);
-        if (nvs_get_str(h, NVS_SET, id, &len) != ESP_OK) {
-            id[0] = '\0';
-        }
-        len = sizeof(s_name);
-        if (nvs_get_str(h, NVS_NAME, s_name, &len) != ESP_OK) {
-            s_name[0] = '\0';
-        }
-        int32_t vol = 0;
-        nvs_get_i32(h, NVS_VOL, &vol);
-        s_volume_ir = vol != 0;
-        nvs_close(h);
-    }
+    kv_get_str(CTRL_NVS_NS, NVS_SET, id, sizeof(id));
+    kv_get_str(CTRL_NVS_NS, NVS_NAME, s_name, sizeof(s_name));
+    int32_t vol = 0;
+    kv_get_i32(CTRL_NVS_NS, NVS_VOL, &vol);
+    s_volume_ir = vol != 0;
     for (size_t i = 0; id[0] && i < tv_set_count; i++) {
         if (strcmp(tv_sets[i].id, id) == 0) {
             s_set = &tv_sets[i];
@@ -333,11 +318,6 @@ bool tv_ir_volume_ir(void)
 void tv_ir_set_volume_ir(bool ir)
 {
     s_volume_ir = ir;
-    nvs_handle_t h;
-    if (nvs_open(CTRL_NVS_NS, NVS_READWRITE, &h) == ESP_OK) {
-        nvs_set_i32(h, NVS_VOL, ir ? 1 : 0);
-        nvs_commit(h);
-        nvs_close(h);
-    }
+    kv_set_i32(CTRL_NVS_NS, NVS_VOL, ir ? 1 : 0);
     ESP_LOGI(TAG, "volume via %s", ir ? "the TV's IR" : "the Streamer");
 }

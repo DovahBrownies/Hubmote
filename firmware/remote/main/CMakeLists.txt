@@ -1,6 +1,6 @@
 idf_component_register(SRCS "main.c" "battery.c" "build_info.c" "devtools.c" "display.c" "net.c" "netlog.c" "ota.c" "controller.c" "ctrl_companion.c" "ctrl_screen.c" "ctrl_setup.c" "ir_ctl.c" "storage.c" "tv_ir.c" "tv_codes.c" "update.c"
                        INCLUDE_DIRS "."
-                       REQUIRES board ui hub atv_remote ir companion esp_wifi esp_netif esp_event nvs_flash esp_timer esp_lcd
+                       REQUIRES board ui hub atv_remote ir companion kv esp_wifi esp_netif esp_event nvs_flash esp_timer esp_lcd
                                 esp_http_server app_update esp_http_client mbedtls json bootloader_support)
 
 # Wi-Fi credentials come from firmware/remote/secrets.env (gitignored; see

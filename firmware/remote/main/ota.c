@@ -29,7 +29,7 @@
 #include "esp_timer.h"
 #include "mbedtls/md.h"
 #include "mbedtls/sha256.h"
-#include "nvs.h"
+#include "kv.h"
 #include "sdkconfig.h"
 
 static const char *TAG = "ota";
@@ -68,14 +68,7 @@ static char s_token[96];
 static void load_token(void)
 {
     const char *from = "saved";
-    nvs_handle_t h;
-    size_t len = sizeof(s_token);
-    if (nvs_open(NVS_NS, NVS_READONLY, &h) == ESP_OK) {
-        if (nvs_get_str(h, NVS_TOKEN, s_token, &len) != ESP_OK) {
-            s_token[0] = '\0';
-        }
-        nvs_close(h);
-    }
+    kv_get_str(NVS_NS, NVS_TOKEN, s_token, sizeof(s_token));
     if (!s_token[0]) {
         /* Made here, never built in: an image carrying the token would hand
          * it to anyone who sees an update go by. Wi-Fi is on by now, so
@@ -90,11 +83,7 @@ static void load_token(void)
         }
         s_token[n] = '\0';
         from = "new";
-        if (nvs_open(NVS_NS, NVS_READWRITE, &h) == ESP_OK) {
-            nvs_set_str(h, NVS_TOKEN, s_token);
-            nvs_commit(h);
-            nvs_close(h);
-        }
+        kv_set_str(NVS_NS, NVS_TOKEN, s_token);
     }
     ESP_LOGI(TAG, "update token: %s", from); /* never the token itself */
 }

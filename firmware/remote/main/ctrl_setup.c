@@ -16,7 +16,7 @@
 #include "esp_timer.h"
 #include "esp_wifi.h"
 #include "net.h"
-#include "nvs.h"
+#include "kv.h"
 #include "sdkconfig.h"
 #include "ui.h"
 
@@ -62,26 +62,13 @@ static net_cb_t s_on_net;
 
 void ctrl_setup_load(void)
 {
-    nvs_handle_t h;
-    size_t len = sizeof(s_mdns_name);
-    if (nvs_open(CTRL_NVS_NS, NVS_READONLY, &h) == ESP_OK) {
-        if (nvs_get_str(h, NVS_TV_NAME, s_mdns_name, &len) != ESP_OK) {
-            s_mdns_name[0] = '\0';
-        }
-        nvs_close(h);
-    }
+    kv_get_str(CTRL_NVS_NS, NVS_TV_NAME, s_mdns_name, sizeof(s_mdns_name));
 }
 
 static void save_tv_name(const char *name)
 {
     strlcpy(s_mdns_name, name, sizeof(s_mdns_name));
-    nvs_handle_t h;
-    if (nvs_open(CTRL_NVS_NS, NVS_READWRITE, &h) == ESP_OK) {
-        if (nvs_set_str(h, NVS_TV_NAME, s_mdns_name) == ESP_OK) {
-            nvs_commit(h);
-        }
-        nvs_close(h);
-    }
+    kv_set_str(CTRL_NVS_NS, NVS_TV_NAME, s_mdns_name);
 }
 
 /* --- Flow ------------------------------------------------------------------- */

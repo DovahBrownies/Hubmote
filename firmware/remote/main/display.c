@@ -26,7 +26,7 @@
 #include "esp_lvgl_port.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
-#include "nvs.h"
+#include "kv.h"
 #include "sdkconfig.h"
 #include "ui_kit.h"
 
@@ -124,15 +124,8 @@ bool display_capture(uint16_t *dst)
 bool display_turned_setting(void)
 {
     uint8_t turned = TURN_DEFAULT;
-    nvs_handle_t h;
-    if (nvs_open(CTRL_NVS_NS, NVS_READWRITE, &h) == ESP_OK) {
-        if (nvs_get_u8(h, NVS_TURN, &turned) != ESP_OK) {
-            turned = TURN_DEFAULT;
-            if (nvs_set_u8(h, NVS_TURN, turned) == ESP_OK) {
-                nvs_commit(h);
-            }
-        }
-        nvs_close(h);
+    if (kv_get_u8(CTRL_NVS_NS, NVS_TURN, &turned) != ESP_OK) {
+        kv_set_u8(CTRL_NVS_NS, NVS_TURN, turned);
     }
     return turned != 0;
 }
@@ -144,13 +137,7 @@ void display_set_turned(bool turned)
         esp_lcd_touch_set_mirror_x(s_touch, turned);
         esp_lcd_touch_set_mirror_y(s_touch, turned);
     }
-    nvs_handle_t h;
-    if (nvs_open(CTRL_NVS_NS, NVS_READWRITE, &h) == ESP_OK) {
-        if (nvs_set_u8(h, NVS_TURN, turned) == ESP_OK) {
-            nvs_commit(h);
-        }
-        nvs_close(h);
-    }
+    kv_set_u8(CTRL_NVS_NS, NVS_TURN, turned);
     ESP_LOGI(TAG, "%s", turned ? "turned 180 degrees" : "upright");
 }
 

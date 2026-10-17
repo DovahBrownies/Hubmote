@@ -419,6 +419,9 @@ UI then leaves out what can't work (`ui_set_ir_caps()`).
 - **`components/hub`** is the module platform: the registry
   (`HUB_MODULE()`), events, glances, one HTTP worker, per-module NVS and
   files, and SNTP time ([docs/modules.md](../../docs/modules.md)).
+- **`components/kv`** reads and writes one NVS value per call (`kv.h`).
+  Settings in `main/`, the companion's token and the hub's module storage
+  use it; `atv_remote` keeps its own NVS code.
 - **`components/ir`** sends and learns IR on the RMT peripheral. It
   encodes NEC, Samsung32, SIRC, RC5 and RC6, and decodes NEC and
   Samsung32. It also keeps the learned remotes on LittleFS. Its host tests

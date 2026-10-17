@@ -8,7 +8,7 @@
 #include "esp_netif.h"
 #include "esp_wifi.h"
 #include "mdns.h"
-#include "nvs.h"
+#include "kv.h"
 #include "hm_secrets.h" /* generated from secrets.env; WIFI_* may be empty */
 
 static const char *TAG = "net";
@@ -31,14 +31,9 @@ static void *s_scan_ctx;
 
 static void load(void)
 {
-    nvs_handle_t h;
-    if (nvs_open(NVS_NS, NVS_READONLY, &h) == ESP_OK) {
-        size_t a = sizeof(s_ssid), b = sizeof(s_pass);
-        bool ok = nvs_get_str(h, NVS_SSID, s_ssid, &a) == ESP_OK && nvs_get_str(h, NVS_PASS, s_pass, &b) == ESP_OK;
-        nvs_close(h);
-        if (ok && s_ssid[0]) {
-            return;
-        }
+    if (kv_get_str(NVS_NS, NVS_SSID, s_ssid, sizeof(s_ssid)) == ESP_OK &&
+        kv_get_str(NVS_NS, NVS_PASS, s_pass, sizeof(s_pass)) == ESP_OK && s_ssid[0]) {
+        return;
     }
     /* Nothing saved: a developer build may carry them in secrets.env. */
     strlcpy(s_ssid, HM_WIFI_SSID, sizeof(s_ssid));
@@ -51,18 +46,11 @@ static void load(void)
 
 static void save(void)
 {
-    nvs_handle_t h;
-    if (nvs_open(NVS_NS, NVS_READWRITE, &h) == ESP_OK) {
-        esp_err_t err = nvs_set_str(h, NVS_SSID, s_ssid);
-        if (err == ESP_OK) {
-            err = nvs_set_str(h, NVS_PASS, s_pass);
-        }
-        if (err == ESP_OK) {
-            err = nvs_commit(h);
-        }
-        nvs_close(h);
-        ESP_LOGI(TAG, "network saved: %s", esp_err_to_name(err));
+    esp_err_t err = kv_set_str(NVS_NS, NVS_SSID, s_ssid);
+    if (err == ESP_OK) {
+        err = kv_set_str(NVS_NS, NVS_PASS, s_pass);
     }
+    ESP_LOGI(TAG, "network saved: %s", esp_err_to_name(err));
     s_unsaved = false;
 }
 
