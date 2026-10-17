@@ -1,0 +1,5 @@
+# Waveshare ESP32-S3-Touch-LCD-7: an ESP32-S3-WROOM-1-N8R8, so 8 MB of
+# flash and its own partition table (-D HM_BOARD=waveshare_s3_touch_lcd_7).
+CONFIG_HM_BOARD_WAVESHARE_S3_TOUCH_LCD_7=y
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_8mb.csv"

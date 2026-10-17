@@ -1,0 +1,7 @@
+config HUB_MODULE_WEATHER
+    bool "Weather (Open-Meteo)"
+    default y
+    help
+        Current weather, the next 24 hours and 7 days for one place, from
+        Open-Meteo (no account or API key; free for non-commercial use, data
+        under CC BY 4.0). Adds a Home card and a top-bar glance.

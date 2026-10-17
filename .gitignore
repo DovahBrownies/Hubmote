@@ -1,0 +1,26 @@
+# Each project folder ignores its own build output too (firmware/remote,
+# firmware/power-test, companion, firmware/remote/tools/fonts).
+
+# Python
+__pycache__/
+*.pyc
+
+# Logs and captures (hm-capture.ps1, hm-netlog.ps1 -Out)
+*.log
+
+# Signing keys. The companion's build makes its own debug.keystore when
+# there is none; keep yours on disk (companion/README.md).
+*.keystore
+*.jks
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# The user's own setup notes for Claude Code (board MAC, addresses, TV)
+CLAUDE.local.md
+
+# Research and notes that stay private (moved out of git 2026-10-14)
+private/

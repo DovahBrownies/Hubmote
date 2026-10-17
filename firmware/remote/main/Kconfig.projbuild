@@ -1,0 +1,292 @@
+menu "Hubmote"
+
+    choice HM_BOARD
+        prompt "Board"
+        default HM_BOARD_WAVESHARE_S3_TOUCH_LCD_7B
+        help
+            The board this firmware runs on: its pins, panel, touch,
+            backlight, battery and deep sleep (components/board/boards).
+            Switch boards by building from a new sdkconfig with
+            -D HM_BOARD=<id> (docs/building.md, docs/porting.md), which picks it here
+            and brings the board's defaults (the 7's flash size, its IR
+            pins): an existing sdkconfig keeps the old board's. docs/porting.md
+            explains how to add one.
+
+        config HM_BOARD_WAVESHARE_S3_TOUCH_LCD_7B
+            bool "Waveshare ESP32-S3-Touch-LCD-7B (7 inch, 1024x600)"
+        config HM_BOARD_WAVESHARE_S3_TOUCH_LCD_7
+            bool "Waveshare ESP32-S3-Touch-LCD-7 (7 inch, 800x480), untested"
+        config HM_BOARD_WAVESHARE_S3_TOUCH_LCD_5B
+            bool "Waveshare ESP32-S3-Touch-LCD-5B (5 inch, 1024x600), untested"
+        config HM_BOARD_WAVESHARE_S3_TOUCH_LCD_5
+            bool "Waveshare ESP32-S3-Touch-LCD-5 (5 inch, 800x480), untested"
+        config HM_BOARD_WAVESHARE_S3_TOUCH_LCD_4_3
+            bool "Waveshare ESP32-S3-Touch-LCD-4.3 (800x480), untested"
+        config HM_BOARD_WAVESHARE_S3_TOUCH_LCD_4_3B
+            bool "Waveshare ESP32-S3-Touch-LCD-4.3B (800x480), untested"
+        config HM_BOARD_WAVESHARE_S3_TOUCH_LCD_4_3C
+            bool "Waveshare ESP32-S3-Touch-LCD-4.3C (800x480), untested"
+    endchoice
+
+    # The board's name in file names: its folder on the installer site and
+    # its image in update.json (main/update.c, tools/web/make_site.py).
+    config HM_BOARD_ID
+        string
+        default "waveshare_s3_touch_lcd_7b" if HM_BOARD_WAVESHARE_S3_TOUCH_LCD_7B
+        default "waveshare_s3_touch_lcd_7" if HM_BOARD_WAVESHARE_S3_TOUCH_LCD_7
+        default "waveshare_s3_touch_lcd_5b" if HM_BOARD_WAVESHARE_S3_TOUCH_LCD_5B
+        default "waveshare_s3_touch_lcd_5" if HM_BOARD_WAVESHARE_S3_TOUCH_LCD_5
+        default "waveshare_s3_touch_lcd_4_3" if HM_BOARD_WAVESHARE_S3_TOUCH_LCD_4_3
+        default "waveshare_s3_touch_lcd_4_3b" if HM_BOARD_WAVESHARE_S3_TOUCH_LCD_4_3B
+        default "waveshare_s3_touch_lcd_4_3c" if HM_BOARD_WAVESHARE_S3_TOUCH_LCD_4_3C
+
+    # The board's screen, which the UI is laid out for (ui_size.h); the
+    # fonts come from components/ui/fonts/h<HM_SCREEN_H>/.
+    config HM_SCREEN_W
+        int
+        default 1024 if HM_BOARD_WAVESHARE_S3_TOUCH_LCD_7B || HM_BOARD_WAVESHARE_S3_TOUCH_LCD_5B
+        default 800 if HM_BOARD_WAVESHARE_S3_TOUCH_LCD_7 || HM_BOARD_WAVESHARE_S3_TOUCH_LCD_5 || HM_BOARD_WAVESHARE_S3_TOUCH_LCD_4_3 || HM_BOARD_WAVESHARE_S3_TOUCH_LCD_4_3B || HM_BOARD_WAVESHARE_S3_TOUCH_LCD_4_3C
+
+    config HM_SCREEN_H
+        int
+        default 600 if HM_BOARD_WAVESHARE_S3_TOUCH_LCD_7B || HM_BOARD_WAVESHARE_S3_TOUCH_LCD_5B
+        default 480 if HM_BOARD_WAVESHARE_S3_TOUCH_LCD_7 || HM_BOARD_WAVESHARE_S3_TOUCH_LCD_5 || HM_BOARD_WAVESHARE_S3_TOUCH_LCD_4_3 || HM_BOARD_WAVESHARE_S3_TOUCH_LCD_4_3B || HM_BOARD_WAVESHARE_S3_TOUCH_LCD_4_3C
+
+    # Wi-Fi credentials are not here: the remote asks for them (first-run
+    # setup, Settings > Wi-Fi); secrets.env (gitignored) may seed them.
+
+    menu "Google TV"
+
+        config HM_TV_HOST
+            string "Google TV Streamer address (optional)"
+            default ""
+            help
+                IP address of the Streamer. Leave empty to find it with mDNS
+                on first boot; the address picked there is remembered.
+
+        config HM_CLIENT_NAME
+            string "Name shown on the TV while pairing"
+            default "Hubmote"
+
+    endmenu
+
+    menu "Display"
+
+        config HM_DISPLAY_ROTATE_180
+            bool "Turn the screen and touch 180 degrees on first start"
+            default n
+            help
+                For the 3D-printed enclosure, which holds the board upside
+                down. Only the default for a remote's first start: after
+                that, Settings > Screen > Rotate 180° decides, and the
+                remote keeps its choice (NVS). The picture is turned as it
+                is sent to the panel (main/display.c), so it costs no
+                drawing time.
+
+        config HM_BRIGHTNESS
+            int "Screen brightness (%)"
+            default 100
+            range 1 100
+            help
+                Backlight level while the remote is in use, until changed in
+                Settings > Screen (then kept in NVS). The 7B's backlight PWM
+                is inverted and the panel is only ~235 cd/m2, so anything
+                much below 100 looks dim in a lit room.
+
+        config HM_BRIGHTNESS_DIM
+            int "Dimmed brightness (%)"
+            default 35
+            range 1 100
+            help
+                Backlight level after the dim timeout, until the screen turns
+                off.
+
+    endmenu
+
+    menu "Power"
+
+        config HM_DIM_AFTER_S
+            int "Dim the screen after this many idle seconds"
+            default 30
+            range 5 3600
+            help
+                The default; Settings > Screen changes it (kept in NVS).
+
+        config HM_SCREEN_OFF_AFTER_S
+            int "Turn the backlight off after this many idle seconds"
+            default 60
+            range 10 3600
+            help
+                The default; Settings > Screen changes it (kept in NVS).
+
+        config HM_DIM_AFTER_CHARGING_S
+            int "While charging: dim after this many idle seconds (0 = never)"
+            default 300
+            range 0 7200
+            help
+                Used instead of the dim time above while the remote is on USB
+                power. The default; Settings > Screen changes it (kept in
+                NVS).
+
+        config HM_SCREEN_OFF_AFTER_CHARGING_S
+            int "While charging: backlight off after this many idle seconds (0 = never)"
+            default 1800
+            range 0 7200
+            help
+                Used instead of the screen-off time above while the remote is
+                on USB power. The default; Settings > Screen changes it (kept
+                in NVS).
+
+        config HM_SLEEP_AFTER_H
+            int "Turn the remote off (deep sleep) after this many idle hours"
+            default 12
+            range 0 168
+            help
+                Like "Turn off remote" in Settings: a touch or BOOT turns it
+                on again. 0 = never. The default; Settings > Screen changes
+                it (kept in NVS). The same on the charger: with the screen
+                dark the remote can't tell when it is unplugged, so a
+                charging-only "never" could drain the battery.
+
+    endmenu
+
+    menu "IR"
+
+        config HM_IR_TX_GPIO
+            int "IR LED (transmit) GPIO"
+            default 44 if HM_BOARD_WAVESHARE_S3_TOUCH_LCD_7B || HM_BOARD_WAVESHARE_S3_TOUCH_LCD_7
+            default 6 if HM_BOARD_WAVESHARE_S3_TOUCH_LCD_4_3
+            default -1
+            range -1 48
+            help
+                On the 7B and the 7, GPIO44 is RXD0 on the 4-pin UART header
+                (H3); set the board's UART switch (SW1) to UART2, the header.
+                On the 4.3, GPIO6 on the 3-pin "Sensor AD" connector (J6),
+                its only free pin. The pin drives the LED stage active-high.
+                -1 disables sending: Waveshare's other boards have no free
+                pin, so they are Google TV remotes only.
+
+        config HM_IR_RX_GPIO
+            int "IR receiver GPIO"
+            default 6 if HM_BOARD_WAVESHARE_S3_TOUCH_LCD_7B || HM_BOARD_WAVESHARE_S3_TOUCH_LCD_7
+            default -1
+            range -1 48
+            help
+                On the 7B and the 7, GPIO6 is the signal pin of the 3-pin J8
+                header (3V3, GND, GPIO6), which matches a receiver module's
+                VCC / GND / OUT.
+                -1 disables learning.
+
+        config HM_IR_RX_POWER_GPIO
+            int "IR receiver power GPIO (-1 = always powered)"
+            default -1
+            range -1 48
+            help
+                A GPIO that powers the receiver module only while learning,
+                to save its standby current. -1 when its VCC is on 3V3.
+
+        config HM_IR_BOOT_CHECK
+            bool "IR self-check at start-up"
+            default n
+            help
+                About 1 s after start-up the transmitter sends a short burst
+                that matches no IR protocol, while the receiver listens. The
+                log line "ir_ctl: IR check" says whether the receiver saw it:
+                a quick way to tell a dark transmitter from one that is only
+                out of range. The two must see each other or a nearby
+                surface. For checking the wiring.
+
+    endmenu
+
+    menu "Updates"
+
+        config HM_UPDATE_URL
+            string "Where releases are published (ends with /)"
+            default "https://dovahbrownies.github.io/Hubmote/"
+            help
+                The web installer's site: Settings > About reads update.json
+                there and installs this board's newer image from the site.
+                https only (checked against ESP-IDF's CA bundle); developer
+                builds also accept http://, for a site served from a PC.
+
+        config HM_UPDATE_AUTO
+            bool "Check for updates by itself"
+            default y
+            help
+                A minute after Wi-Fi comes up, then once a day; Settings >
+                About shows what it found. It never installs by itself.
+
+    endmenu
+
+    menu "Modules"
+        # Each module's options: modules/<id>/Kconfig.module
+        orsource "../modules/*/Kconfig.module"
+    endmenu
+
+    menuconfig HM_DEVELOPER
+        bool "Developer build"
+        default y
+        help
+            Tools for working on the remote from a PC: updates over Wi-Fi
+            (scripts/hm-ota.ps1), the log over Wi-Fi, screenshots and
+            simulated touches, and the start-up self-test. Release builds
+            turn this off (sdkconfig.release, used by scripts/hm-web.ps1).
+
+    if HM_DEVELOPER
+
+        config HM_LOCAL_OTA
+            bool "Updates over Wi-Fi from a PC"
+            default y
+            help
+                An HTTP server where scripts/hm-ota.ps1 sends new firmware
+                (POST /ota) with the remote's update token (Settings >
+                About). GET /version shows the running build. Plain HTTP:
+                for developers on their own network.
+
+        config HM_OTA_PORT
+            int "Port for updates over Wi-Fi"
+            default 8080
+            depends on HM_LOCAL_OTA
+
+        config HM_DEV_TOOLS
+            bool "Screenshot and simulated touches over Wi-Fi"
+            default y
+            depends on HM_LOCAL_OTA
+            help
+                Adds GET /screenshot, POST /tap and POST /swipe to the update
+                server (same token as updates). tools/devtools.py uses them.
+
+        config HM_NETLOG
+            bool "Log over Wi-Fi"
+            default y
+            help
+                Serves the log on a TCP port so scripts/hm-netlog.ps1 can
+                record it without USB. A new connection first gets the last
+                32 KB. Anyone on the network can read it; Wi-Fi driver lines
+                (which name the network) are kept out.
+
+        config HM_NETLOG_PORT
+            int "Wi-Fi log port"
+            default 2323
+            depends on HM_NETLOG
+
+        config HM_ATV_SELFTEST
+            bool "Protocol self-test at start-up"
+            default y
+            help
+                Checks the Android TV Remote message encoder and parsers
+                against golden vectors before connecting ("atv self-test
+                passed" in the log). Needs no network; takes a few ms.
+
+        config HM_BATTERY_PREVIEW
+            bool "Battery preview (test builds only)"
+            default n
+            help
+                On battery, the shown level counts down from 35% to 10%, 1%
+                every 2 s, to check the red level (below 30%) and the
+                low-battery card (below 20%) without draining the cell.
+                Plugging in USB still shows charging.
+
+    endif
+
+endmenu

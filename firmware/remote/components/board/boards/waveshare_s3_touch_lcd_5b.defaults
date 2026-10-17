@@ -1,0 +1,3 @@
+# Waveshare ESP32-S3-Touch-LCD-5B: an ESP32-S3-WROOM-1-N16R8, as
+# sdkconfig.defaults assumes, so only the choice (-D HM_BOARD=waveshare_s3_touch_lcd_5b).
+CONFIG_HM_BOARD_WAVESHARE_S3_TOUCH_LCD_5B=y

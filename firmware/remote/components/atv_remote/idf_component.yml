@@ -1,0 +1,5 @@
+version: "1.0.0"
+description: "Android TV Remote Service protocol v2 client (pairing on 6467, control on 6466) for ESP-IDF"
+dependencies:
+  idf: ">=5.4"
+  espressif/mdns: "^1.2.0"

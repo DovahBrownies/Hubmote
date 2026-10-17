@@ -1,0 +1,54 @@
+CONFIG_IDF_TARGET="esp32s3"
+
+# ESP32-S3-WROOM-1-N16R8: 16 MB QIO flash, 8 MB octal PSRAM
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+# Updates over Wi-Fi (main/ota.c): a new image that doesn't reach Wi-Fi is
+# rolled back on the next restart.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+# Logs on the native USB-C port (USB-Serial/JTAG). Frees GPIO43/44 (UART0)
+# for the IR LED; only the ROM boot banner still goes to UART0.
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+CONFIG_SPIRAM_USE_MALLOC=y
+CONFIG_ESP32S3_DATA_CACHE_LINE_64B=y
+# Run code + rodata from PSRAM so a flash-cache miss can't starve the RGB
+# bounce buffer (bench-tested: turns ST7262 sync slips self-recovering).
+CONFIG_SPIRAM_XIP_FROM_PSRAM=y
+
+# Keep the RGB scan-out alive through flash writes and resync on VSYNC
+CONFIG_LCD_RGB_ISR_IRAM_SAFE=y
+CONFIG_LCD_RGB_RESTART_IN_VSYNC=y
+
+# TLS (Android TV Remote v2): buffers in PSRAM, internal RAM stays free
+CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
+
+# Sockets: the TV link, companion, Wi-Fi log, update server, mDNS, clock
+# sync and module web requests together pass lwIP's default of 10.
+CONFIG_LWIP_MAX_SOCKETS=16
+
+# Wi-Fi config lives in RAM: no NVS flash writes while the panel scans
+CONFIG_ESP_WIFI_NVS_ENABLED=n
+
+# Power management: drivers take their PM locks, ready for frequency scaling
+# and light sleep. Neither is switched on yet (nothing calls
+# esp_pm_configure()); the RGB panel's timing must be checked with them.
+CONFIG_PM_ENABLE=y
+CONFIG_FREERTOS_HZ=1000
+
+# LVGL 9: heap in PSRAM (components/ui/ui_mem.c); plain malloc would put
+# its many small objects in internal RAM. Custom fonts (Sora, IBM Plex Mono,
+# Lucide icons) live in components/ui/fonts.
+CONFIG_LV_USE_CUSTOM_MALLOC=y
+# Dark until ui_init() picks light or dark from the theme (ui_themes.c).
+CONFIG_LV_THEME_DEFAULT_DARK=y
+CONFIG_LV_FONT_MONTSERRAT_14=y

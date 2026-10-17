@@ -1,0 +1,10 @@
+# Name,   Type, SubType, Offset,   Size
+# For boards with 8 MB of flash (the Waveshare 7): partitions.csv with
+# 3 MB app slots (the app is about 2 MB) and a smaller storage. A board
+# keeps the table it was first installed with: never move nvs or storage.
+nvs,      data, nvs,     0x9000,   0x10000
+phy_init, data, phy,     0x19000,  0x1000
+otadata,  data, ota,     0x1A000,  0x2000
+ota_0,    app,  ota_0,   0x20000,  0x300000
+storage,  data, spiffs,  0x320000, 0x1C0000
+ota_1,    app,  ota_1,   0x4E0000, 0x300000

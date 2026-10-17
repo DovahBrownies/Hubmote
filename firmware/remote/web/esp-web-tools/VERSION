@@ -1,0 +1,2 @@
+esp-web-tools 10.4.0 (npm), dist/web, Apache-2.0.
+Changed: a failed install offers Close instead of Back (tools/web/vendor_esp_web_tools.py).

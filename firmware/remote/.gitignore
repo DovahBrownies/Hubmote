@@ -1,0 +1,16 @@
+# Build output, also scratch builds (build-test, build-web...)
+build*/
+managed_components/
+# Local configuration and its backups; sdkconfig.defaults and
+# sdkconfig.release are the tracked configuration.
+sdkconfig
+sdkconfig.*
+!sdkconfig.defaults
+!sdkconfig.release
+# tools/devtools.py's default output: screens can show network and TV names
+screenshot.png
+screenshot.bmp
+# Wi-Fi credentials (template: secrets.env.example)
+secrets.env
+# The UI simulator's screenshots (sim/run_sim.py)
+sim/out/

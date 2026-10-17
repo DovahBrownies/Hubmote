@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install Hubmote</title>
+<script type="module" src="esp-web-tools/install-button.js"></script>
+<style>
+  :root {
+    --bg: #0b0c0e; --s1: #15171b; --s2: #1d2026; --line: #2c3038;
+    --text: #eceef2; --text2: #a3aab6; --accent: #f2a93b; --on-accent: #1a1204; --accent-text: #f2a93b;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f2f0eb; --s1: #ffffff; --s2: #edeae3; --line: #e3ded4;
+      --text: #16181c; --text2: #4c5058; --accent: #f2a93b; --on-accent: #1a1204; --accent-text: #9c5a00;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.55 Sora, system-ui, sans-serif;
+  }
+  main { max-width: 680px; margin: 0 auto; padding: 48px 16px 64px; }
+  h1 { font-size: 30px; font-weight: 600; margin: 0 0 8px; }
+  .lead { color: var(--text2); margin: 0 0 32px; }
+  ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+  li {
+    background: var(--s1); border: 1px solid var(--line); border-radius: 16px;
+    padding: 18px 20px; display: grid; grid-template-columns: 32px 1fr; gap: 4px 14px;
+  }
+  .n {
+    grid-row: span 2; width: 32px; height: 32px; border-radius: 50%;
+    background: var(--s2); color: var(--accent-text); font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+  }
+  li h2 { font-size: 17px; font-weight: 600; margin: 4px 0 0; }
+  li p { margin: 0; color: var(--text2); }
+  .install { margin-top: 12px; }
+  .install button {
+    font: 600 16px Sora, system-ui, sans-serif; color: var(--on-accent); background: var(--accent);
+    border: 0; border-radius: 12px; padding: 14px 28px; cursor: pointer;
+  }
+  .install button:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
+  .note {
+    margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: var(--s2);
+    color: var(--text); font-size: 15px;
+  }
+  code { font: 14px "IBM Plex Mono", ui-monospace, monospace; }
+  a { color: var(--accent-text); }
+  .update { margin-top: 24px; }
+  select {
+    margin-top: 10px; width: 100%; font: 16px Sora, system-ui, sans-serif; color: var(--text);
+    background: var(--s2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
+  }
+  select:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
+  footer { margin-top: 32px; color: var(--text2); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Install Hubmote</h1>
+  <p class="lead">Puts the remote's firmware on a Waveshare ESP32-S3 touch screen board straight from this page. Use Chrome or Edge on a computer.</p>
+  <ol>
+    <li>
+      <span class="n">1</span>
+      <h2>Pick your board</h2>
+      <select id="board" aria-label="Board"></select>
+      <p class="note" id="untested" hidden>Nobody has run Hubmote on this board yet: its support follows Waveshare's documentation and demo code. Whether it works or not, please tell us in an issue on <a href="https://github.com/DovahBrownies/Hubmote/issues">GitHub</a>.</p>
+    </li>
+    <li>
+      <span class="n">2</span>
+      <h2>Connect the board</h2>
+      <p>Plug its <strong>USB</strong> port (the USB-C socket marked USB, not UART) into this computer with a data cable.</p>
+    </li>
+    <li>
+      <span class="n">3</span>
+      <h2>Install</h2>
+      <p>Click Install, pick the port called <code>USB JTAG/serial debug unit</code> (on Windows it may show as <code>USB Serial Device (COMn)</code>), then <strong>Install Hubmote for</strong> your board.</p>
+      <p>If it can't connect, close the message and click Install again. Still failing: unplug the board, hold its BOOT button while plugging it back in, let go, then Install.</p>
+      <esp-web-install-button class="install">
+        <button slot="activate">Install</button>
+        <p slot="unsupported" class="note">This browser can't talk to USB devices. Open this page in Chrome or Edge on a computer.</p>
+        <p slot="not-allowed" class="note">Installing only works from an https page or from localhost.</p>
+      </esp-web-install-button>
+    </li>
+    <li>
+      <span class="n">4</span>
+      <h2>Erase, or keep what's on it</h2>
+      <p>For a new remote, tick <strong>Erase device</strong>. To update one you already use, leave it unticked: its pairing, Wi-Fi, learned remotes and settings stay. Then <strong>Next</strong> and <strong>Install</strong>, and keep this page open until it finishes, about two minutes.</p>
+    </li>
+    <li>
+      <span class="n">5</span>
+      <h2>Set it up on the remote</h2>
+      <p>If the board sits upside down (as the 7B does in its 3D-printed case), first tap the gear (top right) &gt; <strong>Screen</strong> &gt; <strong>Rotate 180&deg;</strong>, then <strong>Done</strong>.</p>
+      <p>The remote prepares its pairing key (up to a minute), asks for your Wi-Fi network and lists the Google TVs it finds: tap yours, then type the code the TV shows.</p>
+    </li>
+  </ol>
+  <p class="note update">Already have a remote set up? Update it over Wi-Fi instead: on the remote, <strong>Settings &gt; About</strong>, then <strong>Check</strong> and <strong>Install</strong>. It keeps your pairing and settings.</p>
+  <p class="note" id="companion" hidden>The companion app for the Streamer (optional: the TV's own apps on the remote, and typing in any app): <a href="companion.apk">companion.apk</a>. How to install it: <a href="https://github.com/DovahBrownies/Hubmote/blob/main/docs/companion.md">the companion guide</a>.</p>
+  <footer id="version">Firmware</footer>
+</main>
+<script>
+  /* update.json lists the boards; each has its images and manifest.json in
+     a folder named by its id (tools/web/make_site.py). */
+  const pick = document.getElementById("board");
+  const button = document.querySelector("esp-web-install-button");
+  fetch("update.json").then(r => r.json()).then(u => {
+    for (const [id, b] of Object.entries(u.boards)) {
+      pick.add(new Option(b.name + (b.untested ? " (untested)" : ""), id));
+    }
+    const choose = () => {
+      button.setAttribute("manifest", pick.value + "/manifest.json");
+      document.getElementById("untested").hidden = !u.boards[pick.value].untested;
+    };
+    pick.addEventListener("change", choose);
+    choose();
+    document.getElementById("version").textContent = "Firmware " + u.version + (u.built ? " (" + u.built + ")" : "");
+  }).catch(() => {});
+  /* Sites built with the companion (GitHub Pages) carry its APK. */
+  fetch("companion.apk", {method: "HEAD"}).then(r => {
+    if (r.ok) document.getElementById("companion").hidden = false;
+  }).catch(() => {});
+</script>
+</body>
+</html>

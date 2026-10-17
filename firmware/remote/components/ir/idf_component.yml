@@ -1,0 +1,4 @@
+version: "1.0.0"
+description: "Infrared send and learn on the ESP32-S3 RMT, plus learned remotes as JSON files"
+dependencies:
+  idf: ">=5.4"

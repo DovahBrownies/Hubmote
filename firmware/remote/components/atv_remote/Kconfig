@@ -1,0 +1,23 @@
+menu "Android TV Remote (atv_remote)"
+
+    config ATV_REMOTE_TASK_STACK_SIZE
+        int "Internal task stack size (bytes)"
+        default 8192
+        range 6144 32768
+        help
+            Stack of the task that runs the TLS sessions (handshake with
+            RSA-2048 client authentication) and calls the event callback.
+            Always allocated in internal RAM. The free stack after each TLS
+            handshake is logged at debug level (tag "atv").
+
+    config ATV_REMOTE_TASK_PRIORITY
+        int "Internal task priority"
+        default 5
+        range 1 24
+
+    config ATV_REMOTE_TASK_CORE
+        int "Internal task core (-1 = no affinity)"
+        default -1
+        range -1 1
+
+endmenu

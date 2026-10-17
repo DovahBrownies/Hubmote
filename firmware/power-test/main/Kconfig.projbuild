@@ -1,0 +1,23 @@
+menu "Power test"
+
+    config PT_WIFI_SSID
+        string "Wi-Fi SSID"
+        default ""
+        help
+            Network used by the Wi-Fi and warm-standby tests. Leave empty to
+            disable every Wi-Fi test.
+
+    config PT_WIFI_PASSWORD
+        string "Wi-Fi password"
+        default ""
+
+    config PT_SEQUENCE_STEP_S
+        int "Seconds per step in the automatic sequence"
+        default 60
+        range 15 600
+        help
+            Dwell time of each step when "Run full sequence" is used. Long
+            enough for a meter reading to settle; a logging meter (PPK2,
+            USB meter with capture) can use shorter steps.
+
+endmenu

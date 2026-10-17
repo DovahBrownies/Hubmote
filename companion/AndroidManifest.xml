@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="io.github.dovahbrownies.hubmote">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Updates itself (Updater): Android only installs an APK of this app
+         signed with the same key. Android 12+ lets an app that updates
+         itself skip the confirmation dialog with the second permission. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
+    <!-- Only this app may send the installer's answer to Updater (its
+         receiver is open to all apps before Android 13 otherwise). -->
+    <permission
+        android:name="io.github.dovahbrownies.hubmote.permission.UPDATE_RESULT"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="io.github.dovahbrownies.hubmote.permission.UPDATE_RESULT" />
+
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+    <!-- Android 11+ only shows other apps that match a declared query. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+        </intent>
+    </queries>
+
+    <!-- Cleartext: an update may come from a site on the home network (a
+         PC, for testing); its SHA-256 and Android's key check guard it. -->
+    <application
+        android:allowBackup="false"
+        android:label="@string/app_name"
+        android:usesCleartextTraffic="true">
+
+        <!-- Unlocks reading media sessions (what is playing); reads no
+             notifications. install.ps1 enables it over ADB. -->
+        <service
+            android:name=".MediaListener"
+            android:exported="true"
+            android:label="@string/service_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- Everything runs inside the accessibility service: the system
+             starts it at boot and keeps it running, and it may open apps
+             from the background. -->
+        <service
+            android:name=".CompanionService"
+            android:exported="true"
+            android:label="@string/service_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service" />
+        </service>
+    </application>
+</manifest>

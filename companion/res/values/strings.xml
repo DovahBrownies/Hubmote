@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Hubmote Companion</string>
+    <string name="service_name">Hubmote companion</string>
+    <string name="service_description">Lets the Hubmote remote list and open apps, see when a text or number field is selected, and type into it. It never reads what is in a field.</string>
+</resources>

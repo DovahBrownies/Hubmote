@@ -1,0 +1,13 @@
+# LF everywhere, except PowerShell scripts, which stay CRLF for Windows
+# PowerShell 5.1 and its editors.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+
+*.png binary
+*.jpg binary
+*.ttf binary
+*.woff2 binary
+*.bin binary
+*.apk binary
+*.stl binary
+*.3mf binary

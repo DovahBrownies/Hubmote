@@ -1,0 +1,6 @@
+# Release builds: sdkconfig.defaults plus this file. scripts/hm-web.ps1 (the
+# web installer) builds with both, from a fresh sdkconfig each time:
+#   idf.py -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.release" ...
+# No developer tools: no updates from a PC (HTTP, token), no log over Wi-Fi,
+# no screenshots or simulated touches, no start-up self-test.
+CONFIG_HM_DEVELOPER=n

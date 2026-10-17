@@ -1,0 +1,6 @@
+build/
+managed_components/
+# sdkconfig holds the Wi-Fi password set through menuconfig;
+# sdkconfig.defaults is the tracked configuration.
+sdkconfig
+sdkconfig.old

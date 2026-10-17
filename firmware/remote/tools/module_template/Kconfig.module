@@ -1,0 +1,5 @@
+config HUB_MODULE___ID_UPPER__
+    bool "__NAME__"
+    default y
+    help
+        __DESCRIPTION__

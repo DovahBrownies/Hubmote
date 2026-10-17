@@ -1,0 +1,301 @@
+# Builds and tests everything on every push and pull request: the firmware
+# for every board, the UI simulator, the companion app. A version tag
+# (v0.1.0) also publishes: the web installer goes to GitHub Pages with every
+# board's firmware, the companion APK and update.json (what remotes update
+# from), and a GitHub release gets each board's images and the companion
+# APK.
+# Setup and release steps: docs/releasing.md.
+#
+# Actions are pinned to commits (the tag in the comment), so a moved tag
+# can't change what runs here; Dependabot (.github/dependabot.yml) proposes
+# updates.
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  host-tests:
+    name: Host tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: IR codec
+        working-directory: firmware/remote/components/ir
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Wshadow -Wformat=2 \
+            -Wmissing-prototypes -Wstrict-prototypes -Wconversion -Wno-sign-conversion \
+            -fsanitize=undefined -fsanitize-undefined-trap-on-error \
+            -I host_test/stub -I include -I . host_test/test_ir_codec.c ir_codec.c -o "$RUNNER_TEMP/ir_codec_test"
+          "$RUNNER_TEMP/ir_codec_test"
+
+      - name: Theme contrast
+        run: python3 firmware/remote/tools/check_themes.py
+
+      - name: Weather
+        run: |
+          git clone --quiet --depth 1 --branch v1.7.18 https://github.com/DaveGamble/cJSON "$RUNNER_TEMP/cJSON"
+          python3 firmware/remote/modules/weather/test/run_test.py --cjson "$RUNNER_TEMP/cJSON"
+
+      - name: Generated headers match their generators
+        run: |
+          python3 firmware/remote/components/atv_remote/tools/gen_keycodes.py
+          git diff --exit-code -- firmware/remote/components/atv_remote/include/atv_keycodes.h
+          # The golden vectors come from the official protobuf runtime, at
+          # the versions gen_golden.py names.
+          python3 -m venv "$RUNNER_TEMP/atvgen"
+          "$RUNNER_TEMP/atvgen/bin/pip" install --quiet protobuf==7.36.2 grpcio-tools==1.84.0
+          "$RUNNER_TEMP/atvgen/bin/python" firmware/remote/components/atv_remote/tools/gen_golden.py
+          git diff --exit-code -- firmware/remote/components/atv_remote/src/atv_golden.h
+
+  # The UI on the PC (firmware/remote/sim): every screen at every board's
+  # screen size, in two themes, kept as an artifact to look at.
+  simulator:
+    name: UI simulator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # LVGL at the version the firmware locks (dependencies.lock).
+      - name: Sources
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ninja-build > /dev/null
+          lvgl=$(awk '/^  lvgl\/lvgl:/ {f = 1} f && /^    version:/ {print $2; exit}' firmware/remote/dependencies.lock)
+          git clone --quiet --depth 1 --branch "v${lvgl%%~*}" https://github.com/lvgl/lvgl "$RUNNER_TEMP/lvgl"
+          git clone --quiet --depth 1 --branch v1.7.18 https://github.com/DaveGamble/cJSON "$RUNNER_TEMP/cJSON"
+
+      - name: Screens
+        run: python3 firmware/remote/sim/run_sim.py --lvgl "$RUNNER_TEMP/lvgl" --cjson "$RUNNER_TEMP/cJSON" --out "$RUNNER_TEMP/screens"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: screens
+          path: ${{ runner.temp }}/screens
+
+  # The boards: one per .defaults file in firmware/remote/components/board/boards.
+  boards:
+    name: Boards
+    runs-on: ubuntu-latest
+    outputs:
+      list: ${{ steps.list.outputs.list }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: list
+        run: |
+          list=$(cd firmware/remote/components/board/boards && ls *.defaults | sed 's/\.defaults$//' | jq -R . | jq -cs .)
+          echo "list=$list" >> "$GITHUB_OUTPUT"
+
+  # Each board: a developer build to check it compiles, and the release
+  # build for the installer site.
+  firmware:
+    name: Firmware (${{ matrix.board }})
+    needs: boards
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        board: ${{ fromJSON(needs.boards.outputs.list) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Version from the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: echo "${GITHUB_REF_NAME#v}" > firmware/remote/version.txt
+
+      - name: Developer build
+        uses: espressif/esp-idf-ci-action@e6f5c74232b1ccd4c97ed641f1e48553853f1fd5 # v1.2.0
+        with:
+          esp_idf_version: v5.4.4
+          target: esp32s3
+          path: firmware/remote
+          command: idf.py -D HM_BOARD=${{ matrix.board }} build
+
+      # The release build: no developer tools, no secrets (as scripts/hm-web.ps1).
+      - name: Release build
+        uses: espressif/esp-idf-ci-action@e6f5c74232b1ccd4c97ed641f1e48553853f1fd5 # v1.2.0
+        with:
+          esp_idf_version: v5.4.4
+          target: esp32s3
+          path: firmware/remote
+          command: idf.py -B build-web -D HM_NO_SECRETS=1 -D HM_BOARD=${{ matrix.board }} -D SDKCONFIG=build-web/sdkconfig -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.release" build
+
+      # What make_site.py reads from a build.
+      - name: Keep the release build
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-${{ matrix.board }}
+          path: |
+            firmware/remote/build-web/bootloader/bootloader.bin
+            firmware/remote/build-web/partition_table/partition-table.bin
+            firmware/remote/build-web/ota_data_initial.bin
+            firmware/remote/build-web/hubmote.bin
+            firmware/remote/build-web/config/sdkconfig.json
+            firmware/remote/build-web/esp-idf/main/build_stamp.h
+
+  site:
+    name: Installer site
+    needs: firmware
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: release-*
+          path: builds
+
+      - name: Assemble
+        run: |
+          # Each build is the folder with a hubmote.bin (with one board,
+          # download-artifact puts its files straight into builds/).
+          args=()
+          while IFS= read -r build; do
+            args+=(--build "$GITHUB_WORKSPACE/$build")
+          done < <(find builds -name hubmote.bin -printf '%h\n' | sort)
+          python3 firmware/remote/tools/web/make_site.py "${args[@]}" --out "$GITHUB_WORKSPACE/site"
+
+      - name: Keep the site
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: installer-site
+          path: site
+
+  companion:
+    name: Companion app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Android SDK packages
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" > /dev/null
+
+      # Releases (v* tags) are signed with the project's key; every other
+      # build with a throwaway key made by build.ps1, which companion.json
+      # then marks so the site never offers it. The key only exists for the
+      # release build and is deleted right after it.
+      - name: Signing key
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          KEYSTORE_BASE64: ${{ secrets.COMPANION_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::A release needs the COMPANION_KEYSTORE_BASE64 secret (docs/releasing.md)"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          echo "HM_KEYSTORE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+
+      - name: Build
+        shell: pwsh
+        env:
+          HM_KEYSTORE_PASS: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.COMPANION_KEYSTORE_PASSWORD || '' }}
+          HM_KEY_ALIAS: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.COMPANION_KEY_ALIAS || '' }}
+        run: ./companion/build.ps1
+
+      - name: Forget the signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.keystore"
+
+      # companion.json: its version, and whether the project's key signed it.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: companion-apk
+          path: |
+            companion/build/companion.apk
+            companion/build/companion.json
+
+  pages:
+    name: GitHub Pages
+    # Tags only: publishing main by hand would offer every remote a
+    # development build (update.json).
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [host-tests, simulator, site, companion]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: installer-site
+          path: site
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: companion-apk
+          path: companion-apk
+
+      # The APK for remotes to offer (update.json), if the project's key
+      # signed it, and companion.apk to download by hand.
+      - name: Companion app on the site
+        run: python3 firmware/remote/tools/web/make_site.py --no-firmware --out "$GITHUB_WORKSPACE/site" --companion "$GITHUB_WORKSPACE/companion-apk"
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [host-tests, simulator, site, companion]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: artifacts
+      # One zip per board: its four images and manifest.json (the site's
+      # folder for it).
+      - name: Release with the images and the APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd artifacts
+          files=()
+          for dir in installer-site/*/; do
+            [ -f "${dir}manifest.json" ] || continue
+            zip="hubmote-$(basename "$dir")-${GITHUB_REF_NAME}.zip"
+            zip -q -j "$zip" "$dir"*.bin "${dir}manifest.json"
+            files+=("$zip")
+          done
+          cp companion-apk/companion.apk "hubmote-companion-${GITHUB_REF_NAME}.apk"
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --generate-notes \
+            "${files[@]}" "hubmote-companion-${GITHUB_REF_NAME}.apk"

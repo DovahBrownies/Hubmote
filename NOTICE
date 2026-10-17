@@ -1,0 +1,123 @@
+Hubmote
+Copyright 2026 the Hubmote authors
+
+This project's own code (the remote's firmware, the companion app, the
+scripts and tools) is licensed under the Apache License, Version 2.0: see
+LICENSE. The enclosure's 3D models (hardware/enclosure) are licensed under
+the Creative Commons Attribution-ShareAlike 4.0 International License: see
+hardware/enclosure/LICENSE.
+
+It includes or builds on the following work by others, each under its own
+license.
+
+Code
+----
+
+androidtvremote2 (https://github.com/tronikos/androidtvremote2)
+  Apache License 2.0. The Android TV Remote protocol client in
+  firmware/remote/components/atv_remote is a C port of it, and its key codes
+  (atv_keycodes.h) and the self-test's golden vectors (atv_golden.h) are
+  generated from its remotemessage.proto and polo.proto, vendored in
+  firmware/remote/components/atv_remote/proto with its LICENSE. Those protos
+  come in turn from androidtv-remote (https://github.com/louis49/androidtv-remote,
+  MIT License, Copyright (c) 2021 louis49; its license text is
+  proto/LICENSE-androidtv-remote) and from AOSP's
+  google-tv-pairing-protocol (Copyright 2009 Google Inc., Apache License
+  2.0), as their header comments say.
+
+ESP-IDF (https://github.com/espressif/esp-idf)
+  Apache License 2.0. The firmware is built on it and links its components,
+  which carry their own licenses (FreeRTOS: MIT; lwIP: BSD-3-Clause;
+  Mbed TLS: Apache-2.0; cJSON: MIT; and others listed in ESP-IDF).
+
+Espressif components from the ESP Component Registry, fetched at build time
+  esp_lvgl_port, esp_lcd_touch, esp_lcd_touch_gt911, mdns: Apache License
+  2.0.
+
+LVGL (https://lvgl.io)
+  MIT License. Copyright (c) LVGL Kft. Its built-in Montserrat 14 font
+  (SIL Open Font License 1.1, with Font Awesome symbols) is compiled in as
+  LVGL's default font.
+
+esp_littlefs (https://github.com/joltwallet/esp_littlefs)
+  MIT License. Copyright 2020 Brian Pugh. It contains littlefs
+  (https://github.com/littlefs-project/littlefs), BSD-3-Clause, Copyright
+  (c) 2022 The littlefs authors and (c) 2017 Arm Limited.
+
+ESP Web Tools (https://github.com/esphome/esp-web-tools)
+  Apache License 2.0. Vendored in firmware/remote/web/esp-web-tools, with
+  its LICENSE, and changed in one place (a failed install offers Close
+  instead of Back; see VERSION there). Its bundle includes Material Web
+  (Apache License 2.0), lit (BSD-3-Clause), esptool-js with Espressif's
+  flasher stubs (Apache License 2.0), improv-wifi-serial-sdk (Apache
+  License 2.0), pako (MIT and Zlib), atob-lite (MIT) and tslib (0BSD).
+
+Fonts and icons
+---------------
+
+Sora (https://fonts.google.com/specimen/Sora)
+  SIL Open Font License 1.1: firmware/remote/components/ui/fonts/OFL-Sora.txt.
+
+IBM Plex Mono (https://github.com/IBM/plex)
+  SIL Open Font License 1.1:
+  firmware/remote/components/ui/fonts/OFL-IBMPlexMono.txt.
+
+Lucide icons (https://lucide.dev)
+  ISC License, with parts under the MIT License (Feather):
+  firmware/remote/components/ui/fonts/LICENSE-Lucide.txt.
+
+The fonts and icons are converted to LVGL bitmap fonts by
+firmware/remote/tools/fonts/build_fonts.py.
+
+IR codes
+--------
+
+SmartIR (https://github.com/smartHomeHub/SmartIR)
+  MIT License. Some TV code sets in firmware/remote/main/tv_codes.c come from
+  its codes; its notice is in firmware/remote/main/tv_codes_licenses.txt.
+
+Flipper-IRDB (https://github.com/Lucaslhm/Flipper-IRDB)
+  CC0 1.0 for files contributed after commit 2319685. Only those files are
+  used (firmware/remote/tools/ir/import_tv_codes.py checks each file's
+  history).
+
+Data
+----
+
+Open-Meteo (https://open-meteo.com)
+  The Weather module's forecasts come from the Open-Meteo API, whose data is
+  licensed under CC BY 4.0. The module shows the attribution "Weather data
+  by Open-Meteo.com", which must stay.
+
+Models
+------
+
+"Waveshare ESP32-S3 7inch Capacitive Touch Display Case" by 3D_Project3R
+(https://www.printables.com/model/1306944-waveshare-esp32-s3-7inch-capacitive-touch-display)
+  CC BY-SA 4.0. The enclosure in hardware/enclosure is a remix of it,
+  changed for Hubmote, and shared under the same license.
+
+Documents
+---------
+
+Contributor Covenant 2.1 (https://www.contributor-covenant.org)
+  CODE_OF_CONDUCT.md is the Contributor Covenant, version 2.1, with this
+  project's contact filled in; licensed under CC BY 4.0.
+
+References
+----------
+
+The board support (firmware/remote/components/board) was written from
+Waveshare's schematics, wiki and demos for its ESP32-S3-Touch-LCD boards
+(the 7B, 7, 5, 5B, 4.3, 4.3B and 4.3C; github.com/waveshareteam, Apache
+License 2.0) and its Waveshare-ESP32-components board support package
+(Apache License 2.0), ESPHome's waveshare_io_ch32v003 component, and
+Espressif's esp_io_expander_ch422g and ESP32_Display_Panel, used as
+references for pins, panel timings, register addresses and limits.
+
+Trademarks
+----------
+
+App names and icons that appear in the screenshots and photos (Netflix,
+YouTube, Prime Video and others) belong to their owners. Hubmote ships no
+app logos: the remote shows the icons the companion app reads from the TV.
