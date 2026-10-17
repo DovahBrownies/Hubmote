@@ -3,6 +3,9 @@
  * with it, updating it (Settings > Remotes), and where typed text goes (the
  * companion's field, Google TV's search on Home, or the remote protocol).
  * Part of the controller (ctrl_internal.h).
+ *
+ * Requests to the companion run on a worker task of their own (see
+ * "Requests" below), so the controller never waits for the network.
  */
 #include <string.h>
 #include "atv_remote.h"
@@ -11,6 +14,9 @@
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+#include "freertos/task.h"
 #include "ui.h"
 #include "ui_icons.h"
 #include "update.h"
@@ -37,8 +43,153 @@ static int s_comp_target;
 static char s_search[128];
 static int64_t s_search_at; /* when to run it; 0 = nothing waiting */
 
+/* --- Requests ---------------------------------------------------------------------------------- */
+
+/* Each request is an HTTP round trip that a slow device, or a wrong one at
+ * the TV's address, can stretch to about 30 s. They run in order on this
+ * worker, so the controller and the screen's reactions never wait for one.
+ * The worker shows pairing results itself (the ui_* calls take the LVGL
+ * lock) and reports a failed update request as a companion event, so the
+ * controller's own state stays on the controller task. */
+#define WORKER_STACK 5120 /* pairing (with its NVS write) peaked at about 3.2 KB */
+#define WORKER_QUEUE 8
+
+typedef enum {
+    REQ_LAUNCH,
+    REQ_TEXT,
+    REQ_ENTER,
+    REQ_SEARCH,
+    REQ_HIDE_KEYBOARD,
+    REQ_PAIR_START,
+    REQ_PAIR,
+    REQ_PAIR_CANCEL,
+    REQ_UPDATE,
+} req_type_t;
+
+typedef struct {
+    req_type_t type;
+    bool hidden;     /* REQ_HIDE_KEYBOARD */
+    int size;        /* REQ_UPDATE: the APK's size and SHA-256 */
+    char sha256[65];
+    char text[160];  /* the package, search, code or APK URL */
+} req_t;
+
+static QueueHandle_t s_req_q;
+static companion_cb_t s_on_event;
+/* The field's latest text: typing sends it on every change, and a slow
+ * companion only needs the newest, so REQ_TEXT sends whatever is here. */
+static portMUX_TYPE s_text_mux = portMUX_INITIALIZER_UNLOCKED;
+static char s_text[sizeof(((ctrl_ui_t *)0)->text)];
+static bool s_text_new;
+
+static bool request(const req_t *r)
+{
+    if (!s_req_q || xQueueSend(s_req_q, r, 0) != pdTRUE) {
+        ESP_LOGW(TAG, "companion busy, dropped request %d", r->type);
+        return false;
+    }
+    return true;
+}
+
+static void request_text(req_type_t type, const char *text)
+{
+    req_t r = {.type = type};
+    strlcpy(r.text, text, sizeof(r.text));
+    request(&r);
+}
+
+static void run(const req_t *r)
+{
+    esp_err_t err = ESP_OK;
+    switch (r->type) {
+    case REQ_LAUNCH:
+        err = companion_launch(r->text);
+        ESP_LOGI(TAG, "launch %s: %s", r->text, esp_err_to_name(err));
+        break;
+    case REQ_TEXT: {
+        char text[sizeof(s_text)];
+        taskENTER_CRITICAL(&s_text_mux);
+        bool fresh = s_text_new;
+        s_text_new = false;
+        memcpy(text, s_text, sizeof(text));
+        taskEXIT_CRITICAL(&s_text_mux);
+        if (fresh) {
+            /* Works in every app, browsers included; the length only, as it
+             * may be a password. */
+            err = companion_set_text(text);
+            ESP_LOGI(TAG, "text (%u chars) via companion: %s", (unsigned)strlen(text), esp_err_to_name(err));
+        }
+        break;
+    }
+    case REQ_ENTER:
+        err = companion_enter();
+        if (err != ESP_OK) {
+            atv_send_key(ATV_KEY_ENTER, ATV_DIR_SHORT);
+        }
+        ESP_LOGI(TAG, "enter via %s", err == ESP_OK ? "companion" : "key");
+        break;
+    case REQ_SEARCH:
+        err = companion_search(r->text);
+        ESP_LOGI(TAG, "search Google TV (%u chars): %s", (unsigned)strlen(r->text), esp_err_to_name(err));
+        break;
+    case REQ_HIDE_KEYBOARD:
+        companion_hide_keyboard(r->hidden);
+        break;
+    case REQ_PAIR_START: {
+        uint32_t locked_s;
+        err = companion_pair_start(&locked_s); /* sets locked_s first */
+        if (err == ESP_ERR_NOT_FINISHED) {
+            ui_notify(ICON_ALERT, "Try again in a few seconds");
+        } else {
+            ui_companion_pairing(err == ESP_OK, locked_s);
+        }
+        break;
+    }
+    case REQ_PAIR:
+        err = companion_pair(r->text);
+        ui_companion_pair_result(err == ESP_OK                ? UI_PAIR_OK
+                                 : err == ESP_ERR_INVALID_ARG ? UI_PAIR_WRONG
+                                 : err == ESP_ERR_TIMEOUT     ? UI_PAIR_EXPIRED
+                                                              : UI_PAIR_FAILED);
+        break;
+    case REQ_PAIR_CANCEL:
+        companion_pair_cancel();
+        break;
+    case REQ_UPDATE:
+        err = companion_update(r->text, r->size, r->sha256);
+        ESP_LOGI(TAG, "companion update request: %s", esp_err_to_name(err));
+        if (err != ESP_OK && s_on_event) {
+            /* As the companion reports a failed update; it was online when
+             * the update was asked for. */
+            companion_event_t e = {.type = COMPANION_EVT_UPDATE, .online = true, .update = COMPANION_UPDATE_FAILED};
+            s_on_event(&e, NULL);
+        }
+        break;
+    }
+}
+
+static void worker(void *arg)
+{
+    static bool stack_logged;
+    req_t r;
+    for (;;) {
+        if (xQueueReceive(s_req_q, &r, portMAX_DELAY) == pdTRUE) {
+            run(&r);
+            if (!stack_logged && r.type == REQ_PAIR) {
+                stack_logged = true;
+                ESP_LOGI(TAG, "companion worker: stack left %u", (unsigned)uxTaskGetStackHighWaterMark(NULL));
+            }
+        }
+    }
+}
+
 void ctrl_companion_start(companion_cb_t on_event)
 {
+    s_on_event = on_event;
+    s_req_q = xQueueCreateWithCaps(WORKER_QUEUE, sizeof(req_t), MALLOC_CAP_SPIRAM);
+    if (!s_req_q || xTaskCreatePinnedToCore(worker, "comp_req", WORKER_STACK, NULL, 5, NULL, 0) != pdPASS) {
+        ESP_LOGE(TAG, "companion worker didn't start");
+    }
     companion_start(on_event, NULL);
 }
 
@@ -89,12 +240,12 @@ static void start_companion_update(void)
     if (!s_companion_online || !s_comp_can_update || !s_rel_comp.apk[0] || s_rel_comp.code <= s_comp_code) {
         return;
     }
-    char url[160];
-    update_file_url(url, sizeof(url), s_rel_comp.apk);
-    esp_err_t err = companion_update(url, s_rel_comp.size, s_rel_comp.sha256);
-    ESP_LOGI(TAG, "companion update %s -> %s: %s", s_comp_name, s_rel_comp.version, esp_err_to_name(err));
+    req_t r = {.type = REQ_UPDATE, .size = s_rel_comp.size};
+    update_file_url(r.text, sizeof(r.text), s_rel_comp.apk);
+    strlcpy(r.sha256, s_rel_comp.sha256, sizeof(r.sha256));
+    ESP_LOGI(TAG, "companion update %s -> %s", s_comp_name, s_rel_comp.version);
     s_comp_target = s_rel_comp.code;
-    s_comp_run = err == ESP_OK ? UI_COMPANION_UPDATE_RUNNING : UI_COMPANION_UPDATE_FAILED;
+    s_comp_run = request(&r) ? UI_COMPANION_UPDATE_RUNNING : UI_COMPANION_UPDATE_FAILED;
     show_companion_update();
 }
 
@@ -176,17 +327,17 @@ void ctrl_companion_event(const companion_event_t *e)
 bool ctrl_companion_ui(const ctrl_ui_t *a)
 {
     switch (a->type) {
-    case UI_ACT_LAUNCH_APP: {
-        esp_err_t err = companion_launch(a->text);
-        ESP_LOGI(TAG, "launch %s: %s", a->text, esp_err_to_name(err));
+    case UI_ACT_LAUNCH_APP:
+        request_text(REQ_LAUNCH, a->text);
         return true;
-    }
     case UI_ACT_TEXT:
         if (s_companion_field) {
-            /* Works in every app, browsers included; the length only, as it
-             * may be a password. */
-            esp_err_t err = companion_set_text(a->text);
-            ESP_LOGI(TAG, "text (%u chars) via companion: %s", (unsigned)strlen(a->text), esp_err_to_name(err));
+            taskENTER_CRITICAL(&s_text_mux);
+            memcpy(s_text, a->text, sizeof(s_text));
+            s_text_new = true;
+            taskEXIT_CRITICAL(&s_text_mux);
+            req_t r = {.type = REQ_TEXT};
+            request(&r);
         } else if (a->text[0]) {
             /* The protocol needs at least one character; an empty field
              * can't be sent, so the TV keeps what it had. */
@@ -214,38 +365,32 @@ bool ctrl_companion_ui(const ctrl_ui_t *a)
     case UI_ACT_KEYBOARD_SHOWN:
         /* The TV's own on-screen keyboard stays away while ours is open. */
         if (s_companion_online) {
-            companion_hide_keyboard(a->index != 0);
+            req_t r = {.type = REQ_HIDE_KEYBOARD, .hidden = a->index != 0};
+            request(&r);
         }
         return true;
-    case UI_ACT_ENTER: {
-        esp_err_t err = s_companion_field ? companion_enter() : ESP_ERR_NOT_SUPPORTED;
-        if (err != ESP_OK) {
-            atv_send_key(ATV_KEY_ENTER, ATV_DIR_SHORT);
-        }
-        ESP_LOGI(TAG, "enter via %s", err == ESP_OK ? "companion" : "key");
-        return true;
-    }
-    case UI_ACT_COMPANION_PAIR: {
-        uint32_t locked_s;
-        esp_err_t err = companion_pair_start(&locked_s); /* sets locked_s first */
-        if (err == ESP_ERR_NOT_FINISHED) {
-            ui_notify(ICON_ALERT, "Try again in a few seconds");
+    case UI_ACT_ENTER:
+        if (s_companion_field) {
+            req_t r = {.type = REQ_ENTER}; /* falls back to the key if the companion can't */
+            request(&r);
         } else {
-            ui_companion_pairing(err == ESP_OK, locked_s);
+            atv_send_key(ATV_KEY_ENTER, ATV_DIR_SHORT);
+            ESP_LOGI(TAG, "enter via key");
         }
         return true;
-    }
-    case UI_ACT_COMPANION_CODE: {
-        esp_err_t err = companion_pair(a->text);
-        ui_companion_pair_result(err == ESP_OK                ? UI_PAIR_OK
-                                 : err == ESP_ERR_INVALID_ARG ? UI_PAIR_WRONG
-                                 : err == ESP_ERR_TIMEOUT     ? UI_PAIR_EXPIRED
-                                                              : UI_PAIR_FAILED);
+    case UI_ACT_COMPANION_PAIR: {
+        req_t r = {.type = REQ_PAIR_START};
+        request(&r);
         return true;
     }
-    case UI_ACT_COMPANION_CANCEL:
-        companion_pair_cancel();
+    case UI_ACT_COMPANION_CODE:
+        request_text(REQ_PAIR, a->text);
         return true;
+    case UI_ACT_COMPANION_CANCEL: {
+        req_t r = {.type = REQ_PAIR_CANCEL};
+        request(&r);
+        return true;
+    }
     case UI_ACT_COMPANION_UPDATE:
         start_companion_update();
         return true;
@@ -258,7 +403,6 @@ void ctrl_companion_tick(int64_t now)
 {
     if (s_search_at && now >= s_search_at) {
         s_search_at = 0;
-        esp_err_t err = companion_search(s_search);
-        ESP_LOGI(TAG, "search Google TV (%u chars): %s", (unsigned)strlen(s_search), esp_err_to_name(err));
+        request_text(REQ_SEARCH, s_search);
     }
 }

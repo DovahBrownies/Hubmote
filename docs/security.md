@@ -311,11 +311,11 @@ To get a new key on the remote, erase the remote with the web installer
 
 - **Plain HTTP to the companion.** TLS, with the companion's certificate
   pinned at pairing, would hide the token and typed text.
-- **Companion requests can stall the controller task.** Typing, launching
-  and pairing run on the controller task. A device answering at the TV's
-  address can hold it for up to about 30 s per request. The connect,
-  header and body deadlines are checked between reads, and a read can
-  wait 5 s.
+- **A slow device at the TV's address delays companion requests.** A
+  device answering there can hold each request for up to about 30 s. The
+  connect, header and body deadlines are checked between reads, and a
+  read can wait 5 s. Requests run on a worker task of their own, so the
+  rest of the remote keeps responding, but typing and launching wait.
 - **No signature on release images.** Updates from the releases should
   check a signature on the image, not only the HTTPS download and a hash
   from the same site.

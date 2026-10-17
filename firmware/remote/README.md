@@ -354,7 +354,9 @@ UI then leaves out what can't work (`ui_set_ir_caps()`).
     pairing, and finding the TV again by name when its address changes.
   - **`main/ctrl_companion.c`** handles the companion: the app list on
     Home, pairing, its version and updates, and typing (companion field,
-    Google TV search on Home, protocol text, Enter).
+    Google TV search on Home, protocol text, Enter). Its requests to the
+    companion run in order on a worker task of their own (`comp_req`), so
+    the controller never waits for the network.
   - **`main/ctrl_screen.c`** handles **Settings > Screen** and
     **Appearance** in NVS, dimming and screen off (longer on USB), turning off after idle
     hours, the theme restart and the battery readout.
