@@ -401,8 +401,17 @@ void ui_settings_tv_changed(void)
     paint_tv_volume();
 }
 
+/* A settings page that scrolls as a whole, for those that outgrow the screen. */
+static void page_scrolls(lv_obj_t *page)
+{
+    lv_obj_set_scrollable(page, true);
+    lv_obj_set_clickable(page, true); /* a drag anywhere scrolls, not only on a button */
+    lv_obj_set_scroll_dir(page, LV_DIR_VER);
+}
+
 static void build_remotes(lv_obj_t *page)
 {
+    page_scrolls(page); /* learned remotes add up */
     subhead(page, "Google TV");
     lv_obj_t *row = ui_btn(page, LV_PCT(100), UI_S(76), 16, COL_SURFACE2);
     lv_obj_add_event_cb(row, on_tv_row, LV_EVENT_CLICKED, NULL);
@@ -452,12 +461,8 @@ static void build_remotes(lv_obj_t *page)
     lv_obj_t *ir_head = s_ir_head = subhead(page, "IR devices");
     lv_obj_set_style_pad_top(ir_head, UI_S(6), 0);
     s_ir_list = ui_box(page);
-    lv_obj_set_width(s_ir_list, LV_PCT(100));
-    lv_obj_set_flex_grow(s_ir_list, 1);
+    lv_obj_set_size(s_ir_list, LV_PCT(100), LV_SIZE_CONTENT);
     ui_flex(s_ir_list, LV_FLEX_FLOW_COLUMN, UI_S(10));
-    lv_obj_set_scrollable(s_ir_list, true);
-    lv_obj_set_clickable(s_ir_list, true); /* a drag anywhere scrolls, not only on a button */
-    lv_obj_set_scroll_dir(s_ir_list, LV_DIR_VER);
     rebuild_ir_list(0);
     build_tv_volume(page);
     lv_obj_t *add = s_learn_remote = ui_btn_icon(page, LV_PCT(100), UI_S(56), 16, COL_SURFACE1, &font_icons_20,
@@ -1347,17 +1352,14 @@ static void build_arrange(lv_obj_t *page)
 
 static void build_modules(lv_obj_t *page)
 {
+    page_scrolls(page); /* the modules' settings outgrow the screen */
     build_time_zone(page);
     build_arrange(page);
     subhead(page, "Modules");
     s_mod_none = ui_label(page, &font_sora_15m, COL_TEXT3, "No modules");
     s_mod_list = ui_box(page);
-    lv_obj_set_width(s_mod_list, LV_PCT(100));
-    lv_obj_set_flex_grow(s_mod_list, 1);
+    lv_obj_set_size(s_mod_list, LV_PCT(100), LV_SIZE_CONTENT);
     ui_flex(s_mod_list, LV_FLEX_FLOW_COLUMN, UI_S(10));
-    lv_obj_set_scrollable(s_mod_list, true);
-    lv_obj_set_clickable(s_mod_list, true); /* a drag anywhere scrolls, not only on a button */
-    lv_obj_set_scroll_dir(s_mod_list, LV_DIR_VER);
 }
 
 /* --- About --------------------------------------------------------------------- */
