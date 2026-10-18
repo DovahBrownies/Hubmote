@@ -190,14 +190,6 @@ void hub_glance_changed(void)
     }
 }
 
-void hub_ui_async(void (*fn)(void *arg), void *arg)
-{
-    if (lvgl_port_lock(0)) {
-        lv_async_call(fn, arg);
-        lvgl_port_unlock();
-    }
-}
-
 /* --- Settings ---------------------------------------------------------------- */
 
 const hub_setting_t *hub_setting_find(const hub_module_t *module, const char *key)

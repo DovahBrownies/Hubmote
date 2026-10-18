@@ -157,8 +157,11 @@ void hub_set_modules_listener(void (*listener)(void));
 void hub_glance_changed(void);
 void hub_set_glance_listener(void (*listener)(void));
 
-/* Runs fn(arg) on the LVGL task with the LVGL lock held. Any task. */
-void hub_ui_async(void (*fn)(void *arg), void *arg);
+/* Runs fn(arg) on the LVGL task with the LVGL lock held, soon. Any task,
+ * esp_timer callbacks included: it doesn't wait for the LVGL lock. Calls
+ * run in order unless LVGL is busy when one is made; false only when there
+ * was no memory for it (then fn never runs: free what arg holds). */
+bool hub_ui_async(void (*fn)(void *arg), void *arg);
 
 #ifdef __cplusplus
 }

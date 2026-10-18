@@ -75,7 +75,8 @@ Each size is built in `build-sim/<W>x<H>/`.
 - `lv_kconfig.h` is LVGL's configuration, generated from the firmware's by
   `gen_lv_kconfig.py`. It uses the PC's malloc instead of the firmware's
   PSRAM allocator. After you change LVGL options in `sdkconfig.defaults`,
-  build the firmware once, then run `gen_lv_kconfig.py` again.
+  build the firmware once, then run `gen_lv_kconfig.py` again. CI makes
+  it again from its 7B build and fails if it differs.
 - The screen size comes in as `UI_W` and `UI_H`. The firmware takes these
   from the board's `CONFIG_HM_SCREEN_W/H`
   (`components/ui/include/ui_size.h`).

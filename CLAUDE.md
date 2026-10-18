@@ -42,6 +42,8 @@ LF, and CRLF for `.ps1`.
   for one, adding one (the board component's contract, the test list);
   keep it current when a board, `board.h`, `main/display.c` or the
   board-specific settings change.
+- `.github/workflows/codeql.yml`: CodeQL code scanning (C, Java, Python,
+  the workflows), on pushes, pull requests and weekly.
 - `.github/workflows/build.yml` and `docs/releasing.md`: CI (host tests,
   the UI simulator, developer and release firmware for every board,
   installer site, companion APK; skipped when a push or pull request

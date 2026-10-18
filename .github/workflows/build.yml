@@ -154,6 +154,18 @@ jobs:
           path: firmware/remote
           command: idf.py -D HM_BOARD=${{ matrix.board }} build
 
+      # The simulator's LVGL configuration (sim/lv_kconfig.h) must be the
+      # firmware's: made again from this build, it must match. Board
+      # defaults don't set LVGL options, so one board checks it.
+      - name: Simulator's LVGL configuration
+        if: matrix.board == 'waveshare_s3_touch_lcd_7b'
+        run: |
+          python3 firmware/remote/sim/gen_lv_kconfig.py firmware/remote/build/config/sdkconfig.h
+          git diff --exit-code -- firmware/remote/sim/lv_kconfig.h || {
+            echo "::error::sim/lv_kconfig.h is out of date: run sim/gen_lv_kconfig.py after a firmware build (sim/README.md)"
+            exit 1
+          }
+
       # The release build: no developer tools, no secrets (as scripts/hm-web.ps1).
       - name: Release build
         uses: espressif/esp-idf-ci-action@e6f5c74232b1ccd4c97ed641f1e48553853f1fd5 # v1.2.0

@@ -36,9 +36,7 @@ static int64_t s_tried_us;
 static int s_fails;
 static bool s_net_up;
 static bool s_screen_on = true;
-static wx_place_t s_found[WX_PLACES_MAX];
-static int s_found_count;
-static bool s_search_failed;
+static unsigned s_search_seq; /* the latest search; LVGL task only */
 
 static void lock(void)
 {
@@ -168,23 +166,45 @@ void weather_retry(void)
 
 /* --- Location search ------------------------------------------------------- */
 
+/* One search's answer, made on the HTTP worker and handed to the LVGL task,
+ * which drops it if a newer search was started meanwhile. */
+typedef struct {
+    unsigned seq;
+    bool failed;
+    int count;
+    wx_place_t places[WX_PLACES_MAX];
+} search_result_t;
+
 static void search_results_async(void *arg)
 {
-    weather_ui_search_results(s_found, s_found_count, s_search_failed);
+    search_result_t *r = arg;
+    if (r->seq == s_search_seq) {
+        weather_ui_search_results(r->places, r->count, r->failed);
+    }
+    heap_caps_free(r);
 }
 
 static void on_search(int status, const char *body, size_t len, void *ctx)
 {
-    s_search_failed = status != 200;
-    s_found_count = s_search_failed ? 0 : wx_parse_search(body, s_found, WX_PLACES_MAX);
-    hub_ui_async(search_results_async, NULL);
+    search_result_t *r = heap_caps_calloc(1, sizeof(*r), MALLOC_CAP_SPIRAM);
+    if (!r) {
+        return;
+    }
+    r->seq = (unsigned)(uintptr_t)ctx;
+    r->failed = status != 200;
+    r->count = r->failed ? 0 : wx_parse_search(body, r->places, WX_PLACES_MAX);
+    if (!hub_ui_async(search_results_async, r)) {
+        heap_caps_free(r);
+    }
 }
 
+/* LVGL task (the search box). */
 void weather_search(const char *text)
 {
     char encoded[160], url[320];
+    unsigned seq = ++s_search_seq;
     if (!hub_url_encode(text, encoded, sizeof(encoded)) || !wx_search_url(url, sizeof(url), encoded) ||
-        hub_http_get(url, SEARCH_MAX, on_search, NULL) != ESP_OK) {
+        hub_http_get(url, SEARCH_MAX, on_search, (void *)(uintptr_t)seq) != ESP_OK) {
         weather_ui_search_results(NULL, 0, true);
     }
 }

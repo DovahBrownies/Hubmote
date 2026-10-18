@@ -243,9 +243,11 @@ Two tasks call a module, and LVGL may only be touched from one of them.
 - **LVGL task:** `create_view`, `create_card`, `show`, `hide` and `glance`
   run here, with the LVGL lock already held. Keep them quick, because the
   screen doesn't redraw while they run.
-- **Any other task** (an HTTP callback, your own task): reach the UI only
-  through `hub_ui_async(fn, arg)`. It runs `fn(arg)` on the LVGL task with
-  the lock held.
+- **Any other task** (an HTTP callback, an `esp_timer` callback, your own
+  task): reach the UI only through `hub_ui_async(fn, arg)`. It runs
+  `fn(arg)` on the LVGL task with the lock held, soon, and doesn't wait for
+  the lock itself. It returns false only when there was no memory for the
+  call; if `arg` holds memory of its own, free it then.
 
 Call `hub_glance_changed()` when your glance changes. You can call it from
 any task.

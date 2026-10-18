@@ -3,6 +3,8 @@
 
 #include <string.h>
 #include "esp_heap_caps.h"
+#include "esp_log.h"
+#include "esp_lvgl_port.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "hub_module.h"
@@ -34,6 +36,36 @@ static esp_err_t queue(const hub_action_t *a)
         return ESP_ERR_INVALID_STATE;
     }
     return s_handler(a) ? ESP_OK : ESP_ERR_NO_MEM;
+}
+
+/* LVGL's lock is held while a frame draws or a screen is built, for tens of
+ * milliseconds at times. Waiting for it here would hold up the caller: an
+ * esp_timer callback, and every timer after it. So the call is queued here
+ * only if the lock comes within a millisecond, and otherwise handed to the
+ * controller task, which may wait for it. */
+bool hub_ui_async(void (*fn)(void *arg), void *arg)
+{
+    if (lvgl_port_lock(1)) {
+        bool ok = lv_async_call(fn, arg) == LV_RESULT_OK;
+        lvgl_port_unlock();
+        return ok;
+    }
+    hub_action_t a = {.type = HUB_ACTION_UI_CALL, .fn = fn, .arg = arg};
+    if (queue(&a) == ESP_OK) {
+        return true;
+    }
+    hub_ui_call(&a); /* the controller's queue is full: wait after all */
+    return true;
+}
+
+void hub_ui_call(const hub_action_t *action)
+{
+    if (lvgl_port_lock(0)) {
+        if (lv_async_call(action->fn, action->arg) != LV_RESULT_OK) {
+            ESP_LOGE("hub", "no memory for a UI call");
+        }
+        lvgl_port_unlock();
+    }
 }
 
 esp_err_t hub_tv_key(hub_key_t key)

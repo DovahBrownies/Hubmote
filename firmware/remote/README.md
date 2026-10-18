@@ -405,7 +405,9 @@ UI then leaves out what can't work (`ui_set_ir_caps()`).
   with `tv_codes_licenses.txt`.
 - **`main/storage.c`** mounts LittleFS at `/storage`. That is the
   `storage` partition, which holds the learned remotes, the modules' files
-  and the icon cache.
+  and the icon cache. A partition it can't mount is formatted (a new or
+  erased board), except right after an update: then the remote rolls back
+  to the firmware before, which could read it.
 - **`main/ir_ctl.c`** routes keys to IR and runs Add a TV, the
   learn-and-save flow, the Inputs page and the start-up IR check.
 

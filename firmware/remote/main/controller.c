@@ -80,8 +80,22 @@ typedef struct {
 } msg_t;
 
 static QueueHandle_t s_q;
+static TaskHandle_t s_task;
 
-/* --- Callbacks: copy and queue, never block -------------------------------- */
+/* --- Callbacks: copy and queue ---------------------------------------------- */
+
+/* Queues m. The controller can be busy for seconds (a TV search), and a lost
+ * event (the TV connected, the network came up) would leave the remote in
+ * the wrong state: so a task that can afford it waits up to POST_WAIT_MS
+ * for room. The LVGL task (the screen would freeze) and the controller
+ * itself (its own queue) never wait. */
+#define POST_WAIT_MS 1000
+
+static bool post(const msg_t *m, bool may_wait)
+{
+    TickType_t wait = may_wait && xTaskGetCurrentTaskHandle() != s_task ? pdMS_TO_TICKS(POST_WAIT_MS) : 0;
+    return xQueueSend(s_q, m, wait) == pdTRUE;
+}
 
 static void on_ui(const ui_action_t *a, void *ctx)
 {
@@ -93,7 +107,7 @@ static void on_ui(const ui_action_t *a, void *ctx)
     m.ui.dir = a->dir;
     m.ui.index = a->index;
     strlcpy(m.ui.text, a->text ? a->text : "", sizeof(m.ui.text));
-    if (xQueueSend(s_q, &m, 0) != pdTRUE) {
+    if (!post(&m, false)) {
         ESP_LOGW(TAG, "queue full, dropped ui action %d", a->type);
     }
 }
@@ -101,7 +115,7 @@ static void on_ui(const ui_action_t *a, void *ctx)
 static void on_companion(const companion_event_t *evt, void *ctx)
 {
     msg_t m = {.kind = MSG_COMPANION, .companion = *evt};
-    if (xQueueSend(s_q, &m, 0) != pdTRUE) {
+    if (!post(&m, true)) {
         ESP_LOGW(TAG, "queue full, dropped companion event %d", evt->type);
     }
 }
@@ -109,7 +123,7 @@ static void on_companion(const companion_event_t *evt, void *ctx)
 static void on_update(const update_status_t *status)
 {
     msg_t m = {.kind = MSG_UPDATE, .update = *status};
-    if (xQueueSend(s_q, &m, 0) != pdTRUE) {
+    if (!post(&m, true)) {
         ESP_LOGW(TAG, "queue full, dropped update status %d", status->state);
     }
 }
@@ -117,7 +131,9 @@ static void on_update(const update_status_t *status)
 static void on_atv(const atv_event_t *evt, void *ctx)
 {
     msg_t m = {.kind = MSG_ATV, .atv = *evt};
-    if (xQueueSend(s_q, &m, 0) != pdTRUE) {
+    /* Volume reports come in bursts and the next one has the level: those
+     * don't hold up the TV's task. */
+    if (!post(&m, evt->type != ATV_EVT_VOLUME)) {
         ESP_LOGW(TAG, "queue full, dropped atv event %d", evt->type);
     }
 }
@@ -126,7 +142,7 @@ static void on_atv(const atv_event_t *evt, void *ctx)
 static bool on_hub_action(const hub_action_t *action)
 {
     msg_t m = {.kind = MSG_HUB, .hub = *action};
-    if (xQueueSend(s_q, &m, 0) != pdTRUE) {
+    if (!post(&m, false)) { /* modules call from any task, this one too */
         ESP_LOGW(TAG, "queue full, dropped module action %d", action->type);
         return false;
     }
@@ -136,7 +152,7 @@ static bool on_hub_action(const hub_action_t *action)
 static void on_net(bool up, int reason, void *ctx)
 {
     msg_t m = {.kind = MSG_NET, .net = {.up = up, .reason = reason}};
-    if (xQueueSend(s_q, &m, 0) != pdTRUE) {
+    if (!post(&m, true)) {
         ESP_LOGW(TAG, "queue full, dropped network %s", up ? "up" : "down");
     }
 }
@@ -338,6 +354,9 @@ static void handle_hub(const hub_action_t *a)
     }
     case HUB_ACTION_SPEEDTEST:
         ESP_LOGI(TAG, "module: speed test on the TV%s", ctrl_companion_speedtest() ? "" : ": no companion 0.7");
+        return;
+    case HUB_ACTION_UI_CALL:
+        hub_ui_call(a); /* LVGL's lock was busy: this task may wait for it */
         return;
     case HUB_ACTION_OPEN:
         if (strstr(a->text, "://")) {
@@ -638,5 +657,5 @@ void controller_start(void)
     ESP_ERROR_CHECK(atv_init(&cfg));
 
     /* Big stack: RSA-2048 key generation runs here on first boot. */
-    xTaskCreatePinnedToCore(controller_task, "ctrl", 16384, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(controller_task, "ctrl", 16384, NULL, 5, &s_task, 0);
 }

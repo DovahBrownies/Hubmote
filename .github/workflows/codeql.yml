@@ -1,0 +1,59 @@
+# CodeQL, GitHub's code scanning: the firmware's C, the companion's Java,
+# the Python tools and these workflows. Findings show under Security > Code
+# scanning. C and Java are read without building them (build-mode none):
+# the firmware builds only in ESP-IDF's container, and the companion
+# without Gradle. A weekly run picks up new queries.
+#
+# Actions are pinned to commits, as in build.yml; Dependabot updates them.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "docs/**", "hardware/**"]
+  pull_request:
+    paths-ignore: ["**.md", "docs/**", "hardware/**"]
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: CodeQL (${{ matrix.language }})
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [actions, c-cpp, java-kotlin, python]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Generated code (fonts, IR code sets, time zones) and the vendored
+      # ESP Web Tools are left out: their sources are what to review.
+      - uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          config: |
+            paths-ignore:
+              - firmware/remote/components/ui/fonts
+              - firmware/remote/main/tv_codes.c
+              - firmware/remote/components/hub/hub_tz.c
+              - firmware/remote/web/esp-web-tools
+
+      - uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          category: "/language:${{ matrix.language }}"

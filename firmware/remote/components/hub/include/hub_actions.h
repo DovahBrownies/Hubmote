@@ -149,6 +149,7 @@ typedef enum {
     HUB_ACTION_OPEN,
     HUB_ACTION_NOTIFY,
     HUB_ACTION_SPEEDTEST,
+    HUB_ACTION_UI_CALL, /* hub_ui_async() found LVGL's lock busy: make the call (hub_ui_call()) */
 } hub_action_type_t;
 
 typedef struct {
@@ -159,11 +160,17 @@ typedef struct {
     char icon[8];   /* NOTIFY: an ICON_* string, or "" */
     bool remote;    /* NOTIFY: show it on the remote */
     bool tv;        /* NOTIFY: show it on the TV */
+    void (*fn)(void *arg); /* UI_CALL */
+    void *arg;             /* UI_CALL */
 } hub_action_t;
 
 /* Queues an action for the controller; false if it couldn't. Any task. */
 typedef bool (*hub_action_handler_t)(const hub_action_t *action);
 void hub_set_action_handler(hub_action_handler_t handler);
+
+/* HUB_ACTION_UI_CALL, on the controller task: hands the call to the LVGL
+ * task, waiting for LVGL's lock as long as it takes. */
+void hub_ui_call(const hub_action_t *action);
 
 /* The companion's news, from the controller task: what is playing (NULL:
  * nothing), which raises HUB_EV_NOW_PLAYING, and the app list. */

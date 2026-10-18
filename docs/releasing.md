@@ -44,7 +44,8 @@ A tag's run is never cancelled.
   (`-D HM_BOARD=<id>`), then the release build (`sdkconfig.release`, no
   secrets, in `build-web/`), which it keeps as `release-<id>`. On a tag,
   the job first sets `version.txt` from the tag (`v0.1.0` becomes
-  `0.1.0`).
+  `0.1.0`). The 7B's job also checks that the simulator's LVGL
+  configuration (`sim/lv_kconfig.h`) is the firmware's.
 - **Installer site** puts all the release builds into one site with
   `tools/web/make_site.py`. The site has a folder per board with its
   images and `manifest.json`, the page with its board picker, and
@@ -82,6 +83,14 @@ A tag's run is never cancelled.
 Every run keeps the site, the screenshots and the APK as run artifacts
 (`installer-site`, `screens`, `companion-apk`); a tag's run also keeps
 the signed site (`signed-site`).
+
+### Code scanning
+
+`.github/workflows/codeql.yml` runs CodeQL on pushes to `main`, on pull
+requests and weekly: the firmware's C, the companion's Java, the Python
+tools and the workflows, without building them. Findings show under
+**Security > Code scanning**. Generated code (fonts, IR code sets, time
+zones) and the vendored ESP Web Tools are left out.
 
 ### Pinned actions and Dependabot
 

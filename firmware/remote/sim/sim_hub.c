@@ -183,9 +183,10 @@ void hub_glance_changed(void)
 }
 
 /* Everything runs on one thread here: run it now. */
-void hub_ui_async(void (*fn)(void *arg), void *arg)
+bool hub_ui_async(void (*fn)(void *arg), void *arg)
 {
     fn(arg);
+    return true;
 }
 
 /* --- Time: fixed, so screenshots don't change from run to run ----------------- */
