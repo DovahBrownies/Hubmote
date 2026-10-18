@@ -198,6 +198,7 @@ Every callback is optional.
 | `HUB_EV_SCREEN_OFF` | the screen went dark | stop polling |
 | `HUB_EV_MINUTE` | every 60 s from start-up (not on the minute) | periodic refresh, clocks |
 | `HUB_EV_NOW_PLAYING` | what the TV plays changed | read `hub_now_playing()` |
+| `HUB_EV_TV` | the TV turned on or off, or another app came to the front | read `hub_tv_state()` |
 
 At start-up the screen is on, and no `HUB_EV_SCREEN_ON` is sent for it.
 
@@ -311,8 +312,11 @@ static const hub_module_t s_module = {
 - **Kinds:** `HUB_SETTING_SWITCH` (on or off), `HUB_SETTING_CHOICE` (one of
   `choices`: two or three show side by side, more open a list),
   `HUB_SETTING_NUMBER` (`min` to `max` in steps of `step`, with an
-  optional `unit`) and `HUB_SETTING_TEXT` (typed on the remote's keyboard,
-  `max_len` characters, 63 at most).
+  optional `unit`, and `zero` shown instead of 0, such as "Off") and
+  `HUB_SETTING_TEXT` (typed on the remote's keyboard, `max_len`
+  characters, 63 at most).
+- **Messages on the TV:** add `HUB_SETTING_SHOW_ON_TV` to the list, and
+  [`hub_notify()`](#messages) follows it.
 - **Reading them:** `hub_setting_i32(module, key)` gives the saved value
   or the default `def`, kept within what the setting allows.
   `hub_setting_str(module, key, out, len)` gives a TEXT setting, or "".
@@ -357,16 +361,39 @@ for the controller and return at once, from any task:
 - `hub_tv_open(app)` opens an app by package name (through the companion
   app) or a deep link.
 
-And read what the TV is doing, from the companion app:
+And read what the TV is doing:
 
+- `hub_tv_state(&tv)` says whether the TV is on and which app is in
+  front, from the Google TV itself (no companion app needed);
+  `HUB_EV_TV` says when either changes. While the remote isn't connected
+  to the Google TV, the TV counts as off.
 - `hub_now_playing(&now)` gives the app, title, subtitle and whether it
-  plays; `HUB_EV_NOW_PLAYING` says when it changes.
-- `hub_tv_apps(list, max)` gives the apps on the TV, package and name.
+  plays, from the companion app; `HUB_EV_NOW_PLAYING` says when it
+  changes.
+- `hub_tv_apps(list, max)` gives the apps on the TV, package and name,
+  from the companion app.
 
 A module that needs the remote to stay on, such as a timer, calls
 `hub_hold_awake()` and later `hub_release_awake()`: the remote doesn't
 turn itself off after idle hours in between. The screen still dims.
-`modules/sleep_timer` uses all of this.
+`modules/sleep_timer` and `modules/screen_time` use all of this.
+
+### Messages
+
+`hub_notify(module, icon, text)` tells the user something: "The TV turns
+off in a minute". It shows the message on the remote, and also at the
+top right of the TV for 10 seconds, with a ring that empties until it
+goes, when:
+
+- your module's settings include `HUB_SETTING_SHOW_ON_TV` (a switch,
+  "Show messages on the TV", on by default) and it is on;
+- the companion app, 0.7 or later, is online.
+
+When the message doesn't reach the TV, the remote's screen lights up to
+show it, as it may well be dark. `icon` is an `ICON_*` string or NULL;
+the text is 160 characters at most. `hub_tv_notify(text)` shows a
+message on the TV only. Both work from any task. Use them for what the
+user must not miss, not for every change.
 
 ### Time (`hub_time.h`)
 
@@ -377,7 +404,8 @@ The clock is set over the network (SNTP) once Wi-Fi is up.
 the time zone in **Settings > Modules**:
 
 - **Automatic** (the default): the UTC offset a module reports for its
-  place with `hub_time_set_utc_offset()`. Weather does this.
+  place with `hub_time_set_utc_offset()`. Weather does this. The last
+  one reported is saved, so local time is right from start-up.
 - **A zone from the list:** that zone's rules, daylight saving included.
 
 `hub_time_utc_offset()` gives the offset in use now. A module that knows a

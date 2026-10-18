@@ -143,8 +143,13 @@ static void sample_data(void)
     static const bool learned[] = {true, true, true, false};
     ui_set_inputs(inputs, learned);
     ui_set_volume(12, 100, false);
+    for (size_t i = 0; i < hub_module_count(); i++) { /* as hub_modules_init() does on the remote */
+        if (hub_module_get(i)->init) {
+            hub_module_get(i)->init();
+        }
+    }
     hub_glance_changed(); /* Weather's glance in the top bar, as when its data arrives */
-    ui_settings_modules_changed(); /* as hub_modules_init() does on the remote */
+    ui_settings_modules_changed();
 }
 
 /* --- The screens ---------------------------------------------------------------- */
@@ -198,6 +203,8 @@ static void screens(void)
     shot("weather");
     ui_module_open("sleep_timer");
     shot("sleep_timer");
+    ui_module_open("screen_time");
+    shot("screen_time");
 
     /* IR */
     ui_show_ir_tv();

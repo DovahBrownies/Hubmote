@@ -38,6 +38,7 @@ add_executable(hubmote_sim
     "${REMOTE_DIR}/modules/weather/weather_ui.c"
     "${REMOTE_DIR}/modules/weather/weather_data.c"
     "${REMOTE_DIR}/modules/sleep_timer/sleep_timer.c"
+    "${REMOTE_DIR}/modules/screen_time/screen_time.c"
     "${CJSON_DIR}/cJSON.c")
 target_include_directories(hubmote_sim PRIVATE
     stubs

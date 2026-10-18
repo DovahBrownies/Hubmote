@@ -17,6 +17,7 @@ static hub_tv_app_t *s_apps; /* PSRAM */
 static size_t s_app_count;
 static portMUX_TYPE s_awake_mux = portMUX_INITIALIZER_UNLOCKED;
 static int s_awake;
+static hub_tv_state_t s_tv; /* under s_lock */
 
 void hub_set_action_handler(hub_action_handler_t handler)
 {
@@ -64,6 +65,67 @@ esp_err_t hub_tv_open(const char *app)
     hub_action_t a = {.type = HUB_ACTION_OPEN};
     strlcpy(a.text, app, sizeof(a.text));
     return queue(&a);
+}
+
+esp_err_t hub_notify(const hub_module_t *module, const char *icon, const char *text)
+{
+    if (!text || !text[0]) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    hub_action_t a = {.type = HUB_ACTION_NOTIFY, .remote = true};
+    a.tv = hub_setting_find(module, "tv_msg") && hub_setting_i32(module, "tv_msg") != 0;
+    strlcpy(a.text, text, sizeof(a.text));
+    strlcpy(a.icon, icon ? icon : "", sizeof(a.icon));
+    return queue(&a);
+}
+
+esp_err_t hub_tv_notify(const char *text)
+{
+    if (!text || !text[0]) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    hub_action_t a = {.type = HUB_ACTION_NOTIFY, .tv = true};
+    strlcpy(a.text, text, sizeof(a.text));
+    return queue(&a);
+}
+
+void hub_tv_state(hub_tv_state_t *out)
+{
+    memset(out, 0, sizeof(*out));
+    if (!s_lock) {
+        return;
+    }
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    *out = s_tv;
+    xSemaphoreGive(s_lock);
+}
+
+void hub_set_tv_power(bool on)
+{
+    if (!s_lock) {
+        return;
+    }
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    bool changed = s_tv.on != on;
+    s_tv.on = on;
+    xSemaphoreGive(s_lock);
+    if (changed) {
+        hub_modules_event(HUB_EV_TV);
+    }
+}
+
+void hub_set_tv_app(const char *app)
+{
+    if (!s_lock) {
+        return;
+    }
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    bool changed = strcmp(s_tv.app, app ? app : "") != 0;
+    strlcpy(s_tv.app, app ? app : "", sizeof(s_tv.app));
+    xSemaphoreGive(s_lock);
+    if (changed) {
+        hub_modules_event(HUB_EV_TV);
+    }
 }
 
 bool hub_now_playing(hub_now_playing_t *out)

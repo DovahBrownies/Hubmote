@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "esp_err.h"
+#include "hub_module.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,6 +52,26 @@ esp_err_t hub_tv_off(bool ir);
  * companion app) or a deep link ("https://www.youtube.com"). */
 esp_err_t hub_tv_open(const char *app);
 
+/* --- Messages -------------------------------------------------------------- */
+
+/* Tells the user something: a message on the remote and, when the module's
+ * "Show messages on the TV" setting (HUB_SETTING_SHOW_ON_TV) is on, at the
+ * top right of the TV for 10 seconds too (companion app 0.7+). When it
+ * doesn't reach the TV, the remote's screen lights up to show it. icon is an
+ * ICON_* string, or NULL. 160 characters at most. Any task. */
+esp_err_t hub_notify(const hub_module_t *module, const char *icon, const char *text);
+
+/* The setting hub_notify() reads: put it in a module's settings. */
+#define HUB_SETTING_SHOW_ON_TV                                                                       \
+    {                                                                                                \
+        .key = "tv_msg", .label = "Show messages on the TV", .type = HUB_SETTING_SWITCH, .def = 1 \
+    }
+
+/* A message on the TV only (companion app 0.7+). */
+esp_err_t hub_tv_notify(const char *text);
+
+/* --- The TV --------------------------------------------------------------------- */
+
 #define HUB_APP_ID_MAX   96
 #define HUB_APP_NAME_MAX 48
 #define HUB_TITLE_MAX    96
@@ -66,6 +87,14 @@ typedef struct {
 /* False when nothing plays or there is no companion. HUB_EV_NOW_PLAYING
  * says when it changes. Any task. */
 bool hub_now_playing(hub_now_playing_t *out);
+
+/* Whether the TV is on, and the app in front ("" unknown), from the Google
+ * TV itself: no companion needed. HUB_EV_TV says when either changes. */
+typedef struct {
+    bool on;
+    char app[HUB_APP_ID_MAX];
+} hub_tv_state_t;
+void hub_tv_state(hub_tv_state_t *out);
 
 /* The apps on the TV, from the companion app. */
 typedef struct {
@@ -89,13 +118,17 @@ typedef enum {
     HUB_ACTION_IR_TV_KEY,
     HUB_ACTION_TV_OFF,
     HUB_ACTION_OPEN,
+    HUB_ACTION_NOTIFY,
 } hub_action_type_t;
 
 typedef struct {
     hub_action_type_t type;
     hub_key_t key;  /* KEY */
     bool ir;        /* TV_OFF */
-    char text[160]; /* IR_TV_KEY: the key's name; OPEN: the app or link */
+    char text[161]; /* IR_TV_KEY: the key's name; OPEN: the app or link; NOTIFY: the message */
+    char icon[8];   /* NOTIFY: an ICON_* string, or "" */
+    bool remote;    /* NOTIFY: show it on the remote */
+    bool tv;        /* NOTIFY: show it on the TV */
 } hub_action_t;
 
 /* Queues an action for the controller; false if it couldn't. Any task. */
@@ -106,6 +139,10 @@ void hub_set_action_handler(hub_action_handler_t handler);
  * nothing), which raises HUB_EV_NOW_PLAYING, and the app list. */
 void hub_set_now_playing(const hub_now_playing_t *now);
 void hub_set_tv_apps(const hub_tv_app_t *apps, size_t count);
+/* The TV's power and the app in front, from the controller task; a change
+ * raises HUB_EV_TV. */
+void hub_set_tv_power(bool on);
+void hub_set_tv_app(const char *app);
 
 /* True while a module holds the remote awake. */
 bool hub_awake_held(void);

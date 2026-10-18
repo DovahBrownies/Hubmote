@@ -2,7 +2,7 @@
  * The simulator's stand-in for the module platform (components/hub) and the
  * Weather module's data side (modules/weather/weather.c): Weather, showing
  * the forecast from the module's test fixture, and the modules that
- * register themselves (the Sleep timer).
+ * register themselves (Screen time, the Sleep timer).
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +11,7 @@
 
 #include "hub_actions.h"
 #include "hub_module.h"
+#include "hub_store.h"
 #include "hub_time.h"
 #include "hub_tz.h"
 #include "ui_icons.h"
@@ -127,6 +128,12 @@ const hub_module_t *hub_module_find(const char *id)
 esp_err_t hub_tv_off(bool ir)
 {
     (void)ir;
+    return ESP_OK;
+}
+
+esp_err_t hub_tv_key(hub_key_t key)
+{
+    (void)key;
     return ESP_OK;
 }
 
@@ -284,8 +291,90 @@ const hub_setting_t *hub_setting_find(const hub_module_t *module, const char *ke
 
 int32_t hub_setting_i32(const hub_module_t *module, const char *key)
 {
+    if (module && strcmp(module->id, "screen_time") == 0 && strcmp(key, "limit") == 0) {
+        return 120; /* a limit, so its screen shows one */
+    }
     const hub_setting_t *s = hub_setting_find(module, key);
     return s ? s->def : 0;
+}
+
+/* --- The TV and module storage: Screen time's day, half used ------------------- */
+
+esp_err_t hub_notify(const hub_module_t *module, const char *icon, const char *text)
+{
+    (void)module;
+    (void)icon;
+    (void)text;
+    return ESP_OK;
+}
+
+esp_err_t hub_tv_notify(const char *text)
+{
+    (void)text;
+    return ESP_OK;
+}
+
+void hub_tv_state(hub_tv_state_t *out)
+{
+    memset(out, 0, sizeof(*out));
+    out->on = true;
+    strlcpy(out->app, "com.netflix.ninja", sizeof(out->app));
+}
+
+bool hub_now_playing(hub_now_playing_t *out)
+{
+    (void)out;
+    return false;
+}
+
+size_t hub_tv_apps(hub_tv_app_t *out, size_t max)
+{
+    static const hub_tv_app_t apps[] = {
+        {"com.netflix.ninja", "Netflix"},
+        {"com.google.android.youtube.tv", "YouTube"},
+        {"com.plexapp.android", "Plex"},
+        {"com.spotify.tv.android", "Spotify"},
+    };
+    size_t n = sizeof(apps) / sizeof(apps[0]) < max ? sizeof(apps) / sizeof(apps[0]) : max;
+    memcpy(out, apps, n * sizeof(apps[0]));
+    return n;
+}
+
+esp_err_t hub_kv_get_i32(const char *module, const char *key, int32_t *out)
+{
+    if (strcmp(module, "screen_time") == 0 && strcmp(key, "used") == 0) {
+        *out = 95;
+        return ESP_OK;
+    }
+    return ESP_FAIL;
+}
+
+esp_err_t hub_kv_get_str(const char *module, const char *key, char *out, size_t len)
+{
+    if (strcmp(module, "screen_time") == 0 && strcmp(key, "apps") == 0) {
+        strlcpy(out,
+                "com.netflix.ninja=48;com.google.android.youtube.tv=27;com.google.android.apps.tv.launcherx=12;"
+                "com.plexapp.android=8;",
+                len);
+        return ESP_OK;
+    }
+    return ESP_FAIL;
+}
+
+esp_err_t hub_kv_set_i32(const char *module, const char *key, int32_t value)
+{
+    (void)module;
+    (void)key;
+    (void)value;
+    return ESP_OK;
+}
+
+esp_err_t hub_kv_set_str(const char *module, const char *key, const char *value)
+{
+    (void)module;
+    (void)key;
+    (void)value;
+    return ESP_OK;
 }
 
 void hub_setting_str(const hub_module_t *module, const char *key, char *out, size_t len)

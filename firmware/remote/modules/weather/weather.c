@@ -275,6 +275,7 @@ static void weather_event(hub_event_t event)
         ui_update(); /* "Updated" ages */
         break;
     case HUB_EV_NOW_PLAYING:
+    case HUB_EV_TV:
         break;
     }
 }

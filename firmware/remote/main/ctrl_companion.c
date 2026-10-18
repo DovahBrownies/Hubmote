@@ -68,14 +68,15 @@ typedef enum {
     REQ_PAIR,
     REQ_PAIR_CANCEL,
     REQ_UPDATE,
+    REQ_NOTIFY,
 } req_type_t;
 
 typedef struct {
     req_type_t type;
     bool hidden;     /* REQ_HIDE_KEYBOARD */
-    int size;        /* REQ_UPDATE: the APK's size and SHA-256 */
+    int size;        /* REQ_UPDATE: the APK's size and SHA-256; REQ_NOTIFY: seconds */
     char sha256[65];
-    char text[160];  /* the package, search, code or APK URL */
+    char text[161];  /* the package, search, code, APK URL or message */
 } req_t;
 
 static QueueHandle_t s_req_q;
@@ -159,6 +160,10 @@ static void run(const req_t *r)
     case REQ_PAIR_CANCEL:
         companion_pair_cancel();
         break;
+    case REQ_NOTIFY:
+        err = companion_notify(r->text, r->size);
+        ESP_LOGI(TAG, "message on the TV: %s", esp_err_to_name(err));
+        break;
     case REQ_UPDATE:
         err = companion_update(r->text, r->size, r->sha256);
         ESP_LOGI(TAG, "companion update request: %s", esp_err_to_name(err));
@@ -190,6 +195,19 @@ static void worker(void *arg)
 void ctrl_companion_launch(const char *package)
 {
     request_text(REQ_LAUNCH, package);
+}
+
+#define NOTIFY_VERSION 7 /* companion 0.7 shows messages (/notify) */
+#define NOTIFY_SECONDS 10
+
+bool ctrl_companion_notify(const char *text)
+{
+    if (!s_companion_online || s_comp_code < NOTIFY_VERSION) {
+        return false;
+    }
+    req_t r = {.type = REQ_NOTIFY, .size = NOTIFY_SECONDS};
+    strlcpy(r.text, text, sizeof(r.text));
+    return request(&r);
 }
 
 void ctrl_companion_start(companion_cb_t on_event)

@@ -1038,6 +1038,13 @@ void ui_notify(const char *icon, const char *text)
     UNLOCK();
 }
 
+void ui_wake(void)
+{
+    LOCK();
+    lv_display_trigger_activity(NULL);
+    UNLOCK();
+}
+
 void ui_learn_progress(int presses, int needed, bool mismatch)
 {
     LOCK();

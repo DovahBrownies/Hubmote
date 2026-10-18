@@ -112,6 +112,7 @@ It does not try to stop:
   - press Enter, and hide the TV's keyboard;
   - open Google TV's search;
   - read what is playing;
+  - show a short message over the TV picture for up to 30 s (0.7+);
   - make the companion install a newer version of itself from a given
     address.
 
@@ -194,7 +195,7 @@ In NVS (the `nvs` partition), not encrypted:
 | `wifi` | The Wi-Fi network name and password |
 | `ota` | The update token (developer builds) |
 | `companion` | The companion token |
-| `ctrl`, `hub`, `hub_off`, `m_<module>` | Settings, the time zone (`hub`); Weather's include the chosen place's name and coordinates |
+| `ctrl`, `hub`, `hub_off`, `m_<module>` | Settings, the time zone and its UTC offset (`hub`); Weather's include the chosen place's name and coordinates; Screen time's include today's minutes per app |
 
 In the `storage` partition (LittleFS):
 

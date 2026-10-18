@@ -38,6 +38,7 @@ typedef enum {
     HUB_EV_SCREEN_OFF,   /* the screen went dark: stop polling */
     HUB_EV_MINUTE,       /* once a minute */
     HUB_EV_NOW_PLAYING,  /* what the TV plays changed: hub_now_playing() */
+    HUB_EV_TV,           /* the TV turned on or off, or another app came to the front: hub_tv_state() */
 } hub_event_t;
 
 /*
@@ -62,6 +63,7 @@ typedef struct {
     size_t count;               /* side, more as a list */
     int32_t min, max, step;     /* NUMBER */
     const char *unit;           /* NUMBER: after the value ("min"), or NULL */
+    const char *zero;           /* NUMBER: shown instead of 0 ("Off"), or NULL */
     size_t max_len;             /* TEXT: the longest value, 63 at most */
 } hub_setting_t;
 

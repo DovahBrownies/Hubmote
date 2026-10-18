@@ -8,7 +8,10 @@ Turns the TV off after 15 to 120 minutes.
 - **While it runs,** the top bar counts down, and the remote doesn't turn
   itself off after idle hours (Settings > Screen), so the timer can finish.
   Turning the remote off from Settings stops it.
-- **A minute before,** a message says the TV is about to turn off.
+- **A minute before,** a message says the TV is about to turn off. It
+  shows on the remote and, with the companion app (0.7 or later), at the
+  top right of the TV for 10 seconds. When it can't reach the TV, the
+  remote's screen lights up to show it.
 
 ## Settings
 
@@ -20,10 +23,13 @@ In **Settings > Modules > Sleep timer**, kept in NVS (`m_sleep_timer`):
   that one turns a TV that is already off back on. Without an IR TV, the
   Streamer is used.
 - **Warn a minute before** (`warn`): on by default.
+- **Show messages on the TV** (`tv_msg`): the warning on the TV too; on
+  by default.
 
 ## Data and privacy
 
-It uses no network of its own and stores only these two settings.
+It uses no network of its own and stores only these settings. The
+warning goes to the companion app on the TV, on your network.
 
 ## Credits and licenses
 

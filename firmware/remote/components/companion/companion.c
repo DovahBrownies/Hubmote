@@ -1065,6 +1065,14 @@ esp_err_t companion_enter(void)
     return post("/enter");
 }
 
+esp_err_t companion_notify(const char *text, int seconds)
+{
+    char path[40 + 160 * 3 + 1];
+    snprintf(path, sizeof(path), "/notify?seconds=%d&text=", seconds);
+    encode_into(path, sizeof(path), text);
+    return post(path);
+}
+
 esp_err_t companion_hide_keyboard(bool hidden)
 {
     return post(hidden ? "/keyboard?hidden=1" : "/keyboard?hidden=0");

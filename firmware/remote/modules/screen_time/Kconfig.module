@@ -1,0 +1,5 @@
+config HUB_MODULE_SCREEN_TIME
+    bool "Screen time"
+    default y
+    help
+        Counts how long the TV is on each day, warns near a daily limit and can turn the TV off at it.

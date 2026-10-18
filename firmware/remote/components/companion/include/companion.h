@@ -147,6 +147,10 @@ esp_err_t companion_launch(const char *pkg);
  * short HTTP request. */
 esp_err_t companion_set_text(const char *text);
 esp_err_t companion_enter(void);
+/* Shows text (160 characters at most) at the top right of the TV for 3 to
+ * 30 seconds, with a ring that empties until it goes (companion 0.7+).
+ * Blocks for one short HTTP request. */
+esp_err_t companion_notify(const char *text, int seconds);
 /* Opens Google TV's own search with this text (companion 0.4+). Blocks for
  * one short HTTP request. */
 esp_err_t companion_search(const char *text);

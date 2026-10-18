@@ -51,6 +51,7 @@ public final class CompanionService extends AccessibilityService {
     private Updater updater;
     private NowPlaying nowPlaying;
     private View codeView; /* the pairing code on screen; main thread only */
+    private View messageView; /* a message from the remote (/notify); main thread only */
 
     /* An app's own on-screen keyboard (OnScreenKeyboard), main thread only:
      * whether one is showing, and when the screen was last searched for it. */
@@ -88,6 +89,7 @@ public final class CompanionService extends AccessibilityService {
     public boolean onUnbind(Intent intent) {
         hideKeyboard(false);
         hideCode();
+        main.post(this::removeMessageView);
         if (updater != null) {
             updater.unregister();
         }
@@ -425,6 +427,46 @@ public final class CompanionService extends AccessibilityService {
 
     void hideCode() {
         main.post(this::removeCodeView);
+    }
+
+    /** Shows a message from the remote at the top right of the TV for ms,
+     * replacing one still showing (Message: the text and a ring that
+     * empties until it goes). */
+    void showMessage(String text, long ms) {
+        main.post(() -> {
+            removeMessageView();
+            View view = Message.build(this, text, ms);
+            WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                    PixelFormat.TRANSLUCENT);
+            lp.gravity = Gravity.TOP | Gravity.END;
+            lp.x = dp(40);
+            lp.y = dp(40);
+            try {
+                ((WindowManager) getSystemService(WINDOW_SERVICE)).addView(view, lp);
+                messageView = view;
+            } catch (RuntimeException e) {
+                Log.w(TAG, "can't show a message", e);
+                return;
+            }
+            main.postDelayed(() -> {
+                if (messageView == view) {
+                    removeMessageView();
+                }
+            }, ms);
+        });
+    }
+
+    private void removeMessageView() {
+        if (messageView != null) {
+            try {
+                ((WindowManager) getSystemService(WINDOW_SERVICE)).removeView(messageView);
+            } catch (RuntimeException ignored) {
+            }
+            messageView = null;
+        }
     }
 
     /* After the timeout: hide unless a newer code replaced this one. */

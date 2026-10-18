@@ -23,7 +23,8 @@ void hub_time_start(void);
 bool hub_time_valid(void);
 
 /* Reports the local place's offset from UTC, in seconds. Local time uses
- * it while the time zone is Automatic. */
+ * it while the time zone is Automatic; it is saved, so local time is right
+ * from start-up. */
 void hub_time_set_utc_offset(int32_t seconds);
 /* The local time's offset from UTC now, in seconds (0 until known). */
 int32_t hub_time_utc_offset(void);

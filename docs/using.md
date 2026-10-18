@@ -209,12 +209,37 @@ under it while it is on.
 Weather's place. To choose a zone instead, tap **Time zone**, pick a
 region, then the city whose time you use.
 
+**Screen time.** Counts how long the TV is on each day, and in which
+apps. A new day starts at midnight. Its screen shows today's time and
+the apps, most watched first.
+
+- **A daily limit:** set **Settings > Modules > Screen time > Daily
+  limit** (off by default). A message comes before the limit (**Warn
+  before the limit**) and another at it. A minute later the TV turns off,
+  and again a minute after each time it comes back on that day. With
+  **At the limit** on **Only warn**, the messages come but the TV stays
+  on.
+- **More time today:** **+ 15 min** on its screen. Anyone with the
+  remote can tap it: Screen time is a reminder, not a lock.
+- **Count while:** **TV is on** counts while the Google TV is on, Home
+  screen included. **Playing** counts only while something plays, which
+  needs the companion app.
+- **Only while the remote is on:** it counts from the remote. With a
+  limit set, the remote stays on while the TV is on, but turning the
+  remote off from Settings stops the count.
+
 **Sleep timer.** Turns the TV off after 15 to 120 minutes. Tap a time to
 start it; **+ 15 min** adds time and **Cancel** stops it. While it runs,
 the top bar counts down, and a message comes a minute before the end. By
 default the Streamer goes to sleep and takes the TV with it over HDMI-CEC;
 **Settings > Modules > Sleep timer > Turn off with** can use the TV's IR
 instead.
+
+**Messages on the TV.** The Sleep timer's and Screen time's messages show
+on the remote and, with the companion app 0.7 or later, at the top right
+of the TV for 10 seconds. Each module's **Show messages on the TV**
+switches that off. When a message can't reach the TV, the remote's
+screen lights up to show it.
 
 **Weather.** To choose the place:
 

@@ -333,6 +333,8 @@ void ui_setup_error(const char *title, const char *body);
 void ui_show_main(void);
 /* A short message over whatever is on screen; icon from ui_icons.h. */
 void ui_notify(const char *icon, const char *text);
+/* Lights the screen as a touch would (it dims and goes dark again later). */
+void ui_wake(void);
 /* Opens Settings > Appearance (after a restart for a new theme). */
 void ui_show_appearance(void);
 

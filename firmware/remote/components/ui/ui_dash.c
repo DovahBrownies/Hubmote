@@ -1,7 +1,8 @@
 /*
  * The Home tab (VIEW_DASH): one card per module that is on and has one,
- * scrolling if there are many. And the module screen (VIEW_MODULE), which
- * holds each module's own view, built the first time it is opened.
+ * two to a row, scrolling if there are many. And the module screen
+ * (VIEW_MODULE), which holds each module's own view, built the first time
+ * it is opened.
  */
 #include "hub_module.h"
 #include "ui_internal.h"
@@ -114,7 +115,10 @@ void ui_dash_refresh(void)
         if (on && !s_card[i]) {
             s_card[i] = m->create_card(s_cards);
             if (s_card[i]) {
+                /* Two to a row, each half the width at least: a card left
+                 * alone on its row takes the whole width. */
                 lv_obj_set_flex_grow(s_card[i], 1);
+                lv_obj_set_style_min_width(s_card[i], (UI_WIDE_W - UI_GAP) / 2, 0);
                 lv_obj_set_clickable(s_card[i], true);
                 lv_obj_add_event_cb(s_card[i], on_card, LV_EVENT_CLICKED, (void *)m);
             }

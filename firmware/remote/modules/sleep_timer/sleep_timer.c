@@ -2,8 +2,8 @@
  * Sleep timer: turns the TV off after 15 to 120 minutes. The Streamer goes
  * to sleep and takes the TV with it over HDMI-CEC, or the TV's own IR off
  * key does it (Settings > Modules > Sleep timer). A minute before, a
- * message says so; while it runs, the top bar counts down, and the remote
- * doesn't turn itself off.
+ * message says so, on the TV too (companion app 0.7+); while it runs, the
+ * top bar counts down, and the remote doesn't turn itself off.
  *
  * Threads: the buttons and the timer's work run on the LVGL task (the
  * esp_timer callback only hands over: its stack is small), the events on
@@ -30,6 +30,7 @@ static const char *const k_off_with[] = {"Google TV", "TV's IR"};
 static const hub_setting_t k_settings[] = {
     {.key = "off_ir", .label = "Turn off with", .type = HUB_SETTING_CHOICE, .choices = k_off_with, .count = 2},
     {.key = "warn", .label = "Warn a minute before", .type = HUB_SETTING_SWITCH, .def = 1},
+    HUB_SETTING_SHOW_ON_TV,
 };
 
 static portMUX_TYPE s_mux = portMUX_INITIALIZER_UNLOCKED;
@@ -107,11 +108,6 @@ static void refresh(void)
     hub_glance_changed();
 }
 
-static void warn(void *arg)
-{
-    ui_toast(ICON_W_MOON, "The TV turns off in a minute");
-}
-
 /* --- The timer ------------------------------------------------------------------- */
 
 /* Wakes at the warning, then at the end. */
@@ -154,7 +150,7 @@ static void tick(void *arg)
         s_warned = true;
         taskEXIT_CRITICAL(&s_mux);
         if (hub_setting_i32(self(), "warn")) {
-            warn(NULL);
+            hub_notify(self(), ICON_W_MOON, "The TV turns off in a minute");
         }
         arm();
         return;
@@ -329,6 +325,7 @@ static void event(hub_event_t ev)
     case HUB_EV_NETWORK_DOWN:
     case HUB_EV_SCREEN_OFF:
     case HUB_EV_NOW_PLAYING:
+    case HUB_EV_TV:
         break;
     }
 }

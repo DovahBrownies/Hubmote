@@ -31,6 +31,8 @@ what.
   media sessions). This needs notification access, which `install.ps1`
   and `install.py` grant. Also a pairing lockout after wrong codes, and
   limits on requests.
+- **0.7:** shows the remote's messages at the top right of the TV
+  (`/notify`), such as the Sleep timer's and Screen time's warnings.
 
 ## Files
 
@@ -39,6 +41,7 @@ what.
 | `src/io/github/dovahbrownies/hubmote/CompanionService.java` | The accessibility service: the focused field, typing, the TV's keyboard, launching apps; it owns the server |
 | `src/.../Server.java` | The HTTP server (one thread per connection) and the event stream |
 | `src/.../Pairing.java` | Pairing codes and the paired remotes' tokens |
+| `src/.../Message.java` | A message at the top right of the TV, with a ring that empties until it goes (`/notify`) |
 | `src/.../OnScreenKeyboard.java` | Finding an app's own on-screen keyboard and its keys |
 | `src/.../Apps.java` | The TV app list, and icons rendered to RGB565A8 |
 | `src/.../Updater.java` | Updating itself: download, checks, Android's package installer |
@@ -203,6 +206,11 @@ These need a token, except `/status`.
   on-screen keyboard, with the soft keyboard controller's
   `SHOW_MODE_HIDDEN`, then `SHOW_MODE_AUTO`. The keyboard is allowed again
   by itself when no remote is connected to `/events`.
+- **`POST /notify?text=T&seconds=S`** shows T (percent-encoded, 160
+  characters at most) at the top right of the TV for S seconds (3 to 30,
+  10 if left out), over whatever is on screen, with a ring that empties
+  until the message goes. A new message replaces the one showing. `400`
+  without text or with too much (0.7+).
 - **`POST /update?url=U&size=N&sha256=H`** updates the companion from the
   APK at U (http or https, N bytes, that SHA-256 in hex), in the
   background ([below](#updating-itself)). `400` if the request is unusable

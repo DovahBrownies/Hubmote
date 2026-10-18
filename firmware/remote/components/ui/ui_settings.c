@@ -928,7 +928,11 @@ static void mset_paint(mod_setting_t *ms, const char *text)
         }
         break;
     case HUB_SETTING_NUMBER:
-        lv_label_set_text_fmt(ms->control, "%ld%s%s", (long)ms->value, s->unit ? " " : "", s->unit ? s->unit : "");
+        if (s->zero && ms->value == 0) {
+            lv_label_set_text(ms->control, s->zero);
+        } else {
+            lv_label_set_text_fmt(ms->control, "%ld%s%s", (long)ms->value, s->unit ? " " : "", s->unit ? s->unit : "");
+        }
         break;
     case HUB_SETTING_TEXT: {
         char value[64];

@@ -57,6 +57,9 @@ void ctrl_companion_release(const update_companion_t *c);
 bool ctrl_companion_ui(const ctrl_ui_t *a);
 /* Opens an app on the TV through the companion (a module asked). */
 void ctrl_companion_launch(const char *package);
+/* Shows a message on the TV through the companion (0.7+) for 10 s; false
+ * when it can't (no companion, or an older one). */
+bool ctrl_companion_notify(const char *text);
 /* Runs a Google TV search once typing has paused. */
 void ctrl_companion_tick(int64_t now);
 

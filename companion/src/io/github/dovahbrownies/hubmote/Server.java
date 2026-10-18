@@ -80,6 +80,7 @@ final class Server {
     private static final int MAX_CONNECTIONS = 24;
     private static final int MAX_PER_ADDRESS = 8; /* one device can't take every slot */
     private static final int MAX_HEADERS = 32;
+    private static final int MESSAGE_MAX = 160; /* /notify text, characters */
     private static final long REQUEST_MS = 10000;
 
     private final CompanionService svc;
@@ -282,6 +283,15 @@ final class Server {
                 json(out, ok ? 200 : 404, ok ? "{\"ok\":true}" : "{\"error\":\"no search\"}");
             } else if (method.equals("POST") && path.equals("/update")) {
                 boolean ok = svc.updater().start(q.get("url"), parseLong(q.get("size")), q.get("sha256"));
+                json(out, ok ? 200 : 400, ok ? "{\"ok\":true}" : "{\"error\":\"bad request\"}");
+            } else if (method.equals("POST") && path.equals("/notify")) {
+                /* A message at the top right of the TV for 3 to 30 s (0.7+). */
+                String text = q.get("text");
+                int seconds = Math.max(3, Math.min(30, parseInt(q.get("seconds"), 10)));
+                boolean ok = text != null && !text.isEmpty() && text.length() <= MESSAGE_MAX;
+                if (ok) {
+                    svc.showMessage(text, seconds * 1000L);
+                }
                 json(out, ok ? 200 : 400, ok ? "{\"ok\":true}" : "{\"error\":\"bad request\"}");
             } else if (method.equals("POST") && path.equals("/enter")) {
                 boolean ok = svc.enter();

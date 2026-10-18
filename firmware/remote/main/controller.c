@@ -38,6 +38,7 @@
 #include "storage.h"
 #include "tv_ir.h"
 #include "ui.h"
+#include "ui_icons.h"
 #include "update.h"
 
 static const char *TAG = "ctrl";
@@ -180,12 +181,18 @@ static void handle_atv(const atv_event_t *e)
 {
     switch (e->type) {
     case ATV_EVT_STATE:
+        if (e->state != ATV_STATE_CONNECTED) {
+            hub_set_tv_power(false); /* unknown until it connects and says */
+        }
+        ctrl_setup_atv(e);
+        break;
     case ATV_EVT_PAIR_RESULT:
     case ATV_EVT_DEVICE_INFO:
         ctrl_setup_atv(e);
         break;
     case ATV_EVT_POWER:
         ui_set_tv_power(e->is_on);
+        hub_set_tv_power(e->is_on);
         break;
     case ATV_EVT_APP:
         if (ui_app_is_system_screen(e->app_package)) {
@@ -195,6 +202,7 @@ static void handle_atv(const atv_event_t *e)
         }
         ESP_LOGI(TAG, "app: %s", e->app_package);
         ui_set_app(e->app_package);
+        hub_set_tv_app(e->app_package);
         break;
     case ATV_EVT_VOLUME:
         ESP_LOGI(TAG, "tv volume %u/%u%s", e->volume.level, e->volume.max, e->volume.muted ? " muted" : "");
@@ -257,6 +265,19 @@ static void handle_hub(const hub_action_t *a)
             ESP_LOGI(TAG, "module: TV off via the Streamer: %s", esp_err_to_name(err));
         }
         return;
+    case HUB_ACTION_NOTIFY: {
+        /* On the TV through the companion when asked and possible; on the
+         * remote as well, lit up if the TV didn't get it. */
+        bool on_tv = a->tv && ctrl_companion_notify(a->text);
+        if (a->remote) {
+            ui_notify(a->icon[0] ? a->icon : ICON_INFO, a->text);
+            if (!on_tv) {
+                ui_wake();
+            }
+        }
+        ESP_LOGI(TAG, "module message%s", on_tv ? ", on the TV too" : "");
+        return;
+    }
     case HUB_ACTION_OPEN:
         if (strstr(a->text, "://")) {
             esp_err_t err = atv_launch_app_link(a->text);

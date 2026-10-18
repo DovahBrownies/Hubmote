@@ -16,6 +16,7 @@ static const char *TAG = "hub_time";
 #define VALID_AFTER 1700000000 /* 2023-11: anything earlier is the unset clock */
 #define NVS_NS      "hub"
 #define NVS_ZONE    "tz"
+#define NVS_OFFSET  "utc_off" /* the last offset reported, so local time is right from start-up */
 
 static bool s_started;
 static int32_t s_offset;
@@ -66,6 +67,7 @@ void hub_time_init(void)
     if (!s_lock) {
         s_lock = xSemaphoreCreateMutex();
     }
+    kv_get_i32(NVS_NS, NVS_OFFSET, &s_offset);
     char name[48];
     kv_get_str(NVS_NS, NVS_ZONE, name, sizeof(name));
     const hub_tz_t *zone = name[0] ? find(name) : NULL;
@@ -125,7 +127,10 @@ bool hub_time_valid(void)
 
 void hub_time_set_utc_offset(int32_t seconds)
 {
-    s_offset = seconds;
+    if (seconds != s_offset) {
+        s_offset = seconds;
+        kv_set_i32(NVS_NS, NVS_OFFSET, seconds);
+    }
 }
 
 int32_t hub_time_utc_offset(void)
