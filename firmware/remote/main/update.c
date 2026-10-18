@@ -14,6 +14,17 @@
  * size and SHA-256, then restarts into it. An image that doesn't reach
  * Wi-Fi is rolled back (ota_mark_good()). It never installs by itself.
  *
+ * Each board's entry also carries "sig": the project's signature (ECDSA
+ * P-256, SHA-256, base64 DER) over
+ *
+ *   "hubmote-firmware\n<board>\n<version>\n<sha256>\n"
+ *
+ * made in CI with a key the site never holds (make_site.py --sign). A
+ * newer release is offered only if it checks out against the public key
+ * built in (main/update_key.pem): someone who could change the site still
+ * couldn't serve an image of their own, another board's or another
+ * version's.
+ *
  * HTTPS only, checked against ESP-IDF's CA bundle; developer builds also
  * accept http:// (a site served from a PC, for testing).
  *
@@ -36,6 +47,9 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "mbedtls/base64.h"
+#include "mbedtls/pk.h"
+#include "mbedtls/sha256.h"
 #include "ota.h"
 #include "sdkconfig.h"
 
@@ -48,6 +62,7 @@ static const char *TAG = "update";
 #define CHECK_EVERY_US (24LL * 3600 * 1000000)
 #define JSON_MAX       8192 /* update.json's size limit: tools/web/make_site.py checks it */
 #define TASK_STACK     8192 /* TLS; internal RAM, as it writes flash */
+#define SIG_MAX        128  /* base64 of an ECDSA P-256 signature: 72 bytes of DER at most */
 
 static TaskHandle_t s_task;
 static update_cb_t s_cb;
@@ -55,6 +70,10 @@ static update_status_t s_status;
 static char s_image[64]; /* from update.json */
 static int s_size;
 static char s_sha256[65];
+static char s_sig[SIG_MAX + 1];
+
+/* main/update_key.pem (or HM_UPDATE_KEY), NUL-terminated */
+extern const char s_update_key[] asm("_binary_update_key_pem_start");
 
 static void report(update_state_t state, int percent)
 {
@@ -217,6 +236,34 @@ static void read_companion(const cJSON *root, update_companion_t *out)
 
 /* --- Check ------------------------------------------------------------------- */
 
+/* --- The signature ----------------------------------------------------------- */
+
+/* True if sig_b64 is the project's signature over this board, version and
+ * image hash. */
+static bool signature_ok(const char *version, const char *sha256, const char *sig_b64)
+{
+    unsigned char sig[96];
+    size_t sig_len = 0;
+    if (!sig_b64[0] ||
+        mbedtls_base64_decode(sig, sizeof(sig), &sig_len, (const unsigned char *)sig_b64, strlen(sig_b64)) != 0) {
+        return false;
+    }
+    char msg[160];
+    int n = snprintf(msg, sizeof(msg), "hubmote-firmware\n%s\n%s\n%s\n", CONFIG_HM_BOARD_ID, version, sha256);
+    unsigned char hash[32];
+    if (n <= 0 || n >= (int)sizeof(msg) || mbedtls_sha256((const unsigned char *)msg, (size_t)n, hash, 0) != 0) {
+        return false;
+    }
+    mbedtls_pk_context key;
+    mbedtls_pk_init(&key);
+    int err = mbedtls_pk_parse_public_key(&key, (const unsigned char *)s_update_key, strlen(s_update_key) + 1);
+    if (err == 0) {
+        err = mbedtls_pk_verify(&key, MBEDTLS_MD_SHA256, hash, sizeof(hash), sig, sig_len);
+    }
+    mbedtls_pk_free(&key);
+    return err == 0;
+}
+
 static bool check(void)
 {
     report(UPDATE_CHECKING, 0);
@@ -253,6 +300,7 @@ static bool check(void)
     const cJSON *image = cJSON_GetObjectItemCaseSensitive(board, "image");
     const cJSON *size = cJSON_GetObjectItemCaseSensitive(board, "size");
     const cJSON *sha = cJSON_GetObjectItemCaseSensitive(board, "sha256");
+    const cJSON *sig = cJSON_GetObjectItemCaseSensitive(board, "sig");
     if (cJSON_IsString(version) && cJSON_IsObject(boards) && !board) {
         /* A release without this board: no firmware to install, but its
          * companion app still applies. */
@@ -271,6 +319,9 @@ static bool check(void)
         strlcpy(s_image, image->valuestring, sizeof(s_image));
         s_size = size->valueint;
         strlcpy(s_sha256, sha->valuestring, sizeof(s_sha256));
+        /* none, or too long to be one: checked (and refused) below */
+        strlcpy(s_sig, cJSON_IsString(sig) && strlen(sig->valuestring) <= SIG_MAX ? sig->valuestring : "",
+                sizeof(s_sig));
         read_companion(root, &s_status.companion);
     }
     cJSON_Delete(root);
@@ -281,6 +332,11 @@ static bool check(void)
     }
     const char *mine = esp_app_get_description()->version;
     bool newer = compare_versions(mine, s_status.version) < 0;
+    if (newer && !signature_ok(s_status.version, s_sha256, s_sig)) {
+        ESP_LOGE(TAG, "release %s: no valid signature for %s, not offered", s_status.version, CONFIG_HM_BOARD_ID);
+        report(UPDATE_FAILED, 0);
+        return false;
+    }
     ESP_LOGI(TAG, "release %s, running %s: %s%s%s", s_status.version, mine, newer ? "update available" : "up to date",
              s_status.companion.version[0] ? "; companion " : "", s_status.companion.version);
     report(newer ? UPDATE_AVAILABLE : UPDATE_CURRENT, 0);

@@ -285,6 +285,26 @@ jobs:
       - name: Companion app on the site
         run: python3 firmware/remote/tools/web/make_site.py --no-firmware --out "$GITHUB_WORKSPACE/site" --companion "$GITHUB_WORKSPACE/companion-apk"
 
+      # Each board's image in update.json gets the project's signature,
+      # which remotes check before offering it (main/update.c). The key
+      # lives only in this secret; make_site.py refuses one whose public
+      # half isn't main/update_key.pem.
+      - name: Firmware signatures
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: |
+          if [ -z "$UPDATE_SIGNING_KEY" ]; then
+            echo "::error::A release needs the UPDATE_SIGNING_KEY secret (docs/releasing.md)"
+            exit 1
+          fi
+          umask 077
+          printf '%s\n' "$UPDATE_SIGNING_KEY" > "$RUNNER_TEMP/update-key.pem"
+          python3 firmware/remote/tools/web/make_site.py --no-firmware --out "$GITHUB_WORKSPACE/site" --sign "$RUNNER_TEMP/update-key.pem"
+
+      - name: Forget the signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/update-key.pem"
+
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site

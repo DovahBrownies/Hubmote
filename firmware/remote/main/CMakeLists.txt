@@ -60,4 +60,19 @@ if(NOT CMAKE_BUILD_EARLY_EXPANSION)
         BYPRODUCTS "${stamp}"
         VERBATIM)
     add_dependencies(${COMPONENT_LIB} hm_build_stamp)
+
+    # The public key that release images' signatures are checked with
+    # (update.c): the project's, whose private half signs releases in CI
+    # (docs/releasing.md). HM_UPDATE_KEY points a test build at another
+    # key (docs/building.md).
+    set(update_key "${CMAKE_CURRENT_LIST_DIR}/update_key.pem")
+    if(HM_UPDATE_KEY)
+        set(update_key "${HM_UPDATE_KEY}")
+        message(STATUS "HM_UPDATE_KEY: release images are checked against ${update_key}")
+    endif()
+    if(NOT EXISTS "${update_key}")
+        message(FATAL_ERROR "no update signing key at ${update_key} (tools/web/make_update_key.py, docs/releasing.md)")
+    endif()
+    configure_file("${update_key}" "${CMAKE_CURRENT_BINARY_DIR}/update_key.pem" COPYONLY)
+    target_add_binary_data(${COMPONENT_LIB} "${CMAKE_CURRENT_BINARY_DIR}/update_key.pem" TEXT)
 endif()

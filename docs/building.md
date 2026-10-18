@@ -205,6 +205,25 @@ page at http://localhost:8000, run:
 
 To build one board only, add `-Board <id>`.
 
+### Testing updates from a site
+
+The remote only installs release images signed with the project's key
+(`main/update_key.pem`). To test updates from a site on your PC, sign it
+with a key of your own and build a test firmware that trusts that key:
+
+```bash
+openssl ecparam -name prime256v1 -genkey -noout -out test-key.pem
+openssl ec -in test-key.pem -pubout -out test-pub.pem
+```
+
+1. Build the test firmware in its own folder, with `HM_UPDATE_URL` set to
+   the site (in a defaults file) and `-D HM_UPDATE_KEY=<path to
+   test-pub.pem>`.
+2. Make the site with `tools/web/make_site.py`, then sign it:
+   `make_site.py --no-firmware --out <site> --sign test-key.pem --public
+   test-pub.pem`.
+3. Put the remote back on its normal build afterwards.
+
 ## Options
 
 The firmware's defaults are in menuconfig. Open it, then go to

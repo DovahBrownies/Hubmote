@@ -39,7 +39,7 @@ It does not try to stop:
 |---|---|---|
 | Google TV Streamer, Android TV Remote v2 | TV ports 6466 (control), 6467 (pairing) | TLS with a client certificate, a pairing code, a pinned TV key |
 | Companion app on the Streamer | TV port 6470 | A token from pairing, with limits |
-| Updates from the releases | The project's site (GitHub Pages), HTTPS | Certificate, size and SHA-256 checked |
+| Updates from the releases | The project's site (GitHub Pages), HTTPS | Certificate, size, SHA-256 and the project's signature checked |
 | Module web requests (Weather) | Internet | HTTPS for Weather; not enforced for others |
 | Speed test (companion app, when asked) | The TV to speed.cloudflare.com | HTTPS, with Android's certificate checks |
 | Clock | `pool.ntp.org` (SNTP) | None |
@@ -54,8 +54,10 @@ It does not try to stop:
   The link is plain HTTP. See [The companion's link](#the-companions-link).
 - **Updates from the releases.** The server certificate is checked against
   ESP-IDF's CA bundle. The image's size and SHA-256 are checked against
-  `update.json`. The remote reads `update.json` a minute after Wi-Fi comes
-  up, then daily. It downloads an image only when you tap **Install**.
+  `update.json`, whose entry must carry the project's signature (see
+  [Firmware you install](#firmware-you-install)). The remote reads
+  `update.json` a minute after Wi-Fi comes up, then daily. It downloads an
+  image only when you tap **Install**.
 - **Module web requests.** Weather uses HTTPS, with server certificates
   checked against ESP-IDF's CA bundle. The module platform doesn't enforce
   HTTPS for other modules. Weather sends the chosen place's coordinates to
@@ -226,7 +228,7 @@ update token.
 
 - **The web installer** flashes a release build made by GitHub Actions
   from the public source. It is served from GitHub Pages over HTTPS. The
-  images aren't signed.
+  browser can't check a signature, so a first install trusts the site.
 - **Updates from the releases** work in every build, from
   **Settings > About**. The remote downloads `update.json` and its board's
   image from the project's site over HTTPS, with the certificate checked
@@ -235,8 +237,15 @@ update token.
   - The image's path may only name a file below `update.json`. It may use
     letters, digits, `.`, `_`, `-`, and `/` between names, and no name may
     start with a dot.
-  - The hash comes from the same site. It guards against a damaged
-    download, not a compromised site, and the image isn't signed.
+  - The hash comes from the same site, but each board's entry also
+    carries a signature: ECDSA P-256 over the board, the version and the
+    image's SHA-256, made by the release workflow with a key kept only in
+    a repository secret (`UPDATE_SIGNING_KEY`). The remote checks it with
+    the public key built into its firmware (`main/update_key.pem`) before
+    it offers the update, and refuses an entry without one. So a changed
+    site can't offer an image of its own, nor another board's or another
+    version's. Someone who controls the repository's secrets or its
+    workflow could still sign.
   - Developer builds also accept a plain-HTTP site, for testing from a
     PC.
   - Nothing installs without a tap on **Install**.

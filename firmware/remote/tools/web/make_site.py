@@ -25,6 +25,15 @@ key (HM_KEYSTORE) goes into update.json, as Android refuses an update signed
 with another key; --any-key lifts that, for testing with the debug key.
 --no-firmware only adds the companion to a site already assembled (CI).
 
+--sign KEY signs each board's image in update.json with the project's
+private key (a PEM file; CI has it from the UPDATE_SIGNING_KEY secret), as
+main/update.c checks: an ECDSA P-256 signature over
+"hubmote-firmware\n<board>\n<version>\n<sha256>\n", base64, as "sig". It
+refuses a key whose public half isn't main/update_key.pem (or --public,
+for a test build's key), and checks each signature with it before
+writing. With --no-firmware and no
+--companion it only signs. Needs the openssl command.
+
 Paths are relative to firmware/remote. The version comes from the image
 (or version.txt), the build time from the build's stamp
 (esp-idf/main/build_stamp.h).
@@ -35,11 +44,14 @@ HM_NO_SECRETS, as scripts/hm-web.ps1 does. Only the key's name is printed.
 """
 
 import argparse
+import base64
 import hashlib
 import json
 import re
 import shutil
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 PROJECT = Path(__file__).resolve().parent.parent.parent
@@ -194,6 +206,37 @@ def add_companion(out: Path, folder: Path, any_key: bool):
     print(f"companion {info['version']} (code {info['code']}, {info['key']} key): {name}")
 
 
+def openssl(*args, data: bytes = b"") -> bytes:
+    try:
+        return subprocess.run(["openssl", *args], input=data, capture_output=True, check=True).stdout
+    except FileNotFoundError:
+        sys.exit("--sign needs the openssl command")
+    except subprocess.CalledProcessError as e:
+        sys.exit(f"openssl {args[0]}: {e.stderr.decode(errors='replace').strip()}")
+
+
+def sign_update(out: Path, key: Path, public: Path):
+    """Signs every board's image in out/update.json (see --sign)."""
+    for pem in (key, public):
+        if not pem.is_file():
+            sys.exit(f"no {pem} (tools/web/make_update_key.py makes the key)")
+    der = lambda pem_args: openssl("pkey", *pem_args, "-pubout", "-outform", "DER")
+    if der(["-in", str(key)]) != der(["-pubin", "-in", str(public)]):
+        sys.exit(f"{key.name} isn't the key whose public half is {public.name}")
+    path = out / "update.json"
+    update = json.loads(path.read_text(encoding="utf-8"))
+    with tempfile.TemporaryDirectory() as tmp:
+        sig_file = Path(tmp) / "sig"
+        for board, entry in update["boards"].items():
+            message = f"hubmote-firmware\n{board}\n{update['version']}\n{entry['sha256']}\n".encode()
+            sig = openssl("dgst", "-sha256", "-sign", str(key), data=message)
+            sig_file.write_bytes(sig)
+            openssl("dgst", "-sha256", "-verify", str(public), "-signature", str(sig_file), data=message)
+            entry["sig"] = base64.b64encode(sig).decode()
+    write_update(path, update)
+    print(f"signed {len(update['boards'])} image{'s' if len(update['boards']) > 1 else ''} in {path}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--build", action="append",
@@ -202,15 +245,22 @@ def main():
     ap.add_argument("--companion", help="companion/build.ps1's output folder (companion.apk, companion.json)")
     ap.add_argument("--any-key", action="store_true", help="offer the companion even if not signed with the project's key")
     ap.add_argument("--no-firmware", action="store_true", help="only add the companion to an assembled site")
+    ap.add_argument("--sign", metavar="KEY", help="sign the images in update.json with this private key (PEM)")
+    ap.add_argument("--public", metavar="PEM", default="main/update_key.pem",
+                    help="its public half, as the firmware has it (a test build's HM_UPDATE_KEY)")
     args = ap.parse_args()
     builds = [(PROJECT / b).resolve() for b in args.build or ["build-web"]]
     out = (PROJECT / args.out).resolve()
     companion = (PROJECT / args.companion).resolve() if args.companion else None
 
+    sign = (PROJECT / args.sign).resolve() if args.sign else None
     if args.no_firmware:
-        if not companion or not (out / "update.json").is_file():
-            sys.exit("--no-firmware needs --companion and a site with update.json in --out")
-        add_companion(out, companion, args.any_key)
+        if not (companion or sign) or not (out / "update.json").is_file():
+            sys.exit("--no-firmware needs --companion or --sign, and a site with update.json in --out")
+        if companion:
+            add_companion(out, companion, args.any_key)
+        if sign:
+            sign_update(out, sign, (PROJECT / args.public).resolve())
         return
 
     out.mkdir(parents=True, exist_ok=True)
@@ -245,6 +295,8 @@ def main():
     print(f"web installer: {out} ({len(boards)} board{'s' if len(boards) > 1 else ''})")
     if companion:
         add_companion(out, companion, args.any_key)
+    if sign:
+        sign_update(out, sign, (PROJECT / args.public).resolve())
 
 
 if __name__ == "__main__":

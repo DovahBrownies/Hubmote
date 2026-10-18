@@ -55,8 +55,10 @@ A tag's run is never cancelled.
   other builds are signed with a throwaway key. `companion.json`, next to
   the APK, says which key signed it.
 - **GitHub Pages** runs on a tag only. It adds the companion to the
-  installer site (`make_site.py --no-firmware --companion`), then
-  publishes the site at https://dovahbrownies.github.io/Hubmote/. The
+  installer site (`make_site.py --no-firmware --companion`), signs each
+  board's image in `update.json` with the update signing key
+  ([step 4](#4-the-update-signing-key)), then publishes the site at
+  https://dovahbrownies.github.io/Hubmote/. The
   companion goes on the site in two forms:
   - `companion.apk`, to download by hand;
   - `companion-<version>.apk` with its entry in `update.json`, from which
@@ -289,6 +291,37 @@ repository secret**:
 
 Without these secrets, a tag build fails rather than publish an APK signed
 with a throwaway key.
+
+### 4. The update signing key
+
+Remotes install a release from the site only if its image carries the
+project's signature (`main/update.c`). Then someone who could change the
+site still couldn't make remotes install an image of their own. The
+private key lives only in a repository secret and offline. The public
+key, `firmware/remote/main/update_key.pem`, is in the repository and is
+built into the firmware.
+
+> [!WARNING]
+> If you lose the private key, or make a new one, remotes refuse later
+> releases. Each then needs a firmware with the new public key, flashed
+> from the installer page or a PC. Make it once and keep a copy safe.
+
+In PowerShell, from the repository's folder, make the key outside the
+repository and give its private half to the workflow:
+
+```powershell
+cd firmware\remote
+python tools\web\make_update_key.py $HOME\hubmote-update-key.pem
+gh secret set UPDATE_SIGNING_KEY -R DovahBrownies/Hubmote -b (Get-Content -Raw $HOME\hubmote-update-key.pem)
+```
+
+Then commit `main/update_key.pem`, the public half, and keep the private
+key's file with your other backups. The script needs `openssl` (Git for
+Windows has one; run it from Git Bash if PowerShell doesn't find it).
+
+Without the secret, a tag build fails rather than publish unsigned
+images. The **Firmware signatures** step also refuses a key whose public
+half isn't `main/update_key.pem`.
 
 ## A release
 

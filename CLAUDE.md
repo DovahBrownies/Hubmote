@@ -286,7 +286,13 @@ untested: their facts and sources are in their headers in
   The attribution line "Weather data by Open-Meteo.com" is a license
   requirement and stays.
 - **Updates from the releases** (`main/update.c`): Settings > About checks
-  `update.json` at `HM_UPDATE_URL` (GitHub Pages) and installs over HTTPS.
+  `update.json` at `HM_UPDATE_URL` (GitHub Pages) and installs over HTTPS,
+  only images with the project's signature (ECDSA P-256 over board,
+  version and SHA-256; public key `main/update_key.pem`, private key in the
+  `UPDATE_SIGNING_KEY` secret, made by the user with
+  `tools/web/make_update_key.py`; never handle it). CI's Pages job signs
+  (`make_site.py --sign`). Test sites need a throwaway key and a test
+  build with `-D HM_UPDATE_KEY=<its public half>` (`docs/building.md`).
   To test before the repo is public: build in a scratch folder with
   `HM_UPDATE_URL` pointing at a site on the PC (developer builds accept
   http://), serve `make_site.py` output from a developer build made with
