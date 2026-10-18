@@ -24,6 +24,7 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "hub.h"
+#include "sdkconfig.h"
 #include "ui_kit.h"
 
 #define MODULE_ID  "screen_time"
@@ -43,9 +44,16 @@ enum { COUNT_TV_ON, COUNT_PLAYING };
 static const char *const k_at_limit[] = {"Turn TV off", "Only warn"};
 static const char *const k_off_with[] = {"Google TV", "TV's IR"};
 static const char *const k_count[] = {"TV is on", "Playing"};
+static const int32_t k_limits[] = {
+    0,
+#if CONFIG_HM_DEVELOPER
+    1, /* developer builds: for quick tests */
+#endif
+    15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 210, 240, 270, 300, 360, 420, 480, 540, 600,
+};
 static const hub_setting_t k_settings[] = {
-    {.key = "limit", .label = "Daily limit", .type = HUB_SETTING_NUMBER, .def = 0, .min = 0, .max = 600, .step = 15,
-     .unit = "min", .zero = "Off"},
+    {.key = "limit", .label = "Daily limit", .type = HUB_SETTING_NUMBER, .def = 0, .values = k_limits,
+     .count = sizeof(k_limits) / sizeof(k_limits[0]), .unit = "min", .zero = "Off"},
     {.key = "at_limit", .label = "At the limit", .type = HUB_SETTING_CHOICE, .choices = k_at_limit, .count = 2},
     {.key = "off_ir", .label = "Turn off with", .type = HUB_SETTING_CHOICE, .choices = k_off_with, .count = 2},
     {.key = "warn", .label = "Warn before the limit", .type = HUB_SETTING_NUMBER, .def = 10, .min = 0, .max = 30,
@@ -550,9 +558,9 @@ static void on_extra(lv_event_t *e)
     hub_glance_changed();
 }
 
-static lv_obj_t *create_card(lv_obj_t *parent)
+static lv_obj_t *create_card(lv_obj_t *parent, hub_card_size_t size)
 {
-    lv_obj_t *card = ui_panel(parent, UI_S(480), UI_S(260));
+    lv_obj_t *card = ui_panel(parent, HUB_CARD_W(size), HUB_CARD_H);
     lv_obj_set_style_pad_all(card, UI_S(22), 0);
     ui_flex(card, LV_FLEX_FLOW_COLUMN, UI_S(8));
     lv_obj_t *head = ui_box(card);
@@ -701,6 +709,7 @@ static const hub_module_t s_module = {
     .show = on_show,
     .create_card = create_card,
     .glance = glance,
+    .card_sizes = HUB_CARD_SMALL | HUB_CARD_MEDIUM | HUB_CARD_LARGE,
     .settings = k_settings,
     .settings_count = sizeof(k_settings) / sizeof(k_settings[0]),
     .setting_changed = setting_changed,

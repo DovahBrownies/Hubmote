@@ -216,6 +216,15 @@ static int32_t allowed(const hub_setting_t *s, int32_t v)
     case HUB_SETTING_CHOICE:
         return v >= 0 && (size_t)v < s->count ? v : s->def;
     case HUB_SETTING_NUMBER:
+        if (s->values && s->count) { /* the listed value nearest v */
+            int32_t best = s->values[0];
+            for (size_t i = 1; i < s->count; i++) {
+                if (labs((long)s->values[i] - v) < labs((long)best - v)) {
+                    best = s->values[i];
+                }
+            }
+            return best;
+        }
         return v < s->min ? s->min : v > s->max ? s->max : v;
     default:
         return v;

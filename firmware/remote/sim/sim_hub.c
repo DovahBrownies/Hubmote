@@ -41,6 +41,8 @@ static const hub_module_t s_weather = {
     .create_view = weather_ui_create_view,
     .create_card = weather_ui_create_card,
     .glance = weather_ui_glance,
+    .card_sizes = HUB_CARD_SMALL | HUB_CARD_MEDIUM | HUB_CARD_LARGE,
+    .card_size = HUB_CARD_LARGE,
     .settings = k_weather_settings,
     .settings_count = 1,
 };

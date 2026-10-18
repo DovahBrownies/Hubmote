@@ -233,7 +233,10 @@ untested: their facts and sources are in their headers in
 - **Navigation:**
   the top bar has a remote tab (current remote; its chevron opens the
   switcher sheet, `ui_switcher.c`), a Home tab (module cards,
-  `ui_dash.c`), a context pill, a module glance, Wi-Fi, battery and a gear
+  `ui_dash.c`: small, medium or large on a four-column grid, arranged with
+  a long press or Settings > Modules > Arrange Home, saved in NVS
+  `ctrl`/`home`; the switcher and the top bar's glance follow its order),
+  a context pill, a module glance, Wi-Fi, battery and a gear
   (Settings, `VIEW_SETTINGS`, `ui_settings.c`: Remotes, Wi-Fi, Screen,
   Appearance, Modules, About). Modules share `VIEW_MODULE`.
 - **Settings in NVS.** Screen settings live in `ctrl` (`bright`, `dim_s`,
@@ -323,6 +326,11 @@ untested: their facts and sources are in their headers in
   HDMI-CEC (Anynet+ on Samsung). With the wrong
   setting the keys arrive but nothing happens, and the TV reports
   `volume 0/0`.
+- **Power keys.** The Streamer ignores KEYCODE_SLEEP and KEYCODE_WAKEUP
+  sent over the remote protocol (2026-10-17, awake or on its
+  screensaver; over ADB they work), so modules' TV off and
+  `HUB_KEY_SLEEP`/`WAKEUP` toggle with POWER, sent only when it changes
+  the state the Streamer reported (`streamer_power()` in `controller.c`).
 - **Deep links** launch built-in apps. Launching by package over the remote
   protocol broke with Play Store 52.6, so the companion's `/launch` is used
   instead.

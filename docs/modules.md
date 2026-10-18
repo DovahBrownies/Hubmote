@@ -146,6 +146,7 @@ static const hub_module_t s_module = {
     .show = show,
     .hide = hide,
     .create_card = create_card,
+    .card_sizes = HUB_CARD_SMALL | HUB_CARD_MEDIUM,
     .glance = glance,
 };
 HUB_MODULE(s_module);
@@ -154,7 +155,7 @@ HUB_MODULE(s_module);
 The sources need no `#if CONFIG_HUB_MODULE_TRANSIT`, because
 `CMakeLists.txt` leaves them out of the build when the option is off.
 `HUB_MODULE()` registers the module before `app_main()` runs. Modules are
-listed by name.
+listed by name until the user arranges the Home tab.
 
 A module whose id is invalid or already taken is left out, with an error
 in the log: `hub: module id "..." is invalid or taken`.
@@ -167,13 +168,13 @@ Every callback is optional.
 |---|---|---|
 | `init()` | once at start-up, after storage is mounted, before Wi-Fi is up | controller |
 | `event(ev)` | for each [event](#events) | controller |
-| `create_card(parent)` | the first time the Home tab is shown | LVGL |
+| `create_card(parent, size)` | the first time the Home tab is shown, and again when the user picks another size | LVGL |
 | `create_view(parent)` | the first time your screen is opened | LVGL |
 | `show()` / `hide()` | your screen came into view / left | LVGL |
 | `glance(out)` | when the top bar or switcher redraws | LVGL |
 | `setting_changed(key)` | the user changed one of your [settings](#settings), after it is saved | controller |
 
-- `create_card()` returns your card.
+- `create_card()` returns your card, `HUB_CARD_W(size)` x `HUB_CARD_H`.
 - `create_view()` builds into `parent`, which is already `HUB_VIEW_W` x
   `HUB_VIEW_H` (1000 x 532 on a 1024x600 screen).
 - `glance()` returns false when there's nothing to show. Its `text` holds
@@ -182,11 +183,23 @@ Every callback is optional.
 ### Cards and glances
 
 - **Cards open your screen.** The Home tab makes the whole card open your
-  screen when tapped, so the card needs no button of its own.
-- **Cards are laid out in rows** that wrap, and stretch to fill their row.
-  The width you give is the minimum. `UI_S(480)` fits two side by side.
-- **The top bar shows one glance**, from the first switched-on module (by
-  name) that has one. The switcher shows every module's glance.
+  screen when tapped, so the card needs no button of its own. A long press
+  is taken: it starts arranging the Home tab.
+- **Sizes.** Cards sit on a grid of four columns, two rows to the screen:
+  `HUB_CARD_SMALL` is one column (241 x 260 at 1024x600), `MEDIUM` two
+  (494 x 260), `LARGE` the whole width (1000 x 260). List the sizes your
+  card works at in `card_sizes` (or-ed; none means medium only), and the
+  one it starts at in `card_size` (none means medium). The user picks
+  among them while arranging the Home tab, and `create_card()` gets the
+  size. Use `HUB_CARD_W(size)` and `HUB_CARD_H` rather than numbers.
+- **A new size makes a new card.** The Home tab deletes the old card and
+  calls `create_card()` again, so the pointers you keep to its labels are
+  replaced; keep none elsewhere. Weather's small card is a different
+  layout; the Sleep timer's is the same one, narrower.
+- **The order is the user's.** Cards start in name order. The user moves
+  them while arranging the Home tab, and the switcher follows that order.
+- **The top bar shows one glance**, from the first switched-on module in
+  that order that has one. The switcher shows every module's glance.
 
 ### Events
 
@@ -311,8 +324,9 @@ static const hub_module_t s_module = {
 
 - **Kinds:** `HUB_SETTING_SWITCH` (on or off), `HUB_SETTING_CHOICE` (one of
   `choices`: two or three show side by side, more open a list),
-  `HUB_SETTING_NUMBER` (`min` to `max` in steps of `step`, with an
-  optional `unit`, and `zero` shown instead of 0, such as "Off") and
+  `HUB_SETTING_NUMBER` (`min` to `max` in steps of `step`, or the rising
+  list in `values` with `count`; an optional `unit`, and `zero` shown
+  instead of 0, such as "Off") and
   `HUB_SETTING_TEXT` (typed on the remote's keyboard, `max_len`
   characters, 63 at most).
 - **Messages on the TV:** add `HUB_SETTING_SHOW_ON_TV` to the list, and
@@ -626,5 +640,6 @@ Watch the log with `scripts\hm-netlog.ps1 -Remote hubmote.local`, or with
 - [ ] No keys, tokens or personal data in the code or fixtures.
 - [ ] Data sources, icons or code it uses are in `NOTICE` with their
       licenses.
-- [ ] Screenshots of the card and the screen (from `tools/devtools.py`).
+- [ ] Screenshots of the card (at each size in `card_sizes`) and the screen
+  (from `tools/devtools.py`, or the simulator).
 - [ ] Free internal RAM checked in the `ctrl: heap` log line.

@@ -54,6 +54,7 @@ _Static_assert(NET_SCAN_MAX <= UI_WIFI_APS_MAX, "the UI must hold every scanned 
 #define TICK_MS         200
 #define NVS_HIDDEN_APPS "hidden_apps"
 #define NVS_APP_ORDER   "app_order"
+#define NVS_HOME_LAYOUT "home" /* the Home tab's module cards: ui_home_layout() */
 
 typedef enum { MSG_UI, MSG_ATV, MSG_NET, MSG_COMPANION, MSG_UPDATE, MSG_HUB } msg_kind_t;
 
@@ -161,6 +162,22 @@ static void load_app_layout(void)
     free(order);
 }
 
+/* The Home tab's cards: their order and sizes. */
+static void load_home_layout(void)
+{
+    char layout[UI_HOME_LAYOUT_MAX] = "";
+    kv_get_str(CTRL_NVS_NS, NVS_HOME_LAYOUT, layout, sizeof(layout));
+    ui_set_home_layout(layout);
+}
+
+static void save_home_layout(void)
+{
+    char layout[UI_HOME_LAYOUT_MAX];
+    ui_home_layout(layout, sizeof(layout));
+    kv_set_str(CTRL_NVS_NS, NVS_HOME_LAYOUT, layout);
+    ESP_LOGI(TAG, "home layout: %s", layout);
+}
+
 static void save_app_layout(void)
 {
     char *order = heap_caps_calloc(2, UI_APP_LIST_MAX, MALLOC_CAP_SPIRAM);
@@ -217,6 +234,21 @@ static void handle_atv(const atv_event_t *e)
     }
 }
 
+/* Puts the Streamer to sleep or wakes it. It ignores KEYCODE_SLEEP and
+ * KEYCODE_WAKEUP from the remote protocol (seen 2026-10-17, awake or on its
+ * screensaver), so this toggles with POWER, and only when that changes
+ * something: the state comes from the Streamer, and counts as off while it
+ * isn't connected. */
+static esp_err_t streamer_power(bool on)
+{
+    hub_tv_state_t tv;
+    hub_tv_state(&tv);
+    if (tv.on == on) {
+        return ESP_OK;
+    }
+    return atv_send_key(ATV_KEY_POWER, ATV_DIR_SHORT);
+}
+
 /* A module's action (hub_actions.h), on the paths the UI's keys take. */
 static void handle_hub(const hub_action_t *a)
 {
@@ -246,7 +278,9 @@ static void handle_hub(const hub_action_t *a)
             ir_ctl_key(keys[a->key], UI_DIR_SHORT); /* as the UI's volume keys */
             return;
         }
-        esp_err_t err = atv_send_key(keys[a->key], ATV_DIR_SHORT);
+        esp_err_t err = a->key == HUB_KEY_SLEEP    ? streamer_power(false)
+                        : a->key == HUB_KEY_WAKEUP ? streamer_power(true)
+                                                   : atv_send_key(keys[a->key], ATV_DIR_SHORT);
         ESP_LOGI(TAG, "module key %d: %s", keys[a->key], esp_err_to_name(err));
         return;
     }
@@ -257,11 +291,12 @@ static void handle_hub(const hub_action_t *a)
         return;
     case HUB_ACTION_TV_OFF:
         /* The IR TV's own off key if it has one; its power toggle otherwise.
-         * Without an IR TV, the Streamer's sleep turns the TV off over CEC. */
+         * Without an IR TV, the Streamer going to sleep turns the TV off
+         * over CEC. */
         if (a->ir && (ir_ctl_tv_send("power_off") || ir_ctl_tv_send("power"))) {
             ESP_LOGI(TAG, "module: TV off over IR");
         } else {
-            esp_err_t err = atv_send_key(ATV_KEY_SLEEP, ATV_DIR_SHORT);
+            esp_err_t err = streamer_power(false);
             ESP_LOGI(TAG, "module: TV off via the Streamer: %s", esp_err_to_name(err));
         }
         return;
@@ -364,6 +399,9 @@ static void handle_ui(const ctrl_ui_t *a)
         return;
     case UI_ACT_INPUT_LEARN:
         ir_ctl_learn_input(a->index);
+        return;
+    case UI_ACT_HOME_LAYOUT:
+        save_home_layout();
         return;
     case UI_ACT_APP_LAYOUT:
         save_app_layout();
@@ -517,6 +555,7 @@ static void controller_task(void *arg)
     controller_log_heap("after IR");
     hub_set_action_handler(on_hub_action);
     hub_modules_init();
+    load_home_layout();
     ui_set_time_zone(hub_time_zone());
     controller_log_heap("after modules");
 

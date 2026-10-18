@@ -2,7 +2,8 @@
 
 Turns the TV off after 15 to 120 minutes.
 
-- **Its screen:** tap **15 min** to **120 min** to start it. While it runs,
+- **Its screen:** tap **15 min** to **120 min** to start it (developer
+  builds also have **1 min**, for quick tests). While it runs,
   **+ 15 min** adds time and **Cancel** stops it. When the clock is set,
   it shows the time the TV turns off.
 - **While it runs,** the top bar counts down, and the remote doesn't turn

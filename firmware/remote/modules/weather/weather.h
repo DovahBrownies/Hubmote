@@ -27,7 +27,7 @@ void weather_set_imperial(bool imperial);
 
 /* weather_ui.c (LVGL task) */
 lv_obj_t *weather_ui_create_view(lv_obj_t *parent);
-lv_obj_t *weather_ui_create_card(lv_obj_t *parent);
+lv_obj_t *weather_ui_create_card(lv_obj_t *parent, hub_card_size_t size);
 bool weather_ui_glance(hub_glance_t *out);
 void weather_ui_update(void *arg);
 void weather_ui_search_results(const wx_place_t *places, int count, bool failed);

@@ -173,8 +173,8 @@ void ui_topbar_refresh_glance(void)
 {
     hub_glance_t g = {0};
     s_glance_module = NULL;
-    for (size_t i = 0; i < hub_module_count() && !s_glance_module; i++) {
-        const hub_module_t *m = hub_module_get(i);
+    for (size_t i = 0; i < ui_home_module_count() && !s_glance_module; i++) { /* the first in the Home tab's order */
+        const hub_module_t *m = ui_home_module(i);
         if (hub_module_enabled(m) && m->glance && m->glance(&g)) {
             s_glance_module = m;
         }

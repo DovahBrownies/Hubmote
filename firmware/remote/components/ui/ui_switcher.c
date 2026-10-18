@@ -59,7 +59,7 @@ static void on_row(lv_event_t *e)
         ui_show_view(VIEW_LEARN);
         break;
     case ROW_MODULE: {
-        const hub_module_t *m = hub_module_get((size_t)index);
+        const hub_module_t *m = ui_home_module((size_t)index);
         if (m) {
             ui_module_open(m->id);
         }
@@ -124,8 +124,8 @@ void ui_switcher_open(void)
     }
 
     bool header = false;
-    for (size_t i = 0; i < hub_module_count(); i++) {
-        const hub_module_t *m = hub_module_get(i);
+    for (size_t i = 0; i < ui_home_module_count(); i++) { /* in the Home tab's order */
+        const hub_module_t *m = ui_home_module(i);
         if (!hub_module_enabled(m)) {
             continue;
         }

@@ -61,6 +61,7 @@ typedef enum {
     UI_ACT_LAUNCH,       /* .text = app deep link */
     UI_ACT_LAUNCH_APP,   /* .text = package name (an app from ui_set_apps()) */
     UI_ACT_APP_LAYOUT,   /* the user hid, showed or moved apps on Home: save ui_app_layout() */
+    UI_ACT_HOME_LAYOUT,  /* the user moved or resized module cards on the Home tab: save ui_home_layout() */
     UI_ACT_MEDIA_KEYS,   /* the user showed or hid an app's playback keys: save ui_media_apps() */
     UI_ACT_INPUT,        /* .index = HDMI switch input (0..UI_INPUTS-1): send its code */
     UI_ACT_INPUT_RENAME, /* .index, .text = the input's new name */
@@ -235,6 +236,13 @@ typedef struct {
     const uint8_t *icon_small;
 } ui_app_t;
 void ui_set_apps(const ui_app_t *apps, size_t count);
+
+/* The Home tab's module cards, in order with their sizes, as saved:
+ * "weather:L,sleep_timer:M" ("" = the defaults). Modules missing from it
+ * follow in name order. */
+#define UI_HOME_LAYOUT_MAX 400
+void ui_set_home_layout(const char *layout);
+void ui_home_layout(char *out, size_t len);
 
 /* Home's app layout as saved: the user's order and the hidden apps, each a
  * list of package names between newlines ("\npkg.a\npkg.b\n"). Apps never

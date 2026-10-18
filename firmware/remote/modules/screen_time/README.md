@@ -57,8 +57,9 @@ count until it is back on.
 
 In **Settings > Modules > Screen time**, kept in NVS (`m_screen_time`):
 
-- **Daily limit** (`limit`): 15 to 600 minutes, or **Off** (the
-  default).
+- **Daily limit** (`limit`): **Off** (the default), or 15 minutes to 3
+  hours in 15-minute steps, then up to 10 hours. Developer builds also
+  offer 1 minute, for quick tests.
 - **At the limit** (`at_limit`): **Turn TV off** (the default) or **Only
   warn**.
 - **Turn off with** (`off_ir`): **Google TV** puts the Streamer to sleep,

@@ -139,6 +139,9 @@ void ui_show_view(ui_view_t view)
     if (s_view == VIEW_MODULE && view != VIEW_MODULE) {
         ui_modview_leave();
     }
+    if (s_view == VIEW_DASH && view != VIEW_DASH) {
+        ui_dash_leave(); /* arranging ends */
+    }
     if (s_view == VIEW_IR_REMOTE && view != VIEW_IR_REMOTE && view != VIEW_KEYBOARD) {
         ui_ir_remote_leave(); /* ends editing (the keyboard renames while editing) */
     }
@@ -350,7 +353,7 @@ static void on_glance_changed(void)
 
 static void modules_async(void *arg)
 {
-    ui_dash_refresh();
+    ui_dash_set_layout(NULL); /* the modules as started: any new ones join the layout */
     ui_settings_modules_changed();
     ui_topbar_refresh_glance();
 }
@@ -590,6 +593,21 @@ void ui_set_apps(const ui_app_t *apps, size_t count)
             apply_context();
         }
     }
+    UNLOCK();
+}
+
+void ui_set_home_layout(const char *layout)
+{
+    LOCK();
+    ui_dash_set_layout(layout ? layout : "");
+    ui_topbar_refresh_glance();
+    UNLOCK();
+}
+
+void ui_home_layout(char *out, size_t len)
+{
+    LOCK();
+    ui_dash_layout(out, len);
     UNLOCK();
 }
 

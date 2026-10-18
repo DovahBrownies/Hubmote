@@ -131,8 +131,18 @@ bool ui_switcher_is_open(void);
 /* --- The Home tab and the module screen (ui_dash.c) ----------------------- */
 lv_obj_t *ui_dash_create(lv_obj_t *parent);
 void ui_dash_show(void);
+void ui_dash_leave(void);
 /* Shows or hides cards after modules were switched on or off. */
 void ui_dash_refresh(void);
+/* Arranging the Home tab: arrows and a size button on each card. */
+void ui_dash_arrange(bool on);
+/* Takes a saved layout (NULL: keeps the one it has, for new modules). */
+void ui_dash_set_layout(const char *layout);
+void ui_dash_layout(char *out, size_t len);
+/* The modules in the Home tab's order, which the switcher and the top
+ * bar's glance follow. */
+size_t ui_home_module_count(void);
+const hub_module_t *ui_home_module(size_t index);
 lv_obj_t *ui_modview_create(lv_obj_t *parent);
 const hub_module_t *ui_modview_current(void);
 void ui_modview_leave(void);

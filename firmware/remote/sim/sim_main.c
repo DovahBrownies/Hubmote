@@ -199,6 +199,17 @@ static void screens(void)
     /* Home tab and Weather */
     ui_show_view(VIEW_DASH);
     shot("home_tab");
+    ui_dash_arrange(true);
+    shot("home_arrange");
+    ui_dash_arrange(false);
+    ui_set_home_layout("sleep_timer:S,weather:M,screen_time:S"); /* each size, Weather's small and medium */
+    shot("home_layout");
+    ui_set_home_layout("weather:S,screen_time:L,sleep_timer:M");
+    shot("home_layout_2");
+    ui_dash_arrange(true);
+    shot("home_arrange_2");
+    ui_dash_arrange(false);
+    ui_set_home_layout("");
     ui_module_open("weather");
     shot("weather");
     ui_module_open("sleep_timer");

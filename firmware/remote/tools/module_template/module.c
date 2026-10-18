@@ -48,11 +48,11 @@ static void on_tap(lv_event_t *e)
     show_value(NULL);
 }
 
-/* Its card on the Home tab. The Home tab makes the whole card open the
- * module's screen when tapped. */
-static lv_obj_t *create_card(lv_obj_t *parent)
+/* Its card on the Home tab, at the size the user picked among card_sizes.
+ * The Home tab makes the whole card open the module's screen when tapped. */
+static lv_obj_t *create_card(lv_obj_t *parent, hub_card_size_t size)
 {
-    lv_obj_t *card = ui_panel(parent, UI_S(480), UI_S(160));
+    lv_obj_t *card = ui_panel(parent, HUB_CARD_W(size), HUB_CARD_H);
     ui_flex(card, LV_FLEX_FLOW_COLUMN, UI_S(6));
     ui_label(card, &font_sora_16sb, COL_TEXT, "__NAME__");
     s_card_value = ui_label(card, &font_sora_26m, COL_ACCENT_TEXT, "");
@@ -112,6 +112,7 @@ static const hub_module_t s_module = {
     .event = event,
     .create_view = create_view,
     .create_card = create_card,
+    .card_sizes = HUB_CARD_SMALL | HUB_CARD_MEDIUM, /* the sizes its card comes in */
     /* .glance: a short summary for the top bar and switcher (see Weather) */
     .settings = k_settings,
     .settings_count = sizeof(k_settings) / sizeof(k_settings[0]),

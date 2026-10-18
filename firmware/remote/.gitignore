@@ -7,6 +7,7 @@ sdkconfig
 sdkconfig.*
 !sdkconfig.defaults
 !sdkconfig.release
+!sim/stubs/sdkconfig.h
 # tools/devtools.py's default output: screens can show network and TV names
 screenshot.png
 screenshot.bmp

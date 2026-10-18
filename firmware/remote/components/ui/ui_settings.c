@@ -998,8 +998,18 @@ static void on_mset_step(lv_event_t *e)
     lv_obj_t *btn = lv_event_get_current_target(e);
     mod_setting_t *ms = lv_event_get_user_data(e);
     const hub_setting_t *s = ms->setting;
+    int by = (int)(intptr_t)lv_obj_get_user_data(btn); /* -1 or +1 */
+    if (s->values && s->count) { /* the next value in the list */
+        size_t i = 0;
+        while (i + 1 < s->count && s->values[i] < ms->value) {
+            i++;
+        }
+        i = by < 0 ? (i > 0 ? i - 1 : 0) : (s->values[i] > ms->value ? i : (i + 1 < s->count ? i + 1 : i));
+        mset_set(ms, s->values[i]);
+        return;
+    }
     int32_t step = s->step > 0 ? s->step : 1;
-    int32_t v = ms->value + (int32_t)(intptr_t)lv_obj_get_user_data(btn) * step; /* -1 or +1 */
+    int32_t v = ms->value + by * step;
     mset_set(ms, v < s->min ? s->min : v > s->max ? s->max : v);
 }
 
@@ -1315,9 +1325,29 @@ static void build_time_zone(lv_obj_t *page)
     ui_settings_set_time_zone(s_tz);
 }
 
+static void on_arrange(lv_event_t *e)
+{
+    ui_show_view(VIEW_DASH);
+    ui_dash_arrange(true);
+}
+
+static void build_arrange(lv_obj_t *page)
+{
+    lv_obj_t *row = ui_btn(page, LV_PCT(100), UI_S(64), 16, COL_SURFACE2);
+    lv_obj_set_style_pad_hor(row, UI_S(14), 0);
+    ui_flex(row, LV_FLEX_FLOW_ROW, UI_S(12));
+    lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    icon_box(row, ICON_GRID, COL_ACCENT_TEXT);
+    lv_obj_t *title = ui_label(row, &font_sora_15m, COL_TEXT, "Arrange Home");
+    lv_obj_set_flex_grow(title, 1);
+    ui_label(row, &font_icons_20, COL_TEXT3, ICON_CHEVRON_RIGHT);
+    lv_obj_add_event_cb(row, on_arrange, LV_EVENT_CLICKED, NULL);
+}
+
 static void build_modules(lv_obj_t *page)
 {
     build_time_zone(page);
+    build_arrange(page);
     subhead(page, "Modules");
     s_mod_none = ui_label(page, &font_sora_15m, COL_TEXT3, "No modules");
     s_mod_list = ui_box(page);

@@ -32,6 +32,7 @@ From left to right:
   you're on the Home tab or in Settings, tapping the remote tab takes you
   back to the remote instead.
 - **The Home tab** shows a card for each module. Tap one to open it.
+  Press and hold one to [arrange them](#modules).
 - **What's on**, in the middle: the app on the TV, **Typing** while you
   type, or the module you have open.
 - **On the right:** a module's glance (the weather), Wi-Fi, the battery,
@@ -204,6 +205,17 @@ under Google TV's Home, or **HDMI switch** in the switcher.
 Each module has a card on the Home tab. **Settings > Modules** switches
 modules on and off. A module's settings, such as Weather's **Units**, show
 under it while it is on.
+
+**Arrange the Home tab.** Press and hold any card, or tap **Settings >
+Modules > Arrange Home**. Each card then shows:
+
+- **‹ and ›** to move it earlier or later. The order is also the
+  switcher's, and the top bar shows the glance of the first module in it
+  that has one (the weather, say).
+- **Small, Medium or Large**, to change its size: a quarter, half or all
+  of the width. Each tap picks the next size the module offers.
+
+Tap **Done** when you're finished. The layout is saved on the remote.
 
 **Time zone.** At the top of **Settings > Modules**. **Automatic** follows
 Weather's place. To choose a zone instead, tap **Time zone**, pick a

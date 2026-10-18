@@ -31,6 +31,18 @@ extern "C" {
 #define HUB_VIEW_W UI_WIDE_W /* ui_kit.h: 1000 at 1024 x 600 */
 #define HUB_VIEW_H UI_BODY_H /* 532 at 1024 x 600 */
 
+/* Cards on the Home tab sit on a grid of four columns, two rows to the
+ * screen. The user picks each card's size among those its module offers
+ * (card_sizes), long-pressing a card. */
+typedef enum {
+    HUB_CARD_SMALL = 1,  /* one column: 241 x 260 at 1024 x 600 */
+    HUB_CARD_MEDIUM = 2, /* two columns: 494 x 260 (the default) */
+    HUB_CARD_LARGE = 4,  /* the whole width: 1000 x 260 */
+} hub_card_size_t;
+#define HUB_CARD_H     ((UI_BODY_H - UI_GAP) / 2)
+#define HUB_CARD_COL_W ((UI_WIDE_W - 3 * UI_GAP) / 4)
+#define HUB_CARD_W(size)                                                                                         ((size) == HUB_CARD_SMALL ? HUB_CARD_COL_W : (size) == HUB_CARD_LARGE ? UI_WIDE_W : 2 * HUB_CARD_COL_W + UI_GAP)
+
 typedef enum {
     HUB_EV_NETWORK_UP,   /* Wi-Fi connected */
     HUB_EV_NETWORK_DOWN, /* Wi-Fi lost */
@@ -60,8 +72,9 @@ typedef struct {
     hub_setting_type_t type;
     int32_t def;                /* the default: SWITCH 0 or 1, CHOICE an index, NUMBER a value */
     const char *const *choices; /* CHOICE: the labels, and how many: 2 or 3 show side by */
-    size_t count;               /* side, more as a list */
+    size_t count;               /* side, more as a list. NUMBER with values: how many */
     int32_t min, max, step;     /* NUMBER */
+    const int32_t *values;      /* NUMBER: the values to step through, rising, instead of min to max by step */
     const char *unit;           /* NUMBER: after the value ("min"), or NULL */
     const char *zero;           /* NUMBER: shown instead of 0 ("Off"), or NULL */
     size_t max_len;             /* TEXT: the longest value, 63 at most */
@@ -87,8 +100,12 @@ typedef struct {
     lv_obj_t *(*create_view)(lv_obj_t *parent); /* its screen, HUB_VIEW_W x HUB_VIEW_H; built when first opened */
     void (*show)(void);                          /* its screen came into view */
     void (*hide)(void);                          /* its screen left */
-    lv_obj_t *(*create_card)(lv_obj_t *parent); /* its card on the Home tab */
-    bool (*glance)(hub_glance_t *out);          /* false: nothing to show yet */
+    /* Its card on the Home tab, HUB_CARD_W(size) x HUB_CARD_H. Made again
+     * when the user picks another size: keep no pointers into an old one. */
+    lv_obj_t *(*create_card)(lv_obj_t *parent, hub_card_size_t size);
+    bool (*glance)(hub_glance_t *out); /* false: nothing to show yet */
+    unsigned card_sizes;               /* the HUB_CARD_* it comes in, or-ed; 0: medium only */
+    hub_card_size_t card_size;         /* its size until the user picks one; 0: medium */
 
     const hub_setting_t *settings; /* shown in Settings > Modules; may be NULL */
     size_t settings_count;

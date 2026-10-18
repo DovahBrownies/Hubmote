@@ -15,6 +15,7 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "hub.h"
+#include "sdkconfig.h"
 #include "ui_kit.h"
 
 #define MODULE_ID "sleep_timer"
@@ -23,7 +24,12 @@
 
 static const char *TAG = "sleep_timer";
 
-static const int k_minutes[] = {15, 30, 45, 60, 90, 120};
+static const int k_minutes[] = {
+#if CONFIG_HM_DEVELOPER
+    1, /* developer builds: for quick tests */
+#endif
+    15, 30, 45, 60, 90, 120,
+};
 #define PRESETS (sizeof(k_minutes) / sizeof(k_minutes[0]))
 
 static const char *const k_off_with[] = {"Google TV", "TV's IR"};
@@ -229,9 +235,9 @@ static void on_cancel(lv_event_t *e)
     cancel();
 }
 
-static lv_obj_t *create_card(lv_obj_t *parent)
+static lv_obj_t *create_card(lv_obj_t *parent, hub_card_size_t size)
 {
-    lv_obj_t *card = ui_panel(parent, UI_S(480), UI_S(260));
+    lv_obj_t *card = ui_panel(parent, HUB_CARD_W(size), HUB_CARD_H);
     lv_obj_set_style_pad_all(card, UI_S(22), 0);
     ui_flex(card, LV_FLEX_FLOW_COLUMN, UI_S(8));
     lv_obj_t *head = ui_box(card);
@@ -339,6 +345,7 @@ static const hub_module_t s_module = {
     .create_view = create_view,
     .create_card = create_card,
     .glance = glance,
+    .card_sizes = HUB_CARD_SMALL | HUB_CARD_MEDIUM | HUB_CARD_LARGE,
     .settings = k_settings,
     .settings_count = sizeof(k_settings) / sizeof(k_settings[0]),
 };

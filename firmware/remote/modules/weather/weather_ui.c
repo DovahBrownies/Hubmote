@@ -586,12 +586,43 @@ static void on_hours_size(lv_event_t *e)
     lv_obj_set_style_bg_opa(hours, fit > 0 ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
 }
 
-lv_obj_t *weather_ui_create_card(lv_obj_t *parent)
+/* Small: the place, the temperature, the sky and the day's range in a
+ * column, no hours. */
+static void create_small_card(void)
+{
+    ui_flex(s_card_body, LV_FLEX_FLOW_COLUMN, UI_S(6));
+    lv_obj_t *head = ui_box(s_card_body);
+    lv_obj_set_size(head, LV_PCT(100), LV_SIZE_CONTENT);
+    ui_flex(head, LV_FLEX_FLOW_ROW, UI_S(8));
+    lv_obj_set_flex_align(head, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    s_c_place = ui_label(head, &font_sora_16sb, COL_TEXT, "");
+    lv_label_set_long_mode(s_c_place, LV_LABEL_LONG_MODE_DOTS);
+    lv_obj_set_flex_grow(s_c_place, 1);
+    s_c_spin = ui_spinner(head, UI_S(14), COL_TEXT2);
+    ui_spinner_run(s_c_spin, false);
+    lv_obj_t *spacer = ui_box(s_card_body);
+    lv_obj_set_flex_grow(spacer, 1);
+    s_c_temp = ui_label(s_card_body, &font_sora_88n, COL_TEXT, "--");
+    lv_obj_t *sky = ui_box(s_card_body);
+    lv_obj_set_size(sky, LV_PCT(100), LV_SIZE_CONTENT);
+    ui_flex(sky, LV_FLEX_FLOW_ROW, UI_S(8));
+    lv_obj_set_flex_align(sky, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    s_c_icon = ui_label(sky, &font_icons_24, COL_SUN, ICON_W_CLOUD_SUN);
+    s_c_text = ui_label(sky, &font_sora_15m, COL_TEXT, "");
+    lv_label_set_long_mode(s_c_text, LV_LABEL_LONG_MODE_DOTS);
+    lv_obj_set_flex_grow(s_c_text, 1);
+    s_c_hl = ui_label(s_card_body, &font_sora_13m, COL_TEXT2, "");
+    for (int i = 0; i < CARD_HOURS; i++) {
+        s_c_hour[i] = s_c_time[i] = s_c_hicon[i] = s_c_htemp[i] = NULL;
+    }
+}
+
+lv_obj_t *weather_ui_create_card(lv_obj_t *parent, hub_card_size_t size)
 {
     if (!s_snap) {
         s_snap = heap_caps_calloc(1, sizeof(*s_snap), MALLOC_CAP_SPIRAM);
     }
-    lv_obj_t *card = ui_panel(parent, UI_S(480), UI_S(260));
+    lv_obj_t *card = ui_panel(parent, HUB_CARD_W(size), HUB_CARD_H);
     lv_obj_set_style_pad_all(card, UI_S(22), 0);
 
     s_card_status = ui_status_create(card, LV_PCT(100), LV_PCT(100), true);
@@ -599,6 +630,12 @@ lv_obj_t *weather_ui_create_card(lv_obj_t *parent)
 
     s_card_body = ui_box(card);
     lv_obj_set_size(s_card_body, LV_PCT(100), LV_PCT(100));
+    if (size == HUB_CARD_SMALL) {
+        create_small_card();
+        weather_ui_update(NULL);
+        return card;
+    }
+    /* Medium and large: the conditions, then as many hours as fit */
     ui_flex(s_card_body, LV_FLEX_FLOW_ROW, UI_S(24));
     lv_obj_t *left = ui_box(s_card_body);
     lv_obj_set_size(left, LV_SIZE_CONTENT, LV_PCT(100));
@@ -670,7 +707,7 @@ static void update_card(void)
     set_temp(s_c_temp, d->now.temp);
     lv_label_set_text(s_c_text, wx_code_text(d->now.code));
     lv_label_set_text_fmt(s_c_hl, "H %ld\xC2\xB0  L %ld\xC2\xB0", temp(d->days[0].tmax), temp(d->days[0].tmin));
-    for (int i = 0; i < CARD_HOURS; i++) {
+    for (int i = 0; i < CARD_HOURS && s_c_hour[i]; i++) { /* none on a small card */
         bool on = i < d->n_hours;
         if (!on) {
             continue;
