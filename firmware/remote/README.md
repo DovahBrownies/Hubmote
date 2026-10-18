@@ -229,6 +229,7 @@ When the TV's address changes, the remote finds it again by its mDNS name.
 | `atv` | `tv_key` | The hash of the TV's public key, pinned at pairing |
 | `ctrl` | `tv_mdns` | The TV's mDNS name |
 | `ctrl` | `app_order`, `hidden_apps` | Home's app order and hidden apps |
+| `ctrl` | `media_on`, `media_off` | Apps given playback keys (they played something, or the user chose) and apps the user took them from |
 | `ctrl` | `bright`, `dim_s`, `off_s`, `sleep_h` | **Settings > Screen** |
 | `ctrl` | `dim_c`, `off_c` | **Settings > Screen**, for charging |
 | `ctrl` | `turn` | **Rotate 180°** |
@@ -237,8 +238,9 @@ When the TV's address changes, the remote finds it again by its mDNS name.
 | `wifi` | `ssid`, `pass` | The network's name and password |
 | `ota` | `token` | The update token |
 | `companion` | `token` | The token from pairing with companion 0.4+ |
+| `hub` | `tz` | The time zone (none: Automatic) |
 | `hub_off` | The module's id | Modules switched off in Settings |
-| `m_<module>` | Set by the module | Each module's own settings |
+| `m_<module>` | Set by the module | Each module's own settings, and the values of its declared settings (Settings > Modules) |
 
 ## Companion app (optional)
 

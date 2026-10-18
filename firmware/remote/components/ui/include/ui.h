@@ -61,6 +61,7 @@ typedef enum {
     UI_ACT_LAUNCH,       /* .text = app deep link */
     UI_ACT_LAUNCH_APP,   /* .text = package name (an app from ui_set_apps()) */
     UI_ACT_APP_LAYOUT,   /* the user hid, showed or moved apps on Home: save ui_app_layout() */
+    UI_ACT_MEDIA_KEYS,   /* the user showed or hid an app's playback keys: save ui_media_apps() */
     UI_ACT_INPUT,        /* .index = HDMI switch input (0..UI_INPUTS-1): send its code */
     UI_ACT_INPUT_RENAME, /* .index, .text = the input's new name */
     UI_ACT_INPUT_LEARN,  /* .index: learn that input's code; progress via ui_learn_* */
@@ -242,6 +243,17 @@ void ui_set_apps(const ui_app_t *apps, size_t count);
 void ui_set_app_layout(const char *order, const char *hidden);
 /* Copies both lists (UI_APP_LIST_MAX bytes each) for saving. */
 void ui_app_layout(char *order, char *hidden);
+
+/* Which apps get playback keys: the media apps the remote knows, apps that
+ * have played something (ui_learn_media_app), and apps the user switched
+ * on; never the apps the user switched off. Lists as Home's layout. */
+#define UI_MEDIA_LIST_MAX 1024
+void ui_set_media_apps(const char *on, const char *off);
+/* Copies both lists (UI_MEDIA_LIST_MAX bytes each) for saving. */
+void ui_media_apps(char *on, char *off);
+/* An app is playing something: it gets playback keys from now on, unless
+ * the user hid them. True if the lists changed (save them). */
+bool ui_learn_media_app(const char *package);
 void ui_set_battery(int percent, bool charging);
 void ui_set_wifi(bool up);
 /* Settings > Screen: the brightness slider (1..100 %), and the idle times

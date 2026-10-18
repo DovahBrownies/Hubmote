@@ -55,28 +55,6 @@ bool ui_app_is_system_screen(const char *package)
     return strstr(package, ".dream") != NULL; /* other screensavers */
 }
 
-/* Apps with nothing to play: their panel leaves out the playback keys,
- * Captions and what's playing. Every other app keeps them: most apps on a
- * TV play something, and many never say so (Plex has no media session). */
-static const char *const NOT_MEDIA[] = {
-    "com.android.tv.settings",             /* Settings */
-    "com.android.vending",                 /* Play Store */
-    "com.google.android.gms",              /* Google account screens */
-    "com.android.packageinstaller",        /* install dialogs */
-    "com.google.android.packageinstaller",
-    "com.android.documentsui",             /* files */
-};
-
-bool ui_app_plays_media(const char *package)
-{
-    for (size_t i = 0; package && i < sizeof(NOT_MEDIA) / sizeof(NOT_MEDIA[0]); i++) {
-        if (strcmp(NOT_MEDIA[i], package) == 0) {
-            return false;
-        }
-    }
-    return true;
-}
-
 static const char *const LAUNCHERS[] = {
     "com.google.android.apps.tv.launcherx",
     "com.google.android.tvlauncher",
@@ -165,6 +143,7 @@ const ui_app_info_t *ui_apps_find(const char *package)
 static char s_order[UI_APP_LIST_MAX] = "\n";
 static char s_hidden[UI_APP_LIST_MAX] = "\n";
 
+/* Lists of package names, each between newlines ("\npkg.a\npkg.b\n"). */
 static const char *list_find(const char *list, const char *package, size_t *key_len)
 {
     char key[104];
@@ -176,12 +155,12 @@ static const char *list_find(const char *list, const char *package, size_t *key_
     return strstr(list, key);
 }
 
-/* Adds a package at the end; false when the list is full. */
-static bool list_append(char *list, const char *package)
+/* Adds a package at the end; false when the list (cap bytes) is full. */
+static bool list_append_cap(char *list, size_t cap, const char *package)
 {
     size_t len = strlen(list);
     size_t n = strlen(package);
-    if (!n || len + n + 2 > UI_APP_LIST_MAX) {
+    if (!n || len + n + 2 > cap) {
         return false;
     }
     memcpy(list + len, package, n);
@@ -190,11 +169,31 @@ static bool list_append(char *list, const char *package)
     return true;
 }
 
-static void list_load(char *list, const char *saved)
+static bool list_append(char *list, const char *package)
+{
+    return list_append_cap(list, UI_APP_LIST_MAX, package);
+}
+
+static void list_load_cap(char *list, size_t cap, const char *saved)
 {
     size_t len = saved ? strlen(saved) : 0;
-    bool ok = len >= 1 && len < UI_APP_LIST_MAX && saved[0] == '\n' && saved[len - 1] == '\n';
-    strlcpy(list, ok ? saved : "\n", UI_APP_LIST_MAX);
+    bool ok = len >= 1 && len < cap && saved[0] == '\n' && saved[len - 1] == '\n';
+    strlcpy(list, ok ? saved : "\n", cap);
+}
+
+static void list_load(char *list, const char *saved)
+{
+    list_load_cap(list, UI_APP_LIST_MAX, saved);
+}
+
+/* Takes package out of list, if it's there. */
+static void list_remove(char *list, const char *package)
+{
+    size_t n = 0;
+    char *at = (char *)list_find(list, package, &n);
+    if (at) {
+        memmove(at + 1, at + n, strlen(at + n) + 1); /* drop "pkg\n", keep the '\n' before it */
+    }
 }
 
 bool ui_apps_is_hidden(const char *package)
@@ -251,4 +250,132 @@ bool ui_apps_is_launcher(const char *package)
         }
     }
     return false;
+}
+
+/* --- Which apps get playback keys -------------------------------------------- */
+
+/* Media apps the remote knows, so their keys are there before they play
+ * anything; Plex never says it plays. Other apps get the keys once they
+ * have played something (the companion reports it) or the user switches
+ * them on. Add an app here with a pull request. */
+static const char *const MEDIA_APPS[] = {
+    "com.google.android.youtube.tvunplugged", /* YouTube TV */
+    "com.google.android.videos",              /* Google TV (films and shows) */
+    "com.apple.atve.androidtv.appletv",       /* Apple TV */
+    "com.disney.disneyplus",
+    "com.hulu.livingroomplus",
+    "com.wbd.stream",                         /* Max */
+    "com.cbs.ott",                            /* Paramount+ */
+    "com.peacocktv.peacockandroid",
+    "com.sling",
+    "com.tubitv",
+    "tv.pluto.android",
+    "com.roku.web.trc",                       /* The Roku Channel */
+    "com.xumo.xumo.tv",
+    "com.crunchyroll.crunchyroid",
+    "net.mbc.shahidTV",                       /* Shahid */
+    "com.stremio.one",
+    "org.xbmc.kodi",
+    "org.videolan.vlc",
+    "org.jellyfin.androidtv",
+    "tv.emby.embyatv",
+    "com.softmedia.receiver",                 /* AirReceiver */
+};
+
+/* Apps that have played something or the user switched on, and apps the
+ * user switched off ("\npkg\n" lists, in PSRAM: internal RAM is scarce). */
+static char *s_media_on;
+static char *s_media_off;
+
+static bool media_lists(void)
+{
+    if (!s_media_on) {
+        s_media_on = lv_malloc(UI_MEDIA_LIST_MAX);
+        s_media_off = lv_malloc(UI_MEDIA_LIST_MAX);
+        if (!s_media_on || !s_media_off) {
+            lv_free(s_media_on);
+            lv_free(s_media_off);
+            s_media_on = s_media_off = NULL;
+            return false;
+        }
+        strlcpy(s_media_on, "\n", UI_MEDIA_LIST_MAX);
+        strlcpy(s_media_off, "\n", UI_MEDIA_LIST_MAX);
+    }
+    return true;
+}
+
+static bool known_media(const char *package)
+{
+    if (find_built_in(package)) {
+        return true;
+    }
+    for (size_t i = 0; i < sizeof(MEDIA_APPS) / sizeof(MEDIA_APPS[0]); i++) {
+        if (strcmp(MEDIA_APPS[i], package) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Adds package to list; when the list is full, the oldest entries go. */
+static void media_list_add(char *list, const char *package)
+{
+    while (!list_append_cap(list, UI_MEDIA_LIST_MAX, package)) {
+        char *second = strchr(list + 1, '\n');
+        if (!second || !second[1]) {
+            return; /* empty, or one package too long for the list */
+        }
+        memmove(list + 1, second + 1, strlen(second + 1) + 1);
+    }
+}
+
+bool ui_app_plays_media(const char *package)
+{
+    size_t n;
+    if (!package || !package[0]) {
+        return false;
+    }
+    if (s_media_off && list_find(s_media_off, package, &n)) {
+        return false;
+    }
+    return known_media(package) || (s_media_on && list_find(s_media_on, package, &n));
+}
+
+void ui_apps_load_media(const char *on, const char *off)
+{
+    if (media_lists()) {
+        list_load_cap(s_media_on, UI_MEDIA_LIST_MAX, on);
+        list_load_cap(s_media_off, UI_MEDIA_LIST_MAX, off);
+    }
+}
+
+void ui_apps_copy_media(char *on, char *off)
+{
+    strlcpy(on, s_media_on ? s_media_on : "\n", UI_MEDIA_LIST_MAX);
+    strlcpy(off, s_media_off ? s_media_off : "\n", UI_MEDIA_LIST_MAX);
+}
+
+bool ui_apps_learn_media(const char *package)
+{
+    size_t n;
+    if (!package || !package[0] || !media_lists() || known_media(package) ||
+        list_find(s_media_on, package, &n) || list_find(s_media_off, package, &n)) {
+        return false;
+    }
+    media_list_add(s_media_on, package);
+    return true;
+}
+
+void ui_apps_set_media_keys(const char *package, bool on)
+{
+    if (!package || !package[0] || !media_lists()) {
+        return;
+    }
+    list_remove(s_media_on, package);
+    list_remove(s_media_off, package);
+    if (!on) {
+        media_list_add(s_media_off, package);
+    } else if (!known_media(package)) {
+        media_list_add(s_media_on, package);
+    }
 }

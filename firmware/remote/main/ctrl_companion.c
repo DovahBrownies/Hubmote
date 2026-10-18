@@ -17,6 +17,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
+#include "kv.h"
 #include "ui.h"
 #include "ui_icons.h"
 #include "update.h"
@@ -42,6 +43,8 @@ static ui_companion_update_t s_comp_run;
 static int s_comp_target;
 static char s_search[128];
 static int64_t s_search_at; /* when to run it; 0 = nothing waiting */
+
+static void load_media_apps(void);
 
 /* --- Requests ---------------------------------------------------------------------------------- */
 
@@ -190,15 +193,52 @@ void ctrl_companion_start(companion_cb_t on_event)
     if (!s_req_q || xTaskCreatePinnedToCore(worker, "comp_req", WORKER_STACK, NULL, 5, NULL, 0) != pdPASS) {
         ESP_LOGE(TAG, "companion worker didn't start");
     }
+    load_media_apps();
     companion_start(on_event, NULL);
 }
 
-/* The app panel's "now playing" (companion 0.6+). */
+/* --- Which apps get playback keys (ui_set_media_apps) ----------------------------------------- */
+
+#define NVS_MEDIA_ON  "media_on"
+#define NVS_MEDIA_OFF "media_off"
+
+static void load_media_apps(void)
+{
+    char *on = heap_caps_calloc(2, UI_MEDIA_LIST_MAX, MALLOC_CAP_SPIRAM);
+    if (!on) {
+        return;
+    }
+    char *off = on + UI_MEDIA_LIST_MAX;
+    kv_get_str(CTRL_NVS_NS, NVS_MEDIA_ON, on, UI_MEDIA_LIST_MAX);
+    kv_get_str(CTRL_NVS_NS, NVS_MEDIA_OFF, off, UI_MEDIA_LIST_MAX);
+    ui_set_media_apps(on, off);
+    free(on);
+}
+
+static void save_media_apps(void)
+{
+    char *on = heap_caps_calloc(2, UI_MEDIA_LIST_MAX, MALLOC_CAP_SPIRAM);
+    if (!on) {
+        return;
+    }
+    char *off = on + UI_MEDIA_LIST_MAX;
+    ui_media_apps(on, off);
+    kv_set_str(CTRL_NVS_NS, NVS_MEDIA_ON, on);
+    kv_set_str(CTRL_NVS_NS, NVS_MEDIA_OFF, off);
+    free(on);
+}
+
+/* The app panel's "now playing" (companion 0.6+). An app that plays gets
+ * playback keys from now on. */
 static void show_media(void)
 {
     companion_media_t m;
     companion_media(&m);
     ui_set_media(m.pkg, m.title, m.subtitle, m.state == COMPANION_MEDIA_PLAYING);
+    if (m.pkg[0] && m.state != COMPANION_MEDIA_NONE && ui_learn_media_app(m.pkg)) {
+        ESP_LOGI(TAG, "playback keys for %s from now on", m.pkg);
+        save_media_apps();
+    }
 }
 
 /* The companion app's list replaces the built-in apps while it is online. */
@@ -393,6 +433,9 @@ bool ctrl_companion_ui(const ctrl_ui_t *a)
     }
     case UI_ACT_COMPANION_UPDATE:
         start_companion_update();
+        return true;
+    case UI_ACT_MEDIA_KEYS:
+        save_media_apps();
         return true;
     default:
         return false;

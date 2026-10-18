@@ -80,8 +80,12 @@ The middle panel follows the app on the TV.
   - the title of what's playing, where the app shares it;
   - **Captions** and **Exit app**.
 
-  Apps with nothing to play, such as the Streamer's Settings and the Play
-  Store, show only **Exit app**.
+  The playback keys show in apps that play: the well-known streaming and
+  music apps, and any app once it has played something (this needs the
+  [companion app](companion.md)). Other apps, such as the Streamer's
+  Settings, show only **Show playback** and **Exit app**. **Show
+  playback** and **Hide playback** change that for the app in front, and
+  the remote remembers it.
 
   If the remote guessed the app wrong, tap **Wrong app?** to show Google
   TV's Home.

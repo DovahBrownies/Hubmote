@@ -79,9 +79,13 @@ typedef struct {
     bool on_tv;                       /* listed by the companion app: launch by package */
     bool no_skip;                     /* previous / next do nothing useful in it */
 } ui_app_info_t;
-/* False for apps with nothing to play (Settings, the Play Store...): their
- * panel has no playback keys. */
+/* True if the app's panel shows playback keys (ui_set_media_apps()). */
 bool ui_app_plays_media(const char *package);
+void ui_apps_load_media(const char *on, const char *off);
+void ui_apps_copy_media(char *on, char *off);
+bool ui_apps_learn_media(const char *package);
+/* The user's choice for one app. */
+void ui_apps_set_media_keys(const char *package, bool on);
 
 /* The home grid's apps: the TV's (ui_set_apps) or else the built-in ones.
  * Icons may be NULL for TV apps. */

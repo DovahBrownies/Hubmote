@@ -601,6 +601,42 @@ void ui_set_app_layout(const char *order, const char *hidden)
     UNLOCK();
 }
 
+/* The app panel again, after its app's playback keys changed. */
+static void refresh_app_panel(void)
+{
+    if (s_app[0] && !ui_apps_is_launcher(s_app)) {
+        ui_app_set(ui_apps_find(s_app), s_app);
+    }
+}
+
+void ui_set_media_apps(const char *on, const char *off)
+{
+    LOCK();
+    ui_apps_load_media(on, off);
+    refresh_app_panel();
+    UNLOCK();
+}
+
+void ui_media_apps(char *on, char *off)
+{
+    LOCK();
+    ui_apps_copy_media(on, off);
+    UNLOCK();
+}
+
+bool ui_learn_media_app(const char *package)
+{
+    if (!s_ready || !lvgl_port_lock(0)) { /* LOCK(), returning false */
+        return false;
+    }
+    bool changed = ui_apps_learn_media(package);
+    if (changed) {
+        refresh_app_panel();
+    }
+    UNLOCK();
+    return changed;
+}
+
 void ui_app_layout(char *order, char *hidden)
 {
     order[0] = '\0';

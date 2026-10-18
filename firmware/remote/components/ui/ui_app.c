@@ -1,8 +1,8 @@
 /*
  * App context: the panel shown while an app is in the foreground. One panel
  * serves every app; it changes its header, the note about what is playing,
- * whether the previous/next keys show, and, for apps with nothing to play
- * (Settings...), leaves out the playback keys and Captions.
+ * whether the previous/next keys show, and whether the playback keys and
+ * Captions show at all (ui_app_plays_media(); Show / Hide playback).
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -34,6 +34,7 @@ static lv_obj_t *s_prev;
 static lv_obj_t *s_next;
 static lv_obj_t *s_transport;
 static lv_obj_t *s_captions;
+static lv_obj_t *s_keys; /* Show / Hide playback */
 static lv_obj_t *s_exit;
 static bool s_media_app; /* the app in front may play something */
 
@@ -78,6 +79,15 @@ static void on_seek(lv_event_t *e)
     default:
         break;
     }
+}
+
+/* The user's choice for this app; the controller saves it. */
+static void on_keys(lv_event_t *e)
+{
+    ui_apps_set_media_keys(s_pkg, !s_media_app);
+    ui_app_set(ui_apps_find(s_pkg), s_pkg);
+    ui_action_t a = {.type = UI_ACT_MEDIA_KEYS};
+    ui_emit(&a);
 }
 
 static void on_wrong_app(lv_event_t *e)
@@ -183,6 +193,9 @@ lv_obj_t *ui_app_create(lv_obj_t *parent)
     s_captions = ui_btn_icon(actions, ACTION_W, UI_S(64), 14, COL_SURFACE2, &font_icons_20, ICON_CAPTIONS, COL_TEXT,
                              "Captions", true);
     ui_btn_bind_key(s_captions, UI_KEY_CAPTIONS, UI_KEYMODE_TAP);
+    s_keys = ui_btn_icon(actions, ACTION_W, UI_S(64), 14, COL_SURFACE2, &font_icons_20, ICON_PLAY, COL_TEXT,
+                         "Show playback", true);
+    lv_obj_add_event_cb(s_keys, on_keys, LV_EVENT_CLICKED, NULL);
     s_exit = ui_btn_icon(actions, ACTION_W, UI_S(64), 14, COL_SURFACE2, &font_icons_20, ICON_EXIT, COL_TEXT, "Exit app",
                          true);
     ui_btn_bind_key(s_exit, UI_KEY_HOME, UI_KEYMODE_TAP);
@@ -272,5 +285,10 @@ void ui_app_set(const ui_app_info_t *app, const char *package)
     lv_obj_set_hidden(s_next, no_skip);
     lv_obj_set_hidden(s_transport, !s_media_app);
     lv_obj_set_hidden(s_captions, !s_media_app);
-    lv_obj_set_width(s_exit, s_media_app ? ACTION_W : LV_PCT(100));
+    lv_label_set_text(lv_obj_get_child(s_keys, 1), s_media_app ? "Hide playback" : "Show playback");
+    /* Three buttons with the playback keys, two without */
+    int32_t w = s_media_app ? (UI_INNER_W - 2 * UI_GAP) / 3 : ACTION_W;
+    lv_obj_set_width(s_captions, w);
+    lv_obj_set_width(s_keys, w);
+    lv_obj_set_width(s_exit, w);
 }
