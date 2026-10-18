@@ -14,6 +14,7 @@
 #define HOURLY_H   UI_S(196)
 #define HOUR_COL_W UI_S(64)
 #define CARD_HOURS 6
+#define CARD_HOUR_W UI_S(46) /* one hour on the card: fits "-12°" */
 
 static weather_state_t *s_snap; /* PSRAM copy used for drawing */
 
@@ -47,6 +48,7 @@ static lv_obj_t *s_card_body;
 static lv_obj_t *s_card_status;
 static lv_obj_t *s_c_place, *s_c_spin, *s_c_icon, *s_c_temp, *s_c_text, *s_c_hl;
 static lv_obj_t *s_c_time[CARD_HOURS], *s_c_hicon[CARD_HOURS], *s_c_htemp[CARD_HOURS];
+static lv_obj_t *s_c_hour[CARD_HOURS];
 
 /* --- Formatting -------------------------------------------------------------- */
 
@@ -571,6 +573,19 @@ static void update_view(void)
 
 /* --- Home card --------------------------------------------------------------- */
 
+/* The hours panel gets what the current conditions leave of the card, which
+ * changes with the temperature's width and the screen's size: show as many
+ * hours as fit. */
+static void on_hours_size(lv_event_t *e)
+{
+    lv_obj_t *hours = lv_event_get_current_target(e);
+    int32_t fit = lv_obj_get_content_width(hours) / CARD_HOUR_W;
+    for (int i = 0; i < CARD_HOURS; i++) {
+        lv_obj_set_hidden(s_c_hour[i], i >= fit);
+    }
+    lv_obj_set_style_bg_opa(hours, fit > 0 ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
+}
+
 lv_obj_t *weather_ui_create_card(lv_obj_t *parent)
 {
     if (!s_snap) {
@@ -612,10 +627,12 @@ lv_obj_t *weather_ui_create_card(lv_obj_t *parent)
     lv_obj_set_style_radius(hours, ui_radius(14), 0);
     lv_obj_set_style_pad_all(hours, UI_S(12), 0);
     ui_flex(hours, LV_FLEX_FLOW_ROW, 0);
-    lv_obj_set_flex_align(hours, LV_FLEX_ALIGN_SPACE_AROUND, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(hours, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_add_event_cb(hours, on_hours_size, LV_EVENT_SIZE_CHANGED, NULL);
     for (int i = 0; i < CARD_HOURS; i++) {
         lv_obj_t *c = ui_box(hours);
-        lv_obj_set_size(c, LV_SIZE_CONTENT, LV_PCT(100));
+        s_c_hour[i] = c;
+        lv_obj_set_size(c, CARD_HOUR_W, LV_PCT(100));
         ui_flex(c, LV_FLEX_FLOW_COLUMN, 0);
         lv_obj_set_flex_align(c, LV_FLEX_ALIGN_SPACE_AROUND, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
         s_c_time[i] = ui_label(c, &font_mono_12, COL_TEXT2, "");
