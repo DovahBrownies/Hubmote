@@ -43,6 +43,12 @@
 
 static const char *TAG = "ctrl";
 
+/* The Streamer sometimes closes the control session and takes it back a
+ * few seconds later (seen right after waking): only a longer gap counts
+ * the TV as off for modules. */
+#define TV_GONE_US (30 * 1000000LL)
+static int64_t s_atv_down_us; /* when the control session went down; 0 while up */
+
 /* Limits written on both sides of the UI's API. */
 _Static_assert(COMPANION_MAX_APPS <= UI_MAX_APPS, "the UI must hold every companion app");
 _Static_assert(COMPANION_PKG_MAX <= UI_APP_PKG_MAX && COMPANION_LABEL_MAX <= UI_APP_NAME_MAX, "app names differ");
@@ -198,8 +204,10 @@ static void handle_atv(const atv_event_t *e)
 {
     switch (e->type) {
     case ATV_EVT_STATE:
-        if (e->state != ATV_STATE_CONNECTED) {
-            hub_set_tv_power(false); /* unknown until it connects and says */
+        if (e->state == ATV_STATE_CONNECTED) {
+            s_atv_down_us = 0;
+        } else if (!s_atv_down_us) {
+            s_atv_down_us = esp_timer_get_time(); /* tick() counts the TV as off if it stays down */
         }
         ctrl_setup_atv(e);
         break;
@@ -305,7 +313,7 @@ static void handle_hub(const hub_action_t *a)
          * remote as well, lit up if the TV didn't get it. */
         bool on_tv = a->tv && ctrl_companion_notify(a->text);
         if (a->remote) {
-            ui_notify(a->icon[0] ? a->icon : ICON_INFO, a->text);
+            ui_message(a->icon[0] ? a->icon : ICON_INFO, a->text);
             if (!on_tv) {
                 ui_wake();
             }
@@ -517,6 +525,10 @@ static void tick(void)
     int64_t now = esp_timer_get_time();
     ctrl_screen_tick(now);
     ctrl_companion_tick(now);
+    if (s_atv_down_us && now - s_atv_down_us > TV_GONE_US) {
+        s_atv_down_us = 0;
+        hub_set_tv_power(false); /* unknown until it connects and says */
+    }
     static int s_name_ticks;
     if (++s_name_ticks >= 10) { /* every 2 s */
         s_name_ticks = 0;

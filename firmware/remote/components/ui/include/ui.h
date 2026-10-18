@@ -341,6 +341,10 @@ void ui_setup_error(const char *title, const char *body);
 void ui_show_main(void);
 /* A short message over whatever is on screen; icon from ui_icons.h. */
 void ui_notify(const char *icon, const char *text);
+/* A module's message (hub_notify): the same pill, left up for
+ * UI_MESSAGE_MS, as long as on the TV, to be read. */
+#define UI_MESSAGE_MS 10000
+void ui_message(const char *icon, const char *text);
 /* Lights the screen as a touch would (it dims and goes dark again later). */
 void ui_wake(void);
 /* Opens Settings > Appearance (after a restart for a new theme). */

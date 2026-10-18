@@ -9,7 +9,8 @@ to a daily limit.
   without it, the package shows.
 - **Its card** on the Home tab: today's time and the time left.
 - **Near the limit,** the top bar shows the minutes left, then
-  **Time's up**.
+  **Time's up**. That goes when the TV is turned on again, at midnight,
+  with **+ 15 min**, or when the limit is raised or switched off.
 - **A day** starts at local midnight (the time zone in Settings >
   Modules). Today's count survives restarts and updates: it is saved
   every 5 counted minutes and when the TV turns off.

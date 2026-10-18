@@ -379,8 +379,9 @@ And read what the TV is doing:
 
 - `hub_tv_state(&tv)` says whether the TV is on and which app is in
   front, from the Google TV itself (no companion app needed);
-  `HUB_EV_TV` says when either changes. While the remote isn't connected
-  to the Google TV, the TV counts as off.
+  `HUB_EV_TV` says when either changes. When the remote loses the
+  Google TV for more than 30 seconds, the TV counts as off (shorter gaps
+  happen, such as right after it wakes).
 - `hub_now_playing(&now)` gives the app, title, subtitle and whether it
   plays, from the companion app; `HUB_EV_NOW_PLAYING` says when it
   changes.
@@ -395,9 +396,9 @@ turn itself off after idle hours in between. The screen still dims.
 ### Messages
 
 `hub_notify(module, icon, text)` tells the user something: "The TV turns
-off in a minute". It shows the message on the remote, and also at the
-top right of the TV for 10 seconds, with a ring that empties until it
-goes, when:
+off in a minute". It shows the message on the remote for 10 seconds, and
+also at the top right of the TV for as long, with a ring that empties
+until it goes, when:
 
 - your module's settings include `HUB_SETTING_SHOW_ON_TV` (a switch,
   "Show messages on the TV", on by default) and it is on;

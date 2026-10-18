@@ -38,6 +38,7 @@ static lv_obj_t *s_toast_label;
 static lv_timer_t *s_toast_timer;
 static char s_app[128];
 static int s_last_volume = -1;
+static int s_last_volume_max; /* 0: not known (the TV off, or just connected) */
 static ui_link_t s_link = UI_LINK_OFFLINE;
 static char s_tv_name[64] = "Google TV Streamer";
 /* The text field the TV last reported focused (remote_ime_show_request).
@@ -286,13 +287,21 @@ static void toast_hide(lv_timer_t *t)
     lv_timer_pause(t);
 }
 
-static void toast(const char *icon, const char *text)
+#define TOAST_MS 1400
+
+static void toast_for(const char *icon, const char *text, uint32_t ms)
 {
     lv_label_set_text(s_toast_icon, icon);
     lv_label_set_text(s_toast_label, text);
     lv_obj_set_hidden(s_toast, false);
+    lv_timer_set_period(s_toast_timer, ms);
     lv_timer_reset(s_toast_timer);
     lv_timer_resume(s_toast_timer);
+}
+
+static void toast(const char *icon, const char *text)
+{
+    toast_for(icon, text, TOAST_MS);
 }
 
 void ui_toast(const char *icon, const char *text)
@@ -382,7 +391,7 @@ static void build_overlays(void)
     s_toast_icon = ui_label(s_toast, &font_icons_20, COL_ACCENT_TEXT, "");
     s_toast_label = ui_label(s_toast, &font_sora_15m, COL_TEXT, "");
     lv_obj_set_hidden(s_toast, true);
-    s_toast_timer = lv_timer_create(toast_hide, 1400, NULL);
+    s_toast_timer = lv_timer_create(toast_hide, TOAST_MS, NULL);
     lv_timer_pause(s_toast_timer);
 
     build_battery_card();
@@ -525,12 +534,14 @@ void ui_set_volume(int level, int max, bool muted)
     LOCK();
     ui_rail_set_volume(level, max, muted);
     ui_ir_tv_set_muted(muted);
-    if (s_last_volume >= 0 && level != s_last_volume) {
+    /* A change, not the first report after the TV comes on or reconnects */
+    if (s_last_volume >= 0 && s_last_volume_max > 0 && max > 0 && level != s_last_volume) {
         char text[24];
         lv_snprintf(text, sizeof(text), "Volume %d", level);
         toast(ICON_VOLUME, text);
     }
     s_last_volume = level;
+    s_last_volume_max = max;
     UNLOCK();
 }
 
@@ -1053,6 +1064,13 @@ void ui_notify(const char *icon, const char *text)
 {
     LOCK();
     ui_toast(icon, text);
+    UNLOCK();
+}
+
+void ui_message(const char *icon, const char *text)
+{
+    LOCK();
+    toast_for(icon, text, UI_MESSAGE_MS);
     UNLOCK();
 }
 

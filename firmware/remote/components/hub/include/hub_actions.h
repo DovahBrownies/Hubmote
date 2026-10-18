@@ -89,7 +89,8 @@ typedef struct {
 bool hub_now_playing(hub_now_playing_t *out);
 
 /* Whether the TV is on, and the app in front ("" unknown), from the Google
- * TV itself: no companion needed. HUB_EV_TV says when either changes. */
+ * TV itself: no companion needed. HUB_EV_TV says when either changes. When
+ * the remote loses the Google TV for more than 30 s, the TV counts as off. */
 typedef struct {
     bool on;
     char app[HUB_APP_ID_MAX];

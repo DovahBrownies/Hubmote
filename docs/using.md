@@ -230,7 +230,8 @@ the apps, most watched first.
   before the limit**) and another at it. A minute later the TV turns off,
   and again a minute after each time it comes back on that day. With
   **At the limit** on **Only warn**, the messages come but the TV stays
-  on.
+  on. Near the limit the top bar shows the minutes left, then **Time's
+  up** until the TV is turned on again or the day ends.
 - **More time today:** **+ 15 min** on its screen. Anyone with the
   remote can tap it: Screen time is a reminder, not a lock.
 - **Count while:** **TV is on** counts while the Google TV is on, Home

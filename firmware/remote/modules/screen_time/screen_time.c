@@ -80,6 +80,7 @@ static today_t s;
 static bool s_warned;   /* the warning before the limit was given */
 static bool s_told;     /* the limit message was given since the TV came on */
 static bool s_off_sent; /* the TV was turned off since then */
+static bool s_up_seen;  /* the TV came on after the limit: no "Time's up" glance today */
 
 /* Controller task */
 static bool s_tv_on;
@@ -221,6 +222,7 @@ static void roll_day(void)
         memset(&s, 0, sizeof(s));
         s_warned = false;
         s_told = false;
+        s_up_seen = false;
     }
     s.day = day;
     taskEXIT_CRITICAL(&s_mux);
@@ -305,6 +307,7 @@ static void check(void)
     if (left > 0) {
         s_told = false;
         s_off_sent = false;
+        s_up_seen = false;
     }
     bool do_warn = tv.on && warn > 0 && left > 0 && left <= warn && !s_warned;
     bool do_tell = tv.on && left <= 0 && !s_told;
@@ -391,6 +394,13 @@ static void tv_changed(void)
     update_hold();
     if (tv.on) {
         roll_day();
+        if (minutes_left() <= 0) {
+            /* On again after the limit: the message says it, the glance goes. */
+            taskENTER_CRITICAL(&s_mux);
+            s_up_seen = true;
+            taskEXIT_CRITICAL(&s_mux);
+            hub_glance_changed();
+        }
         check();
         return;
     }
@@ -639,12 +649,16 @@ static void on_show(void)
     show(NULL);
 }
 
-/* Near the limit: the minutes left, then "Time's up". */
+/* Near the limit: the minutes left, then "Time's up" until the TV is turned
+ * on again (or the day's time changes). */
 static bool glance(hub_glance_t *out)
 {
     int left = minutes_left();
     int warn = setting("warn");
-    if (left == INT_MAX || left > warn) {
+    taskENTER_CRITICAL(&s_mux);
+    bool seen = s_up_seen;
+    taskEXIT_CRITICAL(&s_mux);
+    if (left == INT_MAX || left > warn || (left <= 0 && seen)) {
         return false;
     }
     out->icon = ICON_HOURGLASS;
