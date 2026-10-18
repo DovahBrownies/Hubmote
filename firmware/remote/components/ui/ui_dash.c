@@ -367,6 +367,7 @@ lv_obj_t *ui_dash_create(lv_obj_t *parent)
     s_cards = ui_box(s_dash);
     lv_obj_set_size(s_cards, UI_WIDE_W, UI_BODY_H);
     lv_obj_set_scrollable(s_cards, true);
+    lv_obj_set_clickable(s_cards, true); /* a drag between cards scrolls too */
     lv_obj_set_scroll_dir(s_cards, LV_DIR_VER);
     lv_obj_set_flex_flow(s_cards, LV_FLEX_FLOW_ROW_WRAP);
     lv_obj_set_style_pad_row(s_cards, UI_GAP, 0);

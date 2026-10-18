@@ -444,6 +444,10 @@ follow its theme ([themes.md](themes.md)). `#include "ui_kit.h"` gives:
 - **Building blocks:** `ui_box`, `ui_panel`, `ui_label`, `ui_label_wrap`
   (full width, wraps), `ui_btn`, `ui_btn_icon`, `ui_btn_text` and
   `ui_flex`.
+- **Scrolling:** a `ui_box` takes no touch, and LVGL only scrolls from
+  something that does. Give a scrolling box `lv_obj_set_clickable(box,
+  true)` as well as `lv_obj_set_scrollable(box, true)`, or a drag that
+  starts on a label moves nothing.
 - **States:** `ui_status_*` for loading, error and empty states, and
   `ui_spinner` for a small "refreshing" indicator (see
   [Loading, errors and empty screens](#loading-errors-and-empty-screens)).

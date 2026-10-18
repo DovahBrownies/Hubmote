@@ -221,6 +221,7 @@ static void build_results(lv_obj_t *parent)
     lv_obj_set_width(s_results_list, LV_PCT(100));
     lv_obj_set_flex_grow(s_results_list, 1);
     lv_obj_set_scrollable(s_results_list, true);
+    lv_obj_set_clickable(s_results_list, true); /* a drag anywhere scrolls, not only on a button */
     lv_obj_set_scroll_dir(s_results_list, LV_DIR_VER);
     ui_flex(s_results_list, LV_FLEX_FLOW_COLUMN, UI_S(8));
     s_results_status = ui_status_create(s_results, LV_PCT(100), LV_SIZE_CONTENT, false);
@@ -339,6 +340,7 @@ static void build_hourly(lv_obj_t *parent)
     lv_obj_set_width(row, LV_PCT(100));
     lv_obj_set_flex_grow(row, 1);
     lv_obj_set_scrollable(row, true);
+    lv_obj_set_clickable(row, true); /* the hours take no touch: the row itself is swiped */
     lv_obj_set_scroll_dir(row, LV_DIR_HOR);
     lv_obj_set_scrollbar_mode(row, LV_SCROLLBAR_MODE_OFF);
     ui_flex(row, LV_FLEX_FLOW_ROW, UI_S(4));

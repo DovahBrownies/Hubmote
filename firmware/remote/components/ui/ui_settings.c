@@ -456,6 +456,7 @@ static void build_remotes(lv_obj_t *page)
     lv_obj_set_flex_grow(s_ir_list, 1);
     ui_flex(s_ir_list, LV_FLEX_FLOW_COLUMN, UI_S(10));
     lv_obj_set_scrollable(s_ir_list, true);
+    lv_obj_set_clickable(s_ir_list, true); /* a drag anywhere scrolls, not only on a button */
     lv_obj_set_scroll_dir(s_ir_list, LV_DIR_VER);
     rebuild_ir_list(0);
     build_tv_volume(page);
@@ -1355,6 +1356,7 @@ static void build_modules(lv_obj_t *page)
     lv_obj_set_flex_grow(s_mod_list, 1);
     ui_flex(s_mod_list, LV_FLEX_FLOW_COLUMN, UI_S(10));
     lv_obj_set_scrollable(s_mod_list, true);
+    lv_obj_set_clickable(s_mod_list, true); /* a drag anywhere scrolls, not only on a button */
     lv_obj_set_scroll_dir(s_mod_list, LV_DIR_VER);
 }
 

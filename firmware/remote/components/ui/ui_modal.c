@@ -120,6 +120,7 @@ void ui_modal_list(const char *title, const char *const *items, size_t count, in
     lv_obj_set_size(list, LV_PCT(100), LV_MIN(list_h, LIST_MAX_H));
     ui_flex(list, LV_FLEX_FLOW_COLUMN, ROW_GAP);
     lv_obj_set_scrollable(list, true);
+    lv_obj_set_clickable(list, true); /* a drag anywhere scrolls, not only on a button */
     lv_obj_set_scroll_dir(list, LV_DIR_VER);
     int32_t mark_y = -1; /* where the selected row starts in the list */
     for (size_t i = 0; i < count; i++) {
