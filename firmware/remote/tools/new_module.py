@@ -8,6 +8,9 @@ Makes modules/<id>/ with <id>.c, CMakeLists.txt, Kconfig.module and
 README.md, ready to build: reconfigure once (`scripts/hm-idf.ps1
 reconfigure` on Windows, `idf.py reconfigure` elsewhere) so menuconfig and
 the build see it, then build.
+
+--into DIR makes it in DIR/<id>/ instead (the UI simulator uses that to
+compile the template, sim/run_sim.py).
 """
 
 import argparse
@@ -29,11 +32,13 @@ def main():
     ap.add_argument("name", help="shown on the Home tab and in the switcher")
     ap.add_argument("--description", default="", help="one or two sentences for menuconfig and the README")
     ap.add_argument("--author", default="", help="name or GitHub handle for the README")
+    ap.add_argument("--into", help="where the module's folder goes (default: modules/)")
+    ap.add_argument("--quiet", action="store_true", help="print nothing")
     args = ap.parse_args()
 
     if not re.fullmatch(r"[a-z][a-z0-9_]*", args.id) or len(args.id) > ID_MAX:
         sys.exit(f"id must start with a letter, use a-z 0-9 _ and be {ID_MAX} characters at most")
-    dest = MODULES / args.id
+    dest = (Path(args.into) if args.into else MODULES) / args.id
     if dest.exists():
         sys.exit(f"{dest} already exists")
 
@@ -51,8 +56,10 @@ def main():
         for key, value in values.items():  # __ID_UPPER__ before __ID__
             text = text.replace(key, value)
         (dest / name).write_text(text, encoding="utf-8", newline="\n")
-        print(f"  {dest.relative_to(PROJECT) / name}")
-    print(f"Created modules/{args.id}. Next: reconfigure (scripts/hm-idf.ps1 reconfigure), then build.")
+        if not args.quiet:
+            print(f"  {dest / name}")
+    if not args.quiet:
+        print(f"Created {dest}. Next: reconfigure (scripts/hm-idf.ps1 reconfigure), then build.")
 
 
 if __name__ == "__main__":

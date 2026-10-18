@@ -80,13 +80,26 @@ def main():
     if not cjson or not (Path(cjson) / "cJSON.c").is_file():
         sys.exit("cJSON not found: pass --cjson DIR, or set IDF_PATH")
 
+    # A module made from tools/module_template, as new_module.py makes it:
+    # compiled with the simulator (not linked in), so a change to the module
+    # API can't leave the template behind.
+    template = Path(args.build) / "template"
+    if template.exists():
+        shutil.rmtree(template)
+    subprocess.run([sys.executable, str(REMOTE / "tools" / "new_module.py"), "tmpl_check", "Template check",
+                    "--into", str(template), "--quiet"], check=True)
+
     for size in args.size or board_sizes():
         w, h = size.lower().split("x")
         build = Path(args.build) / size
         subprocess.run(["cmake", "-S", str(HERE), "-B", str(build), "-G", "Ninja",
-                        f"-DLVGL_DIR={args.lvgl}", f"-DCJSON_DIR={cjson}", f"-DSIM_W={w}", f"-DSIM_H={h}"],
+                        f"-DLVGL_DIR={args.lvgl}", f"-DCJSON_DIR={cjson}", f"-DSIM_W={w}", f"-DSIM_H={h}",
+                        f"-DSIM_TEMPLATE_C={(template / 'tmpl_check' / 'tmpl_check.c').as_posix()}"],
                        check=True, stdout=subprocess.DEVNULL)
-        subprocess.run(["cmake", "--build", str(build)], check=True, stdout=subprocess.DEVNULL)
+        built = subprocess.run(["cmake", "--build", str(build)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               text=True, errors="replace")
+        if built.returncode:
+            sys.exit(built.stdout + f"\nthe {size} build failed")
         exe = build / ("hubmote_sim.exe" if os.name == "nt" else "hubmote_sim")
         for theme in args.theme or THEMES:
             out = Path(args.out) / size / theme

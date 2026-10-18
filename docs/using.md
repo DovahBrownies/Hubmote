@@ -134,7 +134,8 @@ works:
   - **Clear** empties the field. With the companion it empties the TV's
     field too. Without it, the TV's field keeps its text.
   - The **Search** key (bottom right) is the field's own Enter.
-  - Number fields get a large number pad, and passwords show as `*`.
+  - Number fields get a large number pad, and passwords show as `*`;
+    **Show** shows what you typed. The Wi-Fi password shows as `*` too.
   - With the companion, the Streamer's own on-screen keyboard is hidden
     while you type.
 - **An app's own on-screen keyboard**, as in Plex, with the companion. The

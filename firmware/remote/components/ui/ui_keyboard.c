@@ -13,6 +13,9 @@
  * - UI_KB_SEARCH: no field, on Google TV's Home. Every edit sends the whole
  *   text to Google TV's search (UI_ACT_SEARCH), which the controller runs
  *   once typing pauses, or at once on Enter.
+ *
+ * Passwords show as '*' until Show is tapped: the TV's password fields, and
+ * the remote's own (ui_kb_open_password(), the Wi-Fi password).
  */
 #include <string.h>
 #include "ui_internal.h"
@@ -42,6 +45,7 @@ static lv_obj_t *s_text_label;
 static lv_obj_t *s_placeholder;
 static lv_obj_t *s_clear;
 static lv_obj_t *s_cancel_btn; /* local mode: back without saving */
+static lv_obj_t *s_show_btn;   /* password fields: Show / Hide */
 static lv_obj_t *s_shift_btn;
 static lv_obj_t *s_layer_label;
 static lv_obj_t *s_enter_label;
@@ -51,6 +55,8 @@ static lv_obj_t *s_numpad;
 static lv_obj_t *s_num_extra[2]; /* Backspace and Enter, number fields only */
 static bool s_numeric;
 static bool s_password;
+static bool s_revealed;          /* Show tapped: the password in clear */
+static bool s_local_password;    /* local mode: ui_kb_open_password() */
 static ui_field_t s_field;       /* the TV's focused field, applied outside local mode */
 static size_t s_max_len;          /* local mode */
 static ui_kb_done_cb_t s_done;
@@ -73,7 +79,9 @@ static char slot_char(int slot)
 
 static void refresh_field(void)
 {
-    if (s_password) {
+    lv_obj_set_hidden(s_show_btn, !s_password);
+    lv_label_set_text(lv_obj_get_child(s_show_btn, 0), s_revealed ? "Hide" : "Show");
+    if (s_password && !s_revealed) {
         char masked[sizeof(s_text)];
         size_t n = strlen(s_text);
         memset(masked, '*', n);
@@ -258,6 +266,12 @@ static void on_cancel_btn(lv_event_t *e)
     ui_kb_close();
 }
 
+static void on_show_btn(lv_event_t *e)
+{
+    s_revealed = !s_revealed;
+    refresh_field();
+}
+
 static void on_enter(lv_event_t *e)
 {
     if (s_mode == UI_KB_LOCAL) {
@@ -322,8 +336,10 @@ static void set_mode(ui_kb_mode_t mode, const char *value, const char *label)
     lv_obj_set_hidden(s_cancel_btn, !local);
     s_shift = false;
     s_symbols = false;
+    s_revealed = false;
     refresh_keys();
-    apply_field(local ? UI_FIELD_TEXT : s_field); /* a name is never a number pad or masked */
+    /* A name is never a number pad or masked; the remote's own password is. */
+    apply_field(local ? (s_local_password ? UI_FIELD_PASSWORD : UI_FIELD_TEXT) : s_field);
 }
 
 static lv_obj_t *row(lv_obj_t *parent)
@@ -396,6 +412,12 @@ lv_obj_t *ui_kb_create(lv_obj_t *parent)
     lv_obj_set_style_bg_opa(cursor, LV_OPA_COVER, 0);
     s_placeholder = ui_label(line, &font_sora_24m, COL_TEXT3, "Type here");
     lv_obj_set_style_pad_left(s_placeholder, UI_S(6), 0);
+    s_show_btn = ui_btn_text(field, LV_SIZE_CONTENT, UI_S(44), 12, COL_SURFACE1, &font_sora_13m, COL_TEXT2, "Show");
+    lv_obj_set_style_pad_hor(s_show_btn, UI_S(16), 0);
+    lv_obj_set_style_border_width(s_show_btn, UI_S(1), 0);
+    lv_obj_set_style_border_color(s_show_btn, COL_LINE, 0);
+    lv_obj_add_event_cb(s_show_btn, on_show_btn, LV_EVENT_CLICKED, NULL);
+    lv_obj_set_hidden(s_show_btn, true);
     s_clear = ui_btn_text(field, LV_SIZE_CONTENT, UI_S(44), 12, COL_SURFACE1, &font_sora_13m, COL_TEXT2, "Clear");
     lv_obj_set_style_pad_hor(s_clear, UI_S(16), 0);
     lv_obj_set_style_border_width(s_clear, UI_S(1), 0);
@@ -495,6 +517,7 @@ void ui_kb_clear(void)
         return;
     }
     s_text[0] = '\0';
+    s_revealed = false; /* another field: a password is hidden again */
     refresh_field();
 }
 
@@ -506,15 +529,27 @@ void ui_kb_set_field(ui_field_t field)
     }
 }
 
-void ui_kb_open_local(const char *value, const char *title, size_t max_len, ui_kb_done_cb_t done,
-                      ui_kb_cancel_cb_t cancel)
+static void open_local(const char *value, const char *title, size_t max_len, ui_kb_done_cb_t done,
+                       ui_kb_cancel_cb_t cancel, bool password)
 {
+    s_local_password = password;
     s_max_len = max_len < sizeof(s_text) - 1 ? max_len : sizeof(s_text) - 1;
     s_done = done;
     s_cancel = cancel;
     set_mode(UI_KB_LOCAL, value, title);
     ui_topbar_set_context(title);
     ui_show_view(VIEW_KEYBOARD);
+}
+
+void ui_kb_open_local(const char *value, const char *title, size_t max_len, ui_kb_done_cb_t done,
+                      ui_kb_cancel_cb_t cancel)
+{
+    open_local(value, title, max_len, done, cancel, false);
+}
+
+void ui_kb_open_password(const char *title, size_t max_len, ui_kb_done_cb_t done, ui_kb_cancel_cb_t cancel)
+{
+    open_local("", title, max_len, done, cancel, true);
 }
 
 void ui_kb_set_text(const char *value)

@@ -469,9 +469,9 @@ static void handle_ui(const ctrl_ui_t *a)
 static void handle_net(bool up, int reason)
 {
     if (up) {
-        netlog_serve();
         net_mdns_start();
         ota_start();
+        netlog_serve(); /* after ota_start(): log clients answer with its token */
         ui_set_update_token(ota_token());
         ota_mark_good(); /* a fresh update reached Wi-Fi: keep it */
         update_net_up();

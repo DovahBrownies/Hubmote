@@ -185,7 +185,9 @@ Replace `COM5` with your board's port.
 
 This works with developer builds only ([building](building.md)). The
 remote serves its log on TCP port 2323. A new connection gets the last
-32 KB of the log first.
+32 KB of the log first. The scripts answer the remote's challenge with the
+update token from `secrets.env` (`OTA_TOKEN`, the one in **Settings >
+About**); with another token, the remote refuses and the script says so.
 
 On Windows, run this in PowerShell from the `firmware/remote` folder:
 
@@ -222,7 +224,8 @@ adb logcat -s HubmoteCompanion
 |---|---|
 | `net: up: 192.168.1.50` | Wi-Fi connected |
 | `atv: TLS up with <ip>:6466`, `state CONNECTING -> CONNECTED` | Connected to the Streamer |
-| `atv: TLS handshake ... -0x0050 ... -> certificate not accepted` | The TV doesn't accept this remote |
+| `atv: TLS handshake ... -0x0050 ... -> certificate not accepted` | The TV doesn't accept this remote. The first time, the remote tries again; twice in a row, it asks to pair again |
+| `atv: <ip> refused us, but its key isn't the paired TV's` | Something else answers at the TV's address |
 | `ctrl: "<name>" moved from A to B` | The TV changed address and was found again |
 | `ctrl: tv volume N/M` | The Streamer's volume. `0/0` means it isn't controlling the TV's |
 | `ctrl: app: <package>` | The app on the TV |

@@ -635,7 +635,8 @@ Watch the log with `scripts\hm-netlog.ps1 -Remote hubmote.local`, or with
 
 ## Pull request checklist
 
-- [ ] Made with `tools/new_module.py`, or follows the same layout.
+- [ ] Made with `tools/new_module.py`, or follows the same layout. (If
+      you change `tools/module_template`, the UI simulator compiles it.)
 - [ ] Builds with the module on and off.
 - [ ] `README.md` filled in: what it does, settings, data and privacy
       (which services it contacts and what it sends), credits and licenses.

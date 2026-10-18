@@ -52,7 +52,7 @@ static void ask_password(void)
 {
     char title[64];
     snprintf(title, sizeof(title), "Password for %s", s_join_ssid);
-    ui_kb_open_local("", title, 64, on_password, on_kb_cancel);
+    ui_kb_open_password(title, 64, on_password, on_kb_cancel);
 }
 
 static void on_ap(lv_event_t *e)

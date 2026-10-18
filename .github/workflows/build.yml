@@ -5,7 +5,9 @@
 # board's firmware, the companion APK and update.json (what remotes update
 # from), and a GitHub release gets each board's images and the companion
 # APK.
-# Setup and release steps: docs/releasing.md.
+# Setup and release steps: docs/releasing.md. The release's keys are
+# secrets of the `release` environment, which only v* tags may use, and only
+# the Release signing job reads them.
 #
 # Actions are pinned to commits (the tag in the comment), so a moved tag
 # can't change what runs here; Dependabot (.github/dependabot.yml) proposes
@@ -199,9 +201,9 @@ jobs:
           done < <(find builds -name hubmote.bin -printf '%h\n' | sort)
           python3 firmware/remote/tools/web/make_site.py "${args[@]}" --out "$GITHUB_WORKSPACE/site"
 
-      # What the Pages job does with the real key on a tag, tried on every
-      # build with a throwaway one, so a broken signing step shows before a
-      # release (the site kept below stays unsigned; Pages signs its own).
+      # What the Release signing job does with the real key on a tag, tried
+      # on every build with a throwaway one, so a broken signing step shows
+      # before a release (the site kept below stays unsigned).
       - name: Signing, with a throwaway key
         run: |
           key="$RUNNER_TEMP/throwaway"
@@ -217,9 +219,13 @@ jobs:
           name: installer-site
           path: site
 
+  # Every build but a release's, signed with a throwaway key made by
+  # build.ps1, which companion.json marks so the site never offers it. A
+  # release's companion comes from the Release signing job.
   companion:
     name: Companion app
     timeout-minutes: 30
+    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -234,12 +240,44 @@ jobs:
       - name: Android SDK packages
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" > /dev/null
 
-      # Releases (v* tags) are signed with the project's key; every other
-      # build with a throwaway key made by build.ps1, which companion.json
-      # then marks so the site never offers it. The key only exists for the
-      # release build and is deleted right after it.
-      - name: Signing key
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Build
+        shell: pwsh
+        run: ./companion/build.ps1
+
+      # companion.json: its version, and whether the project's key signed it.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: companion-apk
+          path: |
+            companion/build/companion.apk
+            companion/build/companion.json
+
+  # Tags only, and the one job that sees the release's keys: secrets of the
+  # `release` environment, which only v* tags may use (docs/releasing.md).
+  # It builds the companion with the project's key, puts it on the site,
+  # and signs each board's image in update.json. Each key exists only for
+  # the step that needs it.
+  sign:
+    name: Release signing
+    timeout-minutes: 30
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: site
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Android SDK packages
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" > /dev/null
+
+      - name: Companion signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.COMPANION_KEYSTORE_BASE64 }}
         run: |
@@ -250,64 +288,30 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
           echo "HM_KEYSTORE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
 
-      - name: Build
+      - name: Companion app
         shell: pwsh
         env:
-          HM_KEYSTORE_PASS: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.COMPANION_KEYSTORE_PASSWORD || '' }}
-          HM_KEY_ALIAS: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.COMPANION_KEY_ALIAS || '' }}
+          HM_KEYSTORE_PASS: ${{ secrets.COMPANION_KEYSTORE_PASSWORD }}
+          HM_KEY_ALIAS: ${{ secrets.COMPANION_KEY_ALIAS }}
         run: ./companion/build.ps1
 
-      - name: Forget the signing key
+      - name: Forget the companion's key
         if: always()
         run: rm -f "$RUNNER_TEMP/release.keystore"
-
-      # companion.json: its version, and whether the project's key signed it.
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: companion-apk
-          path: |
-            companion/build/companion.apk
-            companion/build/companion.json
-
-  pages:
-    name: GitHub Pages
-    timeout-minutes: 15
-    # Tags only: publishing main by hand would offer every remote a
-    # development build (update.json).
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [host-tests, simulator, site, companion]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: installer-site
           path: site
 
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: companion-apk
-          path: companion-apk
-
       # The APK for remotes to offer (update.json), if the project's key
       # signed it, and companion.apk to download by hand.
       - name: Companion app on the site
-        run: python3 firmware/remote/tools/web/make_site.py --no-firmware --out "$GITHUB_WORKSPACE/site" --companion "$GITHUB_WORKSPACE/companion-apk"
+        run: python3 firmware/remote/tools/web/make_site.py --no-firmware --out "$GITHUB_WORKSPACE/site" --companion "$GITHUB_WORKSPACE/companion/build"
 
       # Each board's image in update.json gets the project's signature,
-      # which remotes check before offering it (main/update.c). The key
-      # lives only in this secret; make_site.py refuses one whose public
-      # half isn't main/update_key.pem.
+      # which remotes check before offering it (main/update.c). make_site.py
+      # refuses a key whose public half isn't main/update_key.pem.
       - name: Firmware signatures
         env:
           UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
@@ -324,6 +328,39 @@ jobs:
         if: always()
         run: rm -f "$RUNNER_TEMP/update-key.pem"
 
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: companion-apk
+          path: |
+            companion/build/companion.apk
+            companion/build/companion.json
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: signed-site
+          path: site
+
+  pages:
+    name: GitHub Pages
+    timeout-minutes: 15
+    # Tags only: publishing main by hand would offer every remote a
+    # development build (update.json).
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [host-tests, simulator, sign]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: signed-site
+          path: site
+
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site
@@ -337,7 +374,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     # After Pages: a release isn't published while its site (update.json)
     # failed, unsigned for example.
-    needs: [host-tests, simulator, site, companion, pages]
+    needs: [host-tests, simulator, site, sign, pages]
     runs-on: ubuntu-latest
     permissions:
       contents: write

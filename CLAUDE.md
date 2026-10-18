@@ -47,7 +47,9 @@ LF, and CRLF for `.ps1`.
   installer site, companion APK; skipped when a push or pull request
   only changes Markdown, `docs/` or `hardware/`), Pages and
   releases on `v*` tags, the first publish with a fresh history, the
-  companion's release key in repository secrets.
+  release keys (the companion's, the update signing key) in secrets of
+  the `release` environment, which only `v*` tag runs can read; only the
+  Release signing job uses them.
 - `CONTRIBUTING.md` and `.github/ISSUE_TEMPLATE/`, `pull_request_template.md`:
   how others report and contribute; keep them in line with these rules.
 - `docs/security.md` (and `SECURITY.md` for reports): connections, what
@@ -325,13 +327,16 @@ untested: their facts and sources are in their headers in
   changes, so use the name. Log over Wi-Fi on port 2323, updates on 8080.
 - **Testing off USB.** Record with `hm-netlog.ps1 -Remote hubmote.local`
   in the background; it reconnects by itself after a restart (TCP
-  keepalive). The remote serves one log client at a time and the newest
+  keepalive). It answers the remote's challenge with OTA_TOKEN
+  (`main/netlog.c`): a raw `nc` to port 2323 only gets the challenge. The remote serves one log client at a time and the newest
   wins, so never run two recorders at once. `tools/hm_ota.py` and
   `tools/hm_netlog.py` are the cross-platform versions.
 - **Pairing detection.** An unpaired client certificate gets a TLS alert and
   then a TCP reset. lwIP reports the reset first, so mbedTLS returns
   `-0x0050` (`NET_CONN_RESET`). `atv_remote.c` treats a reset after the
-  client certificate was sent as "pairing needed".
+  client certificate was sent as a refusal, and two refusals in a row as
+  "pairing needed"; a refusal from a device whose key isn't the pinned
+  TV's is `ATV_ERR_WRONG_TV` instead.
 - **Volume** goes through the Streamer (key presses over the protocol) by
   default: Settings > Remotes > TV volume on Google TV. The IR option is
   for TVs without HDMI-CEC (the user's preference is in `CLAUDE.local.md`).

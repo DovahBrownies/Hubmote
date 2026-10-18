@@ -174,6 +174,8 @@ typedef enum {
 } ui_kb_mode_t;
 
 /* ui_kb_open_local() (local text entry) is in ui_kit.h. */
+/* Like it, for a password: shown as '*' until Show is tapped. */
+void ui_kb_open_password(const char *title, size_t max_len, ui_kb_done_cb_t done, ui_kb_cancel_cb_t cancel);
 lv_obj_t *ui_kb_create(lv_obj_t *parent);
 /* value/label: the field's text and hint (UI_KB_FIELD only). */
 void ui_kb_open(ui_kb_mode_t mode, const char *value, const char *label);

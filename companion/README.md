@@ -377,10 +377,10 @@ It runs `aapt2` (resources and manifest), then `javac --release 8` against
   set, the build signs with that key. Without them, it uses
   `debug.keystore`, which the first build creates. Keep it. With a new
   key, Android refuses the update until the old app is uninstalled.
-- **Signing in the workflow.** It sets those variables for `v*` tag builds
-  only, from the repository secrets
-  ([docs/releasing.md](../docs/releasing.md)). Its other builds sign with
-  a throwaway key that `companion.json` marks as debug.
+- **Signing in the workflow.** Its Release signing job sets those
+  variables for `v*` tag builds only, from the secrets of the `release`
+  environment ([docs/releasing.md](../docs/releasing.md)). Its other
+  builds sign with a throwaway key that `companion.json` marks as debug.
 
 ## Trying an update from the remote
 

@@ -63,6 +63,9 @@ Each size is built in `build-sim/<W>x<H>/`.
   controller uses, and saves a BMP after each screen.
 - Time is simulated at 33 ms per frame, so a build always draws the same
   pixels. The 1024x600 screens match the remote's own screenshots.
+- `run_sim.py` also makes a module from `tools/module_template` (with
+  `tools/new_module.py --into`) and compiles it with warnings as errors,
+  without linking it in.
 - `sim_hub.c` stands in for the module platform (`components/hub`) and
   Weather's data side, and lists the modules that register themselves. The
   forecast comes from `modules/weather/test/forecast_sydney.json`.

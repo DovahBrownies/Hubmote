@@ -15,8 +15,10 @@
  *
  * Event error codes (atv_event_t.error):
  *   STATE NOT_PAIRED    ESP_ERR_NOT_ALLOWED  TLS on 6466 failed at the TLS layer
- *                                            (alert / protocol error): the TV
- *                                            does not accept our certificate
+ *                                            (alert, reset after our
+ *                                            certificate, protocol error)
+ *                                            twice in a row: the TV does not
+ *                                            accept our certificate
  *                       ESP_ERR_INVALID_STATE no usable identity in NVS
  *   STATE DISCONNECTED  ESP_ERR_TIMEOUT      TCP connect / TLS handshake timed
  *                                            out, or 16 s without traffic
@@ -91,6 +93,7 @@ static const char *TAG = "atv";
 #define PAIRING_TIMEOUT_US       (10 * 1000000LL)   /* pairing.py PAIRING_TIMEOUT */
 #define IDLE_TIMEOUT_US          (16 * 1000000LL)   /* remote.py _async_idle_disconnect */
 #define BACKOFF_MAX_S            30
+#define REJECTIONS_TO_PAIR       2 /* TLS refusals in a row that mean "pairing needed" */
 #define POST_PAIR_DELAY_US       (300 * 1000LL)     /* let the TV store the new cert */
 #define POLL_FALLBACK_MS         50                 /* only without the wake socket */
 #define MAX_SELECT_WAIT_US       (60 * 1000000LL)
@@ -183,6 +186,7 @@ typedef struct {
     bool connect_pending; /* connect at retry_at_us without a DISCONNECTED state */
     uint32_t backoff_s;
     int64_t retry_at_us;
+    uint8_t rejections; /* TLS refusals in a row, up to REJECTIONS_TO_PAIR */
 
     char host[HOST_MAX];
 } ctx_t;
@@ -487,12 +491,60 @@ static esp_err_t tcp_connect(const char *host, uint16_t port, int *out_fd, bool 
     return ESP_OK;
 }
 
-/* Which TLS failures mean "the TV does not accept us". The reference maps
- * any ssl.SSLError to InvalidAuth ("Need to pair") and OSErrors (refused,
- * reset, timeout, EOF during the handshake = asyncio ConnectionResetError)
- * to CannotConnect (retry). Transport, timeout, EOF and out-of-memory
- * errors are therefore retryable; every other TLS-layer failure (fatal
- * alert such as certificate_unknown, protocol errors) is a rejection. */
+/* SHA-256 of a certificate's public key (its DER SubjectPublicKeyInfo). */
+static bool peer_key_hash(const mbedtls_x509_crt *peer, uint8_t out[32])
+{
+    if (!peer) {
+        return false;
+    }
+    uint8_t der[PUBKEY_DER_MAX]; /* on the stack: no allocation that could fail */
+    /* Writes at the end of the buffer. */
+    int n = mbedtls_pk_write_pubkey_der((mbedtls_pk_context *)&peer->pk, der, sizeof(der));
+    return n > 0 && mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256), der + sizeof(der) - n, (size_t)n,
+                               out) == 0;
+}
+
+/* The pinned hash of the TV's key: ESP_ERR_NVS_NOT_FOUND when none. */
+static esp_err_t read_tv_key(uint8_t pin[32])
+{
+    nvs_handle_t h;
+    esp_err_t err = nvs_open(s.nvs_ns, NVS_READONLY, &h);
+    if (err != ESP_OK) {
+        return err;
+    }
+    size_t len = 32;
+    err = nvs_get_blob(h, NVS_KEY_TV_KEY, pin, &len);
+    nvs_close(h);
+    return err == ESP_OK && len != 32 ? ESP_ERR_INVALID_SIZE : err;
+}
+
+/* The server's certificate during a handshake, failed or not (the session
+ * only takes it once the handshake is done). */
+static const mbedtls_x509_crt *handshake_peer(ctx_t *c)
+{
+    const mbedtls_ssl_session *s_neg = c->ssl.MBEDTLS_PRIVATE(session_negotiate);
+    return s_neg ? s_neg->MBEDTLS_PRIVATE(peer_cert) : NULL;
+}
+
+/* False only if peer is known to have another key than the pinned one;
+ * with no pin, or no key to compare, there is nothing to tell them apart. */
+static bool pin_matches(const mbedtls_x509_crt *peer)
+{
+    uint8_t got[32], pin[32];
+    if (!peer_key_hash(peer, got) || read_tv_key(pin) != ESP_OK) {
+        return true;
+    }
+    return memcmp(pin, got, sizeof(pin)) == 0;
+}
+
+/* Which TLS failures may mean "the TV does not accept us". The reference
+ * maps any ssl.SSLError to InvalidAuth ("Need to pair") and OSErrors
+ * (refused, reset, timeout, EOF during the handshake = asyncio
+ * ConnectionResetError) to CannotConnect (retry). Transport, timeout, EOF
+ * and out-of-memory errors are therefore retryable; every other TLS-layer
+ * failure (fatal alert such as certificate_unknown, protocol errors) is a
+ * refusal. A garbled record on a poor link looks the same, so one refusal
+ * only retries: pairing is needed after REJECTIONS_TO_PAIR in a row. */
 static bool is_tls_rejection(int ret)
 {
     if (ret >= -0x0052 && ret <= -0x0042) { /* MBEDTLS_ERR_NET_* */
@@ -588,7 +640,15 @@ static esp_err_t session_open(ctx_t *c, uint16_t port, sess_kind_t kind)
                          hs_state <= MBEDTLS_SSL_HANDSHAKE_WRAPUP);
         ESP_LOGW(TAG, "TLS handshake with %s:%u failed in state %d: %s%s", c->host, port, hs_state,
                  tls_err_str(ret, eb, sizeof(eb)), rejected ? " -> certificate not accepted" : "");
+        /* Something else at the TV's address may refuse us too: that isn't
+         * the paired TV asking to pair again. Its certificate came before
+         * ours, so its key can be checked. */
+        bool other = rejected && kind == SESS_CONTROL && !pin_matches(handshake_peer(c));
         tls_free(c);
+        if (other) {
+            ESP_LOGW(TAG, "%s refused us, but its key isn't the paired TV's", c->host);
+            return ATV_ERR_WRONG_TV;
+        }
         if (rejected) {
             return ESP_ERR_NOT_ALLOWED;
         }
@@ -670,6 +730,17 @@ static void schedule_retry(ctx_t *c, esp_err_t err)
     set_state(ATV_STATE_DISCONNECTED, err);
 }
 
+/* Counts a refusal; true once there were REJECTIONS_TO_PAIR in a row. */
+static bool refused_again(ctx_t *c)
+{
+    if (++c->rejections < REJECTIONS_TO_PAIR) {
+        ESP_LOGW(TAG, "refused at the TLS layer: trying again before asking to pair");
+        return false;
+    }
+    c->rejections = 0;
+    return true;
+}
+
 static void control_lost(ctx_t *c, esp_err_t err, bool rejected)
 {
     bool was_started = c->started;
@@ -677,10 +748,14 @@ static void control_lost(ctx_t *c, esp_err_t err, bool rejected)
     if (rejected && !was_started) {
         /* TLS failure before remote_start: like the reference's
          * "Need to pair again" when on_con_lost carries an SSLError. */
-        ESP_LOGW(TAG, "TV rejected the connection at the TLS layer: pairing needed");
-        c->want_connected = false;
-        set_state(ATV_STATE_NOT_PAIRED, ESP_ERR_NOT_ALLOWED);
-        return;
+        if (refused_again(c)) {
+            ESP_LOGW(TAG, "TV rejected the connection at the TLS layer: pairing needed");
+            c->want_connected = false;
+            set_state(ATV_STATE_NOT_PAIRED, ESP_ERR_NOT_ALLOWED);
+            return;
+        }
+    } else {
+        c->rejections = 0;
     }
     if (c->want_connected) {
         schedule_retry(c, err);
@@ -718,20 +793,6 @@ static void refresh_host(ctx_t *c)
     xSemaphoreGive(s.lock);
 }
 
-/* SHA-256 of the peer's public key (its DER SubjectPublicKeyInfo). */
-static bool peer_key_hash(ctx_t *c, uint8_t out[32])
-{
-    const mbedtls_x509_crt *peer = mbedtls_ssl_get_peer_cert(&c->ssl);
-    if (!peer) {
-        return false;
-    }
-    uint8_t der[PUBKEY_DER_MAX]; /* on the stack: no allocation that could fail */
-    /* Writes at the end of the buffer. */
-    int n = mbedtls_pk_write_pubkey_der((mbedtls_pk_context *)&peer->pk, der, sizeof(der));
-    return n > 0 && mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256), der + sizeof(der) - n, (size_t)n,
-                               out) == 0;
-}
-
 static esp_err_t save_tv_key(const uint8_t hash[32])
 {
     nvs_handle_t h;
@@ -755,20 +816,14 @@ static esp_err_t save_tv_key(const uint8_t hash[32])
 static esp_err_t check_tv_key(ctx_t *c)
 {
     uint8_t got[32];
-    if (!peer_key_hash(c, got)) {
+    if (!peer_key_hash(mbedtls_ssl_get_peer_cert(&c->ssl), got)) {
         ESP_LOGE(TAG, "the TV's key can't be read");
         return ATV_ERR_WRONG_TV;
     }
-    nvs_handle_t h;
-    if (nvs_open(s.nvs_ns, NVS_READONLY, &h) != ESP_OK) {
-        return ATV_ERR_WRONG_TV;
-    }
     uint8_t pin[32];
-    size_t len = sizeof(pin);
-    esp_err_t err = nvs_get_blob(h, NVS_KEY_TV_KEY, pin, &len);
-    nvs_close(h);
+    esp_err_t err = read_tv_key(pin);
     if (err == ESP_OK) {
-        return len == sizeof(pin) && memcmp(pin, got, sizeof(pin)) == 0 ? ESP_OK : ATV_ERR_WRONG_TV;
+        return memcmp(pin, got, sizeof(pin)) == 0 ? ESP_OK : ATV_ERR_WRONG_TV;
     }
     if (err != ESP_ERR_NVS_NOT_FOUND) {
         ESP_LOGE(TAG, "the pinned key can't be read: %s", esp_err_to_name(err));
@@ -821,11 +876,16 @@ static void control_connect(ctx_t *c)
         c->retry_at_us = now_us();
         return;
     }
+    if (err == ESP_ERR_NOT_ALLOWED && !refused_again(c)) {
+        schedule_retry(c, ESP_FAIL);
+        return;
+    }
     if (err == ESP_ERR_NOT_ALLOWED || err == ESP_ERR_INVALID_STATE) {
         c->want_connected = false;
         set_state(ATV_STATE_NOT_PAIRED, err);
         return;
     }
+    c->rejections = 0;
     schedule_retry(c, err);
 }
 
@@ -980,6 +1040,7 @@ static void control_on_message(ctx_t *c, const uint8_t *buf, size_t len)
         if (!c->started) {
             c->started = true;
             c->backoff_s = 1;
+            c->rejections = 0;
             set_state(ATV_STATE_CONNECTED, ESP_OK);
         }
         e.type = ATV_EVT_POWER;
@@ -1080,7 +1141,7 @@ static void pairing_on_message(ctx_t *c, const uint8_t *buf, size_t len)
     } else if (m->has_secret_ack) {
         if (c->pair_step == PAIR_WAIT_SECRET_ACK) {
             uint8_t key[32];
-            if (peer_key_hash(c, key) && save_tv_key(key) == ESP_OK) {
+            if (peer_key_hash(mbedtls_ssl_get_peer_cert(&c->ssl), key) && save_tv_key(key) == ESP_OK) {
                 ESP_LOGI(TAG, "the TV's key is pinned");
             } else {
                 forget_tv_key(); /* the first control session pins it */

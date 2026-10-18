@@ -188,6 +188,11 @@ static void screens(void)
     ui_ime_show("", "Search");
     shot("keyboard");
     ui_kb_close();
+    ui_set_field(UI_FIELD_PASSWORD, 7); /* masked, with Show */
+    ui_ime_show("hunter2", "Password");
+    shot("keyboard_password");
+    ui_kb_close();
+    ui_set_field(UI_FIELD_NONE, 0);
     ui_set_app("com.google.android.apps.tv.launcherx");
     ui_switcher_open();
     shot("switcher");

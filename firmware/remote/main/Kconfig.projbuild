@@ -259,11 +259,13 @@ menu "Hubmote"
         config HM_NETLOG
             bool "Log over Wi-Fi"
             default y
+            depends on HM_LOCAL_OTA
             help
                 Serves the log on a TCP port so scripts/hm-netlog.ps1 can
                 record it without USB. A new connection first gets the last
-                32 KB. Anyone on the network can read it; Wi-Fi driver lines
-                (which name the network) are kept out.
+                32 KB. Only a client with the update token gets it (it
+                answers a challenge), but the log itself isn't encrypted;
+                Wi-Fi driver lines (which name the network) are kept out.
 
         config HM_NETLOG_PORT
             int "Wi-Fi log port"

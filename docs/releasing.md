@@ -36,7 +36,8 @@ A tag's run is never cancelled.
 - **UI simulator** builds the UI for the PC (`firmware/remote/sim`), with
   LVGL at the version `dependencies.lock` names. It draws every screen at
   every board's screen size, in Midnight and Daylight, and keeps them as
-  the `screens` artifact to look at.
+  the `screens` artifact to look at. It also compiles a module made from
+  `tools/module_template`, so the template keeps up with the module API.
 - **Boards** and **Firmware** run one firmware job per board, that is, per
   `.defaults` file in `components/board/boards`. Each job uses ESP-IDF
   5.4.4 in Espressif's container. It makes a developer build
@@ -48,17 +49,22 @@ A tag's run is never cancelled.
   `tools/web/make_site.py`. The site has a folder per board with its
   images and `manifest.json`, the page with its board picker, and
   `update.json`. Remotes already in use take their own board's image from
-  `update.json`.
-- **Companion app** sets up JDK 17 and Android SDK 35, then runs
-  `companion/build.ps1` (pwsh). Tag builds are signed with the project's
-  key, which exists only for that build and is deleted right after. All
-  other builds are signed with a throwaway key. `companion.json`, next to
-  the APK, says which key signed it.
-- **GitHub Pages** runs on a tag only. It adds the companion to the
-  installer site (`make_site.py --no-firmware --companion`), signs each
-  board's image in `update.json` with the update signing key
-  ([step 4](#4-the-update-signing-key)), then publishes the site at
-  https://dovahbrownies.github.io/Hubmote/. The
+  `update.json`. It also tries the signing step with a throwaway key, so
+  a broken one shows before a release.
+- **Companion app** runs on every build but a tag's. It sets up JDK 17 and
+  Android SDK 35, then runs `companion/build.ps1` (pwsh), signed with a
+  throwaway key. `companion.json`, next to the APK, says which key signed
+  it.
+- **Release signing** runs on a tag only, in the `release` environment:
+  the one job that can read the keys
+  ([step 2](#2-repository-settings-on-github)). It builds the companion
+  signed with the project's key, adds it to the installer site
+  (`make_site.py --no-firmware --companion`), and signs each board's image
+  in `update.json` with the update signing key
+  ([step 4](#4-the-update-signing-key)). Each key exists only for its
+  step and is deleted right after.
+- **GitHub Pages** runs on a tag only. It publishes the site Release
+  signing made at https://dovahbrownies.github.io/Hubmote/. The
   companion goes on the site in two forms:
   - `companion.apk`, to download by hand;
   - `companion-<version>.apk` with its entry in `update.json`, from which
@@ -74,7 +80,8 @@ A tag's run is never cancelled.
   - `hubmote-companion-<tag>.apk`.
 
 Every run keeps the site, the screenshots and the APK as run artifacts
-(`installer-site`, `screens`, `companion-apk`).
+(`installer-site`, `screens`, `companion-apk`); a tag's run also keeps
+the signed site (`signed-site`).
 
 ### Pinned actions and Dependabot
 
@@ -186,6 +193,24 @@ in PowerShell, as in step 3.
   gh api -X POST repos/$R/environments/github-pages/deployment-branch-policies -f name='v*' -f type=tag
   ```
 
+- **The release environment** (**Settings > Environments > New
+  environment**: `release`, then **Deployment branches and tags**:
+  selected, a tag rule `v*`). The signing keys of steps 3 and 4 are its
+  secrets, and only workflow runs for `v*` tags can read them: a change
+  to the workflow on `main` or in a pull request can't. With the tag
+  ruleset below, only admins can push such a tag. Optionally add yourself
+  under **Required reviewers**, so each release waits for your approval.
+
+  ```sh
+  gh api -X PUT repos/$R/environments/release -F "deployment_branch_policy[protected_branches]=false" -F "deployment_branch_policy[custom_branch_policies]=true"
+  gh api -X POST repos/$R/environments/release/deployment-branch-policies -f name='v*' -f type=tag
+  ```
+
+  A repository set up before this had the keys as repository secrets.
+  Add them to the environment (steps 3 and 4), push the workflow that
+  uses it, then delete the repository ones:
+  `gh secret delete <NAME> -R $R` for each of the four.
+
 - **Release tags protected** (**Settings > Rules > Rulesets > New tag
   ruleset**). Only repository admins can create, move or delete `v*` tags,
   so only you can publish, move or delete a release tag. Send this JSON to
@@ -271,18 +296,19 @@ $kt = "$env:LOCALAPPDATA\Android\jdk-17\bin\keytool.exe"
 keytool asks for a password, which protects the key too. Keep the password
 with the keystore's backup, in a password manager for example.
 
-Then add the three repository secrets with `gh`. The second command asks
+Then add the three secrets to the `release` environment
+([step 2](#2-repository-settings-on-github)) with `gh`. The second command asks
 for the password without showing it.
 
 ```powershell
 $R = "DovahBrownies/Hubmote"
-gh secret set COMPANION_KEYSTORE_BASE64 -R $R -b ([Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path hubmote-release.keystore))))
-gh secret set COMPANION_KEYSTORE_PASSWORD -R $R
-gh secret set COMPANION_KEY_ALIAS -R $R -b hubmote
+gh secret set COMPANION_KEYSTORE_BASE64 -R $R --env release -b ([Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path hubmote-release.keystore))))
+gh secret set COMPANION_KEYSTORE_PASSWORD -R $R --env release
+gh secret set COMPANION_KEY_ALIAS -R $R --env release -b hubmote
 ```
 
-Or add them in **Settings > Secrets and variables > Actions > New
-repository secret**:
+Or add them in **Settings > Environments > release > Add environment
+secret**:
 
 - `COMPANION_KEYSTORE_BASE64` is the keystore in base64. This PowerShell
   command copies it to the clipboard:
@@ -302,7 +328,8 @@ with a throwaway key.
 Remotes install a release from the site only if its image carries the
 project's signature (`main/update.c`). Then someone who could change the
 site still couldn't make remotes install an image of their own. The
-private key lives only in a repository secret and offline. The public
+private key lives only in a secret of the `release` environment and
+offline. The public
 key, `firmware/remote/main/update_key.pem`, is in the repository and is
 built into the firmware.
 
@@ -317,7 +344,7 @@ repository and give its private half to the workflow:
 ```powershell
 cd firmware\remote
 python tools\web\make_update_key.py $HOME\hubmote-update-key.pem
-gh secret set UPDATE_SIGNING_KEY -R DovahBrownies/Hubmote -b (Get-Content -Raw $HOME\hubmote-update-key.pem)
+gh secret set UPDATE_SIGNING_KEY -R DovahBrownies/Hubmote --env release -b (Get-Content -Raw $HOME\hubmote-update-key.pem)
 ```
 
 Then commit `main/update_key.pem`, the public half, and keep the private

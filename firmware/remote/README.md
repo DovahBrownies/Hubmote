@@ -295,7 +295,9 @@ port 6470 of the TV. When the companion is reachable:
   never tell the remote protocol about their fields, such as browsers.
   - While typing that way, the remote ignores the TV's late echoes of the
     field.
-  - Number fields get the number pad alone, and passwords show as `*`.
+  - Number fields get the number pad alone, and passwords show as `*`
+    until **Show** is tapped. So does the Wi-Fi password
+    (`ui_kb_open_password()`).
   - The text clears when a different field gets focus.
   - While the remote's keyboard is open, the Streamer's on-screen keyboard
     is hidden (`/keyboard`).
@@ -375,7 +377,8 @@ UI then leaves out what can't work (`ui_set_ir_caps()`).
   `secrets.env` the first time), scanning and joining another network. It
   also sets up the `hubmote.local` mDNS name.
 - **`main/netlog.c`** is the log over Wi-Fi: a ring buffer plus a TCP
-  server on port 2323.
+  server on port 2323, for a client that answers its challenge with the
+  update token (an HMAC; the protocol is at the top of the file).
 - **`main/ota.c`** takes updates over Wi-Fi from a PC, in developer builds:
   `/ota`, `/version` and `/nonce` on port 8080, with requests signed with
   the update token. It also does the rollback confirmation.
@@ -503,7 +506,9 @@ There are more files besides these.
 - **`tools/check_secrets.py`** checks `secrets.env` against the compiled
   header without printing it.
 - **`tools/new_module.py`** and **`tools/module_template/`** make
-  `modules/<id>/` for a new module.
+  `modules/<id>/` for a new module. The UI simulator compiles a module made
+  from the template on every run (`--into`), so CI notices when a change
+  to the module API leaves it behind.
 - **`tools/devtools.py`** takes screenshots and sends taps and swipes over
   Wi-Fi. It signs them with the token from `secrets.env` and never prints
   the token.

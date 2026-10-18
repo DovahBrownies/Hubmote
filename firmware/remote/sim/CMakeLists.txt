@@ -7,6 +7,7 @@ set(LVGL_DIR "${REMOTE_DIR}/managed_components/lvgl__lvgl" CACHE PATH "LVGL 9.6 
 set(CJSON_DIR "" CACHE PATH "cJSON sources (cJSON.c and cJSON.h)")
 set(SIM_W 1024 CACHE STRING "screen width")
 set(SIM_H 600 CACHE STRING "screen height")
+set(SIM_TEMPLATE_C "" CACHE FILEPATH "a module made from tools/module_template, to compile (run_sim.py)")
 
 if(NOT EXISTS "${LVGL_DIR}/lvgl.h")
     message(FATAL_ERROR "no LVGL at ${LVGL_DIR}: build the firmware once, or pass -DLVGL_DIR")
@@ -42,7 +43,7 @@ add_executable(hubmote_sim
     "${REMOTE_DIR}/modules/guest_wifi/guest_wifi.c"
     "${REMOTE_DIR}/modules/speed_test/speed_test.c"
     "${CJSON_DIR}/cJSON.c")
-target_include_directories(hubmote_sim PRIVATE
+set(SIM_INCLUDES
     stubs
     "${REMOTE_DIR}/components/ui"
     "${REMOTE_DIR}/components/ui/include"
@@ -50,8 +51,19 @@ target_include_directories(hubmote_sim PRIVATE
     "${REMOTE_DIR}/components/hub"
     "${REMOTE_DIR}/modules/weather"
     "${CJSON_DIR}")
-target_compile_definitions(hubmote_sim PRIVATE
-    SIM_W=${SIM_W} SIM_H=${SIM_H} UI_W=${SIM_W} UI_H=${SIM_H}
+set(SIM_DEFINES SIM_W=${SIM_W} SIM_H=${SIM_H} UI_W=${SIM_W} UI_H=${SIM_H})
+target_include_directories(hubmote_sim PRIVATE ${SIM_INCLUDES})
+target_compile_definitions(hubmote_sim PRIVATE ${SIM_DEFINES}
     "SIM_FIXTURE=\"${REMOTE_DIR}/modules/weather/test/forecast_sydney.json\"")
 target_compile_options(hubmote_sim PRIVATE -Wall -O1 -include "${CMAKE_CURRENT_LIST_DIR}/stubs/sim_compat.h")
 target_link_libraries(hubmote_sim lvgl m)
+
+# The module template, made into a module by run_sim.py: compiled with
+# warnings as errors, not linked in (its card would change the screens).
+if(SIM_TEMPLATE_C)
+    add_library(template_check OBJECT "${SIM_TEMPLATE_C}")
+    target_include_directories(template_check PRIVATE ${SIM_INCLUDES})
+    target_compile_definitions(template_check PRIVATE ${SIM_DEFINES})
+    target_compile_options(template_check PRIVATE -Wall -Werror -include "${CMAKE_CURRENT_LIST_DIR}/stubs/sim_compat.h")
+    target_link_libraries(template_check PRIVATE lvgl)
+endif()

@@ -88,7 +88,11 @@ It does not try to stop:
 - The companion, and its token, is only contacted while the paired TV is
   connected.
 - Once paired, if the TV no longer knows the remote, the remote asks
-  before pairing again, rather than pairing with whatever answers.
+  before pairing again, rather than pairing with whatever answers. It
+  asks only after the TV refused it twice in a row (a garbled connection
+  can look like a refusal), and only if what refused it shows the paired
+  TV's key: a refusal from a device with another key counts as something
+  else at the TV's address.
 - At pairing, the code check covers the TV's key, but only its first
   byte, by the protocol's design. Something between the remote and the TV
   gets past it 1 time in 256. A wrong code isn't logged.
@@ -138,7 +142,7 @@ as the web installer's.
 |---|---|---|
 | Firmware updates (`hm-ota.ps1`, `hm_ota.py`) | 8080 | Signed with the update token |
 | Screenshots and simulated touches (`devtools.py`) | 8080 | Signed with the update token |
-| Log over Wi-Fi (`hm-netlog.ps1`, `hm_netlog.py`) | 2323 | None |
+| Log over Wi-Fi (`hm-netlog.ps1`, `hm_netlog.py`) | 2323 | A challenge answered with the update token; not encrypted |
 
 #### Firmware updates
 
@@ -168,14 +172,18 @@ Notes:
 #### Screenshots and simulated touches
 
 - Requests are signed the same way as updates.
-- A screenshot shows whatever is on screen, including the Wi-Fi password
-  while it is typed. The keyboard shows `*` for fields the companion
-  reports as passwords.
+- A screenshot shows whatever is on screen. Passwords show as `*` while
+  they are typed (the Wi-Fi password, and fields the companion reports as
+  passwords) unless **Show** was tapped.
 - A gesture lasts 10 s at most.
 
 #### Log over Wi-Fi
 
-- Anyone on the network can read it.
+- Only a client with the update token gets it. The remote opens with a
+  one-time challenge, and the client answers with an HMAC of it made with
+  the token (`main/netlog.c`), so the token never crosses the network.
+- The log itself isn't encrypted: someone who can read the network's
+  traffic can read it too.
 - The log leaves out the update token and typed text. For typed text, it
   shows only the length. The Wi-Fi driver logs only its warnings, which
   rarely name the network.
@@ -185,7 +193,8 @@ Notes:
   only the length of typed text), but they aren't compiled in at the
   default level (`CONFIG_LOG_MAXIMUM_LEVEL` INFO). Don't raise the level
   on a shared network.
-- The remote serves one client, the newest.
+- The remote serves one client: the newest that answered the challenge.
+  A device that doesn't answer it can't take the log from that client.
 - The PC tools drop control characters from what they show and save.
 
 A **release build** opens no ports of its own besides mDNS. It makes only
@@ -241,12 +250,13 @@ update token.
   - The hash comes from the same site, but each board's entry also
     carries a signature: ECDSA P-256 over the board, the version and the
     image's SHA-256, made by the release workflow with a key kept only in
-    a repository secret (`UPDATE_SIGNING_KEY`). The remote checks it with
+    a secret of the `release` environment (`UPDATE_SIGNING_KEY`), which
+    only builds of `v*` tags can read. The remote checks it with
     the public key built into its firmware (`main/update_key.pem`) before
     it offers the update, and refuses an entry without one. So a changed
     site can't offer an image of its own, nor another board's or another
-    version's. Someone who controls the repository's secrets or its
-    workflow could still sign.
+    version's. Someone who can push a release tag (the repository's
+    admins) could still sign.
   - Developer builds also accept a plain-HTTP site, for testing from a
     PC.
   - Nothing installs without a tap on **Install**.
