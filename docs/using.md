@@ -209,6 +209,13 @@ under it while it is on.
 Weather's place. To choose a zone instead, tap **Time zone**, pick a
 region, then the city whose time you use.
 
+**Sleep timer.** Turns the TV off after 15 to 120 minutes. Tap a time to
+start it; **+ 15 min** adds time and **Cancel** stops it. While it runs,
+the top bar counts down, and a message comes a minute before the end. By
+default the Streamer goes to sleep and takes the TV with it over HDMI-CEC;
+**Settings > Modules > Sleep timer > Turn off with** can use the TV's IR
+instead.
+
 **Weather.** To choose the place:
 
 1. Tap the place's name, or **Set location** if there isn't one yet.

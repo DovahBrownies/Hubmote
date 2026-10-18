@@ -196,6 +196,8 @@ static void screens(void)
     shot("home_tab");
     ui_module_open("weather");
     shot("weather");
+    ui_module_open("sleep_timer");
+    shot("sleep_timer");
 
     /* IR */
     ui_show_ir_tv();

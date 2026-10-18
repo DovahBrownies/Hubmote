@@ -1,13 +1,15 @@
 /*
  * The simulator's stand-in for the module platform (components/hub) and the
- * Weather module's data side (modules/weather/weather.c): one module,
- * Weather, showing the forecast from the module's test fixture.
+ * Weather module's data side (modules/weather/weather.c): Weather, showing
+ * the forecast from the module's test fixture, and the modules that
+ * register themselves (the Sleep timer).
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
+#include "hub_actions.h"
 #include "hub_module.h"
 #include "hub_time.h"
 #include "hub_tz.h"
@@ -66,22 +68,74 @@ void sim_show_demo_module(bool on)
     s_demo_on = on;
 }
 
+/* Modules that register themselves (HUB_MODULE), as on the remote. */
+static const hub_module_t *s_registered[4];
+static size_t s_registered_count;
+
+void hub_module_register(const hub_module_t *module)
+{
+    if (s_registered_count < sizeof(s_registered) / sizeof(s_registered[0])) {
+        s_registered[s_registered_count++] = module;
+    }
+}
+
+static int by_name(const void *a, const void *b)
+{
+    return strcmp((*(const hub_module_t *const *)a)->name, (*(const hub_module_t *const *)b)->name);
+}
+
+/* Every module, sorted by name as hub_modules_init() does. */
+static size_t modules(const hub_module_t **out)
+{
+    size_t n = 0;
+    out[n++] = &s_weather;
+    for (size_t i = 0; i < s_registered_count; i++) {
+        out[n++] = s_registered[i];
+    }
+    if (s_demo_on) {
+        out[n++] = &s_demo;
+    }
+    qsort(out, n, sizeof(out[0]), by_name);
+    return n;
+}
+
 size_t hub_module_count(void)
 {
-    return s_demo_on ? 2 : 1;
+    const hub_module_t *list[8];
+    return modules(list);
 }
 
 const hub_module_t *hub_module_get(size_t index)
 {
-    return index == 0 ? &s_weather : index == 1 && s_demo_on ? &s_demo : NULL;
+    const hub_module_t *list[8];
+    return index < modules(list) ? list[index] : NULL;
 }
 
 const hub_module_t *hub_module_find(const char *id)
 {
-    return !id                                  ? NULL
-           : strcmp(id, WEATHER_ID) == 0        ? &s_weather
-           : s_demo_on && strcmp(id, "transit") == 0 ? &s_demo
-                                                : NULL;
+    const hub_module_t *list[8];
+    size_t n = modules(list);
+    for (size_t i = 0; id && i < n; i++) {
+        if (strcmp(list[i]->id, id) == 0) {
+            return list[i];
+        }
+    }
+    return NULL;
+}
+
+/* Actions on the TV do nothing here. */
+esp_err_t hub_tv_off(bool ir)
+{
+    (void)ir;
+    return ESP_OK;
+}
+
+void hub_hold_awake(void)
+{
+}
+
+void hub_release_awake(void)
+{
 }
 
 bool hub_module_enabled(const hub_module_t *module)

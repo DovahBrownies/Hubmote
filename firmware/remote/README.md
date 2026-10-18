@@ -422,7 +422,8 @@ UI then leaves out what can't work (`ui_set_ir_caps()`).
 - **`components/ui`** holds the LVGL 9 screens. The main files are below.
 - **`components/hub`** is the module platform: the registry
   (`HUB_MODULE()`), events, glances, one HTTP worker, per-module NVS and
-  files, SNTP time and the time zone ([docs/modules.md](../../docs/modules.md)).
+  files, SNTP time, the time zone, and actions on the TV for modules
+  ([docs/modules.md](../../docs/modules.md)).
 - **`components/kv`** reads and writes one NVS value per call (`kv.h`).
   Settings in `main/`, the companion's token and the hub's module storage
   use it; `atv_remote` keeps its own NVS code.
@@ -431,8 +432,8 @@ UI then leaves out what can't work (`ui_set_ir_caps()`).
   Samsung32. It also keeps the learned remotes on LittleFS. Its host tests
   are in `host_test/` (`run_host_tests.ps1`).
 - **`modules/`** has one component per module, each with a
-  `Kconfig.module` and a README. There is `weather/` (Open-Meteo), with a
-  host test in `test/`.
+  `Kconfig.module` and a README. There are `weather/` (Open-Meteo), with
+  a host test in `test/`, and `sleep_timer/`.
 
 ### The UI (`components/ui`)
 

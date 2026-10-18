@@ -54,7 +54,7 @@ _Static_assert(NET_SCAN_MAX <= UI_WIFI_APS_MAX, "the UI must hold every scanned 
 #define NVS_HIDDEN_APPS "hidden_apps"
 #define NVS_APP_ORDER   "app_order"
 
-typedef enum { MSG_UI, MSG_ATV, MSG_NET, MSG_COMPANION, MSG_UPDATE } msg_kind_t;
+typedef enum { MSG_UI, MSG_ATV, MSG_NET, MSG_COMPANION, MSG_UPDATE, MSG_HUB } msg_kind_t;
 
 typedef struct {
     msg_kind_t kind;
@@ -63,6 +63,7 @@ typedef struct {
         atv_event_t atv;
         companion_event_t companion;
         update_status_t update;
+        hub_action_t hub;
         struct {
             bool up;
             int reason;
@@ -111,6 +112,17 @@ static void on_atv(const atv_event_t *evt, void *ctx)
     if (xQueueSend(s_q, &m, 0) != pdTRUE) {
         ESP_LOGW(TAG, "queue full, dropped atv event %d", evt->type);
     }
+}
+
+/* Modules' actions on the TV (hub_actions.h), from any task. */
+static bool on_hub_action(const hub_action_t *action)
+{
+    msg_t m = {.kind = MSG_HUB, .hub = *action};
+    if (xQueueSend(s_q, &m, 0) != pdTRUE) {
+        ESP_LOGW(TAG, "queue full, dropped module action %d", action->type);
+        return false;
+    }
+    return true;
 }
 
 static void on_net(bool up, int reason, void *ctx)
@@ -194,6 +206,65 @@ static void handle_atv(const atv_event_t *e)
     case ATV_EVT_IME_TEXT:
         ui_ime_text(e->ime.value);
         break;
+    }
+}
+
+/* A module's action (hub_actions.h), on the paths the UI's keys take. */
+static void handle_hub(const hub_action_t *a)
+{
+    static const atv_keycode_t keys[] = {
+        [HUB_KEY_HOME] = ATV_KEY_HOME,
+        [HUB_KEY_BACK] = ATV_KEY_BACK,
+        [HUB_KEY_UP] = ATV_KEY_DPAD_UP,
+        [HUB_KEY_DOWN] = ATV_KEY_DPAD_DOWN,
+        [HUB_KEY_LEFT] = ATV_KEY_DPAD_LEFT,
+        [HUB_KEY_RIGHT] = ATV_KEY_DPAD_RIGHT,
+        [HUB_KEY_OK] = ATV_KEY_DPAD_CENTER,
+        [HUB_KEY_PLAY_PAUSE] = ATV_KEY_MEDIA_PLAY_PAUSE,
+        [HUB_KEY_VOLUME_UP] = ATV_KEY_VOLUME_UP,
+        [HUB_KEY_VOLUME_DOWN] = ATV_KEY_VOLUME_DOWN,
+        [HUB_KEY_MUTE] = ATV_KEY_VOLUME_MUTE,
+        [HUB_KEY_POWER] = ATV_KEY_POWER,
+        [HUB_KEY_SLEEP] = ATV_KEY_SLEEP,
+        [HUB_KEY_WAKEUP] = ATV_KEY_WAKEUP,
+    };
+    switch (a->type) {
+    case HUB_ACTION_KEY: {
+        if ((size_t)a->key >= sizeof(keys) / sizeof(keys[0])) {
+            return;
+        }
+        bool volume = a->key == HUB_KEY_VOLUME_UP || a->key == HUB_KEY_VOLUME_DOWN || a->key == HUB_KEY_MUTE;
+        if (volume && tv_ir_volume_ir()) {
+            ir_ctl_key(keys[a->key], UI_DIR_SHORT); /* as the UI's volume keys */
+            return;
+        }
+        esp_err_t err = atv_send_key(keys[a->key], ATV_DIR_SHORT);
+        ESP_LOGI(TAG, "module key %d: %s", keys[a->key], esp_err_to_name(err));
+        return;
+    }
+    case HUB_ACTION_IR_TV_KEY:
+        if (!ir_ctl_tv_send(a->text)) {
+            ESP_LOGW(TAG, "module IR key %s: no IR TV, or no such key", a->text);
+        }
+        return;
+    case HUB_ACTION_TV_OFF:
+        /* The IR TV's own off key if it has one; its power toggle otherwise.
+         * Without an IR TV, the Streamer's sleep turns the TV off over CEC. */
+        if (a->ir && (ir_ctl_tv_send("power_off") || ir_ctl_tv_send("power"))) {
+            ESP_LOGI(TAG, "module: TV off over IR");
+        } else {
+            esp_err_t err = atv_send_key(ATV_KEY_SLEEP, ATV_DIR_SHORT);
+            ESP_LOGI(TAG, "module: TV off via the Streamer: %s", esp_err_to_name(err));
+        }
+        return;
+    case HUB_ACTION_OPEN:
+        if (strstr(a->text, "://")) {
+            esp_err_t err = atv_launch_app_link(a->text);
+            ESP_LOGI(TAG, "module: open link: %s", esp_err_to_name(err));
+        } else {
+            ctrl_companion_launch(a->text);
+        }
+        return;
     }
 }
 
@@ -423,6 +494,7 @@ static void controller_task(void *arg)
     ir_ctl_init();
     companion_set_cache_dir(STORAGE_MOUNT "/icons", 640 * 1024);
     controller_log_heap("after IR");
+    hub_set_action_handler(on_hub_action);
     hub_modules_init();
     ui_set_time_zone(hub_time_zone());
     controller_log_heap("after modules");
@@ -447,6 +519,9 @@ static void controller_task(void *arg)
                 break;
             case MSG_UPDATE:
                 handle_update(&m.update);
+                break;
+            case MSG_HUB:
+                handle_hub(&m.hub);
                 break;
             }
         }

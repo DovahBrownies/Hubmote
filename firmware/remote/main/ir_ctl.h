@@ -10,6 +10,8 @@ void ir_ctl_init(void);
 
 /* A rail or touchpad key meant for the IR TV (UI_TARGET_IR_TV). */
 void ir_ctl_key(int key, ui_dir_t dir);
+/* Sends the IR TV's key by name (tv_ir.h); false without that key. */
+bool ir_ctl_tv_send(const char *key);
 /* A button on an IR screen (UI_ACT_IR). */
 void ir_ctl_button(ui_target_t target, const char *id, int slot);
 void ir_ctl_open_remote(int index);

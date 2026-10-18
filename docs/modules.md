@@ -197,6 +197,7 @@ Every callback is optional.
 | `HUB_EV_SCREEN_ON` | the screen woke from dark | refresh what is stale |
 | `HUB_EV_SCREEN_OFF` | the screen went dark | stop polling |
 | `HUB_EV_MINUTE` | every 60 s from start-up (not on the minute) | periodic refresh, clocks |
+| `HUB_EV_NOW_PLAYING` | what the TV plays changed | read `hub_now_playing()` |
 
 At start-up the screen is on, and no `HUB_EV_SCREEN_ON` is sent for it.
 
@@ -339,6 +340,33 @@ static const hub_module_t s_module = {
 
 Cache the last good answer in a file, so the screen fills at once after
 start-up. Keep showing it, marked as old, when the network is down.
+
+### The TV (`hub_actions.h`)
+
+A module can make things happen on the TV. These calls queue the action
+for the controller and return at once, from any task:
+
+- `hub_tv_key(key)` presses a Google TV key: `HUB_KEY_HOME`, `BACK`, the
+  arrows and `OK`, `PLAY_PAUSE`, the volume keys (they follow **Settings >
+  Remotes > TV volume**), `POWER`, `SLEEP` (off only) and `WAKEUP` (on
+  only).
+- `hub_ir_tv_key("power_off")` sends a key of the IR TV, by the names in
+  [ir-tvs.md](ir-tvs.md).
+- `hub_tv_off(ir)` turns the TV off: the Streamer goes to sleep and takes
+  the TV with it over HDMI-CEC, or, with `ir` true, the IR TV's off key.
+- `hub_tv_open(app)` opens an app by package name (through the companion
+  app) or a deep link.
+
+And read what the TV is doing, from the companion app:
+
+- `hub_now_playing(&now)` gives the app, title, subtitle and whether it
+  plays; `HUB_EV_NOW_PLAYING` says when it changes.
+- `hub_tv_apps(list, max)` gives the apps on the TV, package and name.
+
+A module that needs the remote to stay on, such as a timer, calls
+`hub_hold_awake()` and later `hub_release_awake()`: the remote doesn't
+turn itself off after idle hours in between. The screen still dims.
+`modules/sleep_timer` uses all of this.
 
 ### Time (`hub_time.h`)
 

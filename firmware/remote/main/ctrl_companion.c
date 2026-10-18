@@ -17,6 +17,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
+#include "hub.h"
 #include "kv.h"
 #include "ui.h"
 #include "ui_icons.h"
@@ -186,6 +187,11 @@ static void worker(void *arg)
     }
 }
 
+void ctrl_companion_launch(const char *package)
+{
+    request_text(REQ_LAUNCH, package);
+}
+
 void ctrl_companion_start(companion_cb_t on_event)
 {
     s_on_event = on_event;
@@ -235,6 +241,11 @@ static void show_media(void)
     companion_media_t m;
     companion_media(&m);
     ui_set_media(m.pkg, m.title, m.subtitle, m.state == COMPANION_MEDIA_PLAYING);
+    hub_now_playing_t now = {.playing = m.state == COMPANION_MEDIA_PLAYING};
+    strlcpy(now.app, m.pkg, sizeof(now.app));
+    strlcpy(now.title, m.title, sizeof(now.title));
+    strlcpy(now.subtitle, m.subtitle, sizeof(now.subtitle));
+    hub_set_now_playing(m.pkg[0] && m.state != COMPANION_MEDIA_NONE ? &now : NULL);
     if (m.pkg[0] && m.state != COMPANION_MEDIA_NONE && ui_learn_media_app(m.pkg)) {
         ESP_LOGI(TAG, "playback keys for %s from now on", m.pkg);
         save_media_apps();
@@ -260,6 +271,18 @@ static void show_companion_apps(void)
     }
     ui_set_apps(list, n);
     companion_apps_applied(gen);
+    /* The same list for modules (hub_tv_apps) */
+    static hub_tv_app_t *hub_list;
+    if (!hub_list) {
+        hub_list = heap_caps_calloc(COMPANION_MAX_APPS, sizeof(hub_tv_app_t), MALLOC_CAP_SPIRAM);
+    }
+    if (hub_list) {
+        for (size_t i = 0; i < n; i++) {
+            strlcpy(hub_list[i].app, apps[i].pkg, sizeof(hub_list[i].app));
+            strlcpy(hub_list[i].name, apps[i].label, sizeof(hub_list[i].name));
+        }
+        hub_set_tv_apps(hub_list, n);
+    }
 }
 
 /* --- Updating the companion ----------------------------------------------------------------- */
@@ -340,6 +363,7 @@ void ctrl_companion_event(const companion_event_t *e)
         } else {
             s_companion_field = false;
             ui_set_apps(NULL, 0);
+            hub_set_tv_apps(NULL, 0);
             ui_set_field(UI_FIELD_UNKNOWN, 0);
         }
         show_companion_update();

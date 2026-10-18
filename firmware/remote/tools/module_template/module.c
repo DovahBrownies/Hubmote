@@ -98,6 +98,7 @@ static void event(hub_event_t ev)
     case HUB_EV_SCREEN_ON:
     case HUB_EV_SCREEN_OFF:
     case HUB_EV_NETWORK_DOWN:
+    case HUB_EV_NOW_PLAYING:
         break;
     }
 }

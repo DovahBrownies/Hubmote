@@ -37,6 +37,7 @@ typedef enum {
     HUB_EV_SCREEN_ON,    /* the screen woke up: refresh what is stale */
     HUB_EV_SCREEN_OFF,   /* the screen went dark: stop polling */
     HUB_EV_MINUTE,       /* once a minute */
+    HUB_EV_NOW_PLAYING,  /* what the TV plays changed: hub_now_playing() */
 } hub_event_t;
 
 /*

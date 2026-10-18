@@ -60,7 +60,7 @@ LF, and CRLF for `.ps1`.
   - `components/hub/`: the module platform (registry, events, HTTP worker,
     storage, time). `components/ui/include/ui_kit.h` is the UI part
     modules may use.
-  - `modules/<id>/`: one component per module (Weather so far), each with
+  - `modules/<id>/`: one component per module (Weather, Sleep timer), each with
     a `Kconfig.module` and a README.
   - `scripts/`: `hm-idf.ps1` (build/flash), `hm-ota.ps1` (firmware over
     Wi-Fi to `hubmote.local:8080`, token from `secrets.env`),
@@ -266,6 +266,10 @@ untested: their facts and sources are in their headers in
   pick-lists use `ui_modal()` / `ui_modal_list()`.
 - **Threads.** Module `init`/`event` run on the controller task; LVGL only
   on the LVGL task or through `hub_ui_async()`.
+- **Modules act on the TV** through `hub_actions.h` (keys, IR TV keys,
+  turning the TV off, opening apps, what's playing, holding the remote
+  awake). The calls queue `MSG_HUB` for the controller (`handle_hub()` in
+  `controller.c`), which takes the UI's own paths.
 - **Weather** (Open-Meteo, no key): the place's UTC offset sets the
   remote's local time (`hub_time`) while the time zone (Settings >
   Modules, NVS `hub`/`tz`) is Automatic. The zones and their POSIX rules

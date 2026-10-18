@@ -233,6 +233,16 @@ static void send_tv(const char *key, int repeats)
     send_text(what, code, repeats);
 }
 
+bool ir_ctl_tv_send(const char *key)
+{
+    char code[IR_CODE_TEXT_MAX];
+    if (!s_ok || !tv_ir_code(key, code, sizeof(code))) {
+        return false;
+    }
+    send_tv(key, 0);
+    return true;
+}
+
 void ir_ctl_key(int key, ui_dir_t dir)
 {
     const char *id = tv_ir_key_for(key);

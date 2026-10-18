@@ -1,0 +1,5 @@
+config HUB_MODULE_SLEEP_TIMER
+    bool "Sleep timer"
+    default y
+    help
+        Turns the TV off after a while.

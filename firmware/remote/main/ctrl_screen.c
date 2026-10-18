@@ -118,7 +118,7 @@ void ctrl_screen_tick(int64_t now)
     static const char *const names[] = {"on", "dimmed", "off"};
     static int s_screen = 0; /* 0 on, 1 dimmed, 2 off */
     uint32_t idle = ui_idle_ms();
-    if (s_sleep_h > 0 && idle >= (uint32_t)s_sleep_h * 3600u * 1000u) {
+    if (s_sleep_h > 0 && idle >= (uint32_t)s_sleep_h * 3600u * 1000u && !hub_awake_held()) {
         ESP_LOGI(TAG, "unused for %d h: turning off", s_sleep_h);
         atv_disconnect();
         board_deep_sleep();
