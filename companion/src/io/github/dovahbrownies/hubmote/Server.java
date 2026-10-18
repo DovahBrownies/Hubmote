@@ -372,7 +372,7 @@ final class Server {
     /** "192.168.1.60", "192.168.1.60:6470" or "[fe80::1]:6470": an address,
      * not a name (a name means DNS, which DNS rebinding abuses). */
     private static boolean isAddress(String host) {
-        return host.matches("\\[[0-9A-Fa-f:.%a-zA-Z]+\\](:\\d+)?") || host.matches("[0-9.]+(:\\d+)?");
+        return host.matches("\\[[0-9A-Za-z:.%]+\\](:\\d+)?") || host.matches("[0-9.]+(:\\d+)?");
     }
 
     private void pair(OutputStream out, String path, Map<String, String> q) throws IOException {
