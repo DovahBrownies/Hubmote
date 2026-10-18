@@ -103,7 +103,7 @@ If your TV doesn't have HDMI-CEC, send volume to it over IR instead:
 ## 4. Next steps
 
 - **The companion app** runs on the Streamer. It shows your installed apps
-  with their icons and lets you type into any app. See
+  with their icons and lets you type into most apps. See
   [companion app](companion.md).
 - **IR** lets the remote send the TV's own keys and control an HDMI
   switch or a soundbar. Wire a receiver and transmitter

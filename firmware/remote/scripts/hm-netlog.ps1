@@ -18,6 +18,9 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $end = if ($Seconds -gt 0) { (Get-Date).AddSeconds($Seconds) } else { [DateTime]::MaxValue }
+# .NET resolves relative paths against its own current folder, not
+# PowerShell's: make -Out absolute first.
+$Out = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Out)
 [System.IO.File]::WriteAllText($Out, "")
 $buf = New-Object byte[] 4096
 

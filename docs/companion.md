@@ -11,7 +11,12 @@ Streamer. With it, the remote:
   on-screen keyboards, such as Plex's;
 - searches Google TV with what you type on Google TV's Home;
 - hides the Streamer's on-screen keyboard while the remote's is open;
-- shows the title of what's playing, where the app shares it.
+- shows the title of what's playing, where the app shares it;
+- shows the remote's messages at the top right of the TV, such as the
+  Sleep timer's warning (version 0.7 and later);
+- tests the TV's internet speed for the Internet speed module. The test
+  connects the TV to Cloudflare's speed test (speed.cloudflare.com) and
+  can move about 500 MB on a fast connection (0.7 and later).
 
 The companion has no screen of its own. It runs in the background as an
 *accessibility service*, Android's way of letting a helper app work other

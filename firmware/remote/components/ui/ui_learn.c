@@ -326,6 +326,7 @@ void ui_learn_remotes_changed(void)
 void ui_learn_open(int remote_index)
 {
     s_tv_key[0] = '\0';
+    s_input = -1; /* a remote's button, not an input learned before */
     s_remote_chips.selected = (remote_index >= 0 && remote_index < remote_count()) ? remote_index : remote_count();
     chip_paint(&s_remote_chips);
     lv_label_set_text(s_choose_msg, "");
@@ -387,15 +388,22 @@ void ui_learn_show_result(const char *summary)
 
 void ui_learn_show_failed(const char *reason)
 {
+    /* Back to where it was learning for, only if the user is still here:
+     * the time-out comes even after they left. */
+    bool here = ui_current_view() == VIEW_LEARN;
     if (s_tv_key[0]) {
         s_tv_key[0] = '\0';
-        ui_irtv_show();
-        ui_toast(ICON_ALERT, "Nothing learned. Try again.");
+        if (here) {
+            ui_irtv_show();
+            ui_toast(ICON_ALERT, "Nothing learned. Try again.");
+        }
         return;
     }
     if (s_input >= 0) {
-        ui_inputs_show();
-        ui_toast(ICON_ALERT, "Nothing learned. Try again.");
+        if (here) {
+            ui_inputs_show();
+            ui_toast(ICON_ALERT, "Nothing learned. Try again.");
+        }
         return;
     }
     lv_label_set_text(s_choose_msg, reason ? reason : "");

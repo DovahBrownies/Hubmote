@@ -21,6 +21,10 @@ extern "C" {
 void hub_time_start(void);
 /* True once the clock has been set. */
 bool hub_time_valid(void);
+/* True once local time can be trusted: the clock is set, and a time zone
+ * is chosen or (Automatic) a module has reported its place's offset, now
+ * or before a restart. Until then local time may be UTC. */
+bool hub_time_known(void);
 
 /* Reports the local place's offset from UTC, in seconds. Local time uses
  * it while the time zone is Automatic; it is saved, so local time is right

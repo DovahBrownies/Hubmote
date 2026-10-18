@@ -246,15 +246,30 @@ static void handle_atv(const atv_event_t *e)
  * KEYCODE_WAKEUP from the remote protocol (seen 2026-10-17, awake or on its
  * screensaver), so this toggles with POWER, and only when that changes
  * something: the state comes from the Streamer, and counts as off while it
- * isn't connected. */
+ * isn't connected. Its power event comes after the actions already queued,
+ * so a second request for the same state within POWER_SETTLE_US isn't sent:
+ * a second POWER would toggle it back. */
+#define POWER_SETTLE_US (10 * 1000000LL)
+
 static esp_err_t streamer_power(bool on)
 {
+    static int64_t s_sent_us;
+    static bool s_sent_on;
     hub_tv_state_t tv;
     hub_tv_state(&tv);
     if (tv.on == on) {
         return ESP_OK;
     }
-    return atv_send_key(ATV_KEY_POWER, ATV_DIR_SHORT);
+    int64_t now = esp_timer_get_time();
+    if (s_sent_us && s_sent_on == on && now - s_sent_us < POWER_SETTLE_US) {
+        return ESP_OK; /* sent already; the Streamer hasn't said yet */
+    }
+    esp_err_t err = atv_send_key(ATV_KEY_POWER, ATV_DIR_SHORT);
+    if (err == ESP_OK) {
+        s_sent_us = now;
+        s_sent_on = on;
+    }
+    return err;
 }
 
 /* A module's action (hub_actions.h), on the paths the UI's keys take. */

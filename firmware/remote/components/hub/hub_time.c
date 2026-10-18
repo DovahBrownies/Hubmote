@@ -20,6 +20,7 @@ static const char *TAG = "hub_time";
 
 static bool s_started;
 static int32_t s_offset;
+static bool s_offset_known; /* reported, or saved from an earlier report */
 static const hub_tz_t *s_zone; /* NULL: Automatic */
 /* TZ and localtime_r() are the C library's shared state: the zone can
  * change on the controller task while a module reads the time on another. */
@@ -67,7 +68,7 @@ void hub_time_init(void)
     if (!s_lock) {
         s_lock = xSemaphoreCreateMutex();
     }
-    kv_get_i32(NVS_NS, NVS_OFFSET, &s_offset);
+    s_offset_known = kv_get_i32(NVS_NS, NVS_OFFSET, &s_offset) == ESP_OK;
     char name[48];
     kv_get_str(NVS_NS, NVS_ZONE, name, sizeof(name));
     const hub_tz_t *zone = name[0] ? find(name) : NULL;
@@ -120,6 +121,11 @@ void hub_time_start(void)
     ESP_LOGI(TAG, "clock sync: %s", esp_err_to_name(err));
 }
 
+bool hub_time_known(void)
+{
+    return hub_time_valid() && (s_zone || s_offset_known);
+}
+
 bool hub_time_valid(void)
 {
     return time(NULL) > VALID_AFTER;
@@ -127,8 +133,9 @@ bool hub_time_valid(void)
 
 void hub_time_set_utc_offset(int32_t seconds)
 {
-    if (seconds != s_offset) {
+    if (seconds != s_offset || !s_offset_known) {
         s_offset = seconds;
+        s_offset_known = true;
         kv_set_i32(NVS_NS, NVS_OFFSET, seconds);
     }
 }

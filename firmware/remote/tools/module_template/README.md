@@ -4,6 +4,7 @@ __DESCRIPTION__
 
 ## Settings
 
+- **Each tap adds:** 1 to 10, in Settings > Modules (`m___ID__`: `step`).
 - **Taps:** the count, kept in NVS (`m___ID__`: `taps`).
 
 ## Data and privacy

@@ -1,7 +1,7 @@
 # UI simulator
 
 The UI simulator draws the remote's screens on a PC, for developers who
-change the UI. It builds the real `components/ui` and the Weather module's
+change the UI. It builds the real `components/ui` and the modules'
 screens, lets LVGL draw them into memory at any screen size, and saves them
 as PNGs.
 
@@ -22,8 +22,8 @@ python sim/run_sim.py --size 1280x800              # another size, after making 
 
 The screenshots go to `sim/out/<W>x<H>/<theme>/`, which is gitignored. There
 is one PNG per screen: setup, the Streamer's home and app panels, the
-keyboard, the switcher, Home and Weather, the IR screens, Add a TV and
-every Settings section.
+keyboard, the switcher, Home (and arranging it), every module's screen, the
+IR screens, Add a TV and every Settings section.
 
 - `--out DIR` puts them somewhere else.
 - `--keep-bmp` also keeps the exact pixels as BMPs.
@@ -64,8 +64,8 @@ Each size is built in `build-sim/<W>x<H>/`.
 - Time is simulated at 33 ms per frame, so a build always draws the same
   pixels. The 1024x600 screens match the remote's own screenshots.
 - `sim_hub.c` stands in for the module platform (`components/hub`) and
-  Weather's data side. The forecast comes from
-  `modules/weather/test/forecast_sydney.json`.
+  Weather's data side, and lists the modules that register themselves. The
+  forecast comes from `modules/weather/test/forecast_sydney.json`.
 - `stubs/` replaces the few ESP-IDF headers the UI includes: logging,
   `esp_lvgl_port`'s lock and heap capabilities. `sim_compat.h` adds what a
   PC's C library may lack.

@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 
 /**
@@ -43,8 +44,8 @@ import java.util.concurrent.Semaphore;
  *                             {"left":N} if not; 410 if no code is showing
  *                             (expired, used, or 3 wrong tries)
  *   POST /pair/cancel         hides the code
- *   GET  /status              {"version":5,"name":"0.5","updates":true,
- *                             "paired":false}, or with a token also
+ *   GET  /status              {"version":8,"name":"0.8","updates":true,
+ *                             "media":true,"paired":false}, or with a token also
  *                             "field":..,"id":.. ("version" is the app's
  *                             version code; "updates": /update can work,
  *                             false where the TV forbids installs from apps;
@@ -63,7 +64,7 @@ import java.util.concurrent.Semaphore;
  *   POST /update?url=U&size=N&sha256=H
  *                             updates the companion from the APK at U (N
  *                             bytes, that SHA-256), see Updater; 400 if the
- *                             request is unusable
+ *                             request is unusable or the TV forbids installs
  *   POST /notify?text=T&seconds=S
  *                             shows T at the top right of the TV for S
  *                             seconds (3-30, 10 if left out); 400 without
@@ -93,6 +94,7 @@ final class Server {
     private static final int MAX_PER_ADDRESS = 8; /* one device can't take every slot */
     private static final int MAX_HEADERS = 32;
     private static final int MESSAGE_MAX = 160; /* /notify text, characters */
+    private static final int TEXT_MAX = 1000;   /* /text, characters (the remote sends 128 bytes at most) */
     private static final long REQUEST_MS = 10000;
 
     private final CompanionService svc;
@@ -101,7 +103,11 @@ final class Server {
     private final List<OutputStream> streams = new CopyOnWriteArrayList<>();
     /* Event lines are written here: never on the main thread, where Android
      * forbids network use (NetworkOnMainThreadException). */
-    private final ExecutorService sender = Executors.newSingleThreadExecutor();
+    private final ExecutorService sender = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "hm-events");
+        t.setDaemon(true); /* and shut down with the server: one per bind, not one more each time */
+        return t;
+    });
     private volatile boolean running;
     private volatile ServerSocket socket;
     private final Semaphore slots = new Semaphore(MAX_CONNECTIONS);
@@ -139,10 +145,15 @@ final class Server {
             closeQuietly(out);
         }
         streams.clear();
+        sender.shutdown();
     }
 
     void broadcast(String line) {
-        sender.execute(() -> sendToAll(line));
+        try {
+            sender.execute(() -> sendToAll(line));
+        } catch (RejectedExecutionException ignored) {
+            /* stopped: a late event from a test or an update has no one to go to */
+        }
     }
 
     private void sendToAll(String line) {
@@ -284,7 +295,7 @@ final class Server {
                 json(out, ok ? 200 : 404, ok ? "{\"ok\":true}" : "{\"error\":\"not launchable\"}");
             } else if (method.equals("POST") && path.equals("/text")) {
                 String value = q.get("value");
-                boolean ok = value != null && svc.setText(value);
+                boolean ok = value != null && value.length() <= TEXT_MAX && svc.setText(value);
                 json(out, ok ? 200 : 404, ok ? "{\"ok\":true}" : "{\"error\":\"no focused field\"}");
             } else if (method.equals("POST") && path.equals("/keyboard")) {
                 svc.hideKeyboard("1".equals(q.get("hidden")));
@@ -304,8 +315,11 @@ final class Server {
             } else if (method.equals("POST") && path.equals("/notify")) {
                 /* A message at the top right of the TV for 3 to 30 s (0.7+). */
                 String text = q.get("text");
+                if (text != null) {
+                    text = text.replaceAll("[\\p{Cntrl}&&[^\\n]]", " "); /* line breaks only; Message keeps 4 lines */
+                }
                 int seconds = Math.max(3, Math.min(30, parseInt(q.get("seconds"), 10)));
-                boolean ok = text != null && !text.isEmpty() && text.length() <= MESSAGE_MAX;
+                boolean ok = text != null && !text.trim().isEmpty() && text.length() <= MESSAGE_MAX;
                 if (ok) {
                     svc.showMessage(text, seconds * 1000L);
                 }
@@ -402,13 +416,18 @@ final class Server {
 
     /** Streams events until the client goes away. */
     private void events(Socket c, InputStream in, OutputStream out) throws IOException {
-        String speed = svc.speedTest().eventLine(); /* how a test went, if one ran while it was away */
-        out.write(("HTTP/1.1 200 OK\r\nContent-Type: application/x-ndjson\r\nCache-Control: no-cache\r\n"
-                + "Connection: close\r\n\r\n" + svc.fieldJson() + "\n" + (speed != null ? speed + "\n" : ""))
-                .getBytes(StandardCharsets.UTF_8));
-        out.flush();
-        streams.add(out);
         try {
+            /* Joined and greeted in one step: an event sent meanwhile waits
+             * for the header (sendToAll locks the stream too), and none is
+             * missed between the first lines and joining. */
+            synchronized (out) {
+                streams.add(out);
+                String speed = svc.speedTest().eventLine(); /* how a test went, if one ran while it was away */
+                out.write(("HTTP/1.1 200 OK\r\nContent-Type: application/x-ndjson\r\nCache-Control: no-cache\r\n"
+                        + "Connection: close\r\n\r\n" + svc.fieldJson() + "\n" + (speed != null ? speed + "\n" : ""))
+                        .getBytes(StandardCharsets.UTF_8));
+                out.flush();
+            }
             c.setSoTimeout(0);
             c.setKeepAlive(true);
             while (in.read() >= 0) {

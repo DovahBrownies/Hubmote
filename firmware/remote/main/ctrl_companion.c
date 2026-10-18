@@ -184,14 +184,15 @@ static void run(const req_t *r)
 
 static void worker(void *arg)
 {
-    static bool stack_logged;
+    UBaseType_t low = WORKER_STACK;
     req_t r;
     for (;;) {
         if (xQueueReceive(s_req_q, &r, portMAX_DELAY) == pdTRUE) {
             run(&r);
-            if (!stack_logged && r.type == REQ_PAIR) {
-                stack_logged = true;
-                ESP_LOGI(TAG, "companion worker: stack left %u", (unsigned)uxTaskGetStackHighWaterMark(NULL));
+            UBaseType_t left = uxTaskGetStackHighWaterMark(NULL);
+            if (left < low) { /* each new low, so every request's depth shows once */
+                low = left;
+                ESP_LOGI(TAG, "companion worker: stack left %u (after request %d)", (unsigned)left, (int)r.type);
             }
         }
     }

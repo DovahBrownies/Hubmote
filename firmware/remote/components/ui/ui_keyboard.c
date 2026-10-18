@@ -487,8 +487,13 @@ void ui_kb_follow(ui_kb_mode_t mode)
     }
 }
 
+/* The TV's field changed: its text goes. Not the remote's own (local)
+ * typing, such as a Wi-Fi password, which the TV has nothing to do with. */
 void ui_kb_clear(void)
 {
+    if (s_mode == UI_KB_LOCAL) {
+        return;
+    }
     s_text[0] = '\0';
     refresh_field();
 }

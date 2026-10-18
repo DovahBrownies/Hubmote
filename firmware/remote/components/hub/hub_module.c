@@ -151,6 +151,9 @@ void hub_module_set_enabled(const char *id, bool on)
     if (i < 0 || s_off[i] == !on) {
         return;
     }
+    if (!on && s_started[i] && s_modules[i]->event) {
+        s_modules[i]->event(HUB_EV_OFF); /* its last, to stop what it runs */
+    }
     s_off[i] = !on;
     if (on) {
         kv_erase(NVS_OFF, id);

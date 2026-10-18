@@ -2,7 +2,7 @@
 
 /*
  * Learned remotes, kept as JSON files on the LittleFS "storage" partition
- * (see partitions.csv): one file per remote, /ir/<id>.json.
+ * (see partitions.csv): one file per remote, /storage/ir/<id>.json.
  *
  * Not thread-safe: call from one task (the controller).
  */
@@ -45,7 +45,7 @@ typedef struct {
 esp_err_t ir_store_init(const char *dir);
 esp_err_t ir_store_list(ir_remote_info_t *out, size_t max, size_t *count);
 esp_err_t ir_store_load(const char *id, ir_remote_t *out);
-/* Creates or replaces /ir/<id>.json. An empty id gets one derived from the
+/* Creates or replaces /storage/ir/<id>.json. An empty id gets one derived from the
  * name (written back into r->id). */
 esp_err_t ir_store_save(ir_remote_t *r);
 esp_err_t ir_store_delete(const char *id);

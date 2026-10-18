@@ -48,6 +48,9 @@ static int log_hook(const char *fmt, va_list args)
     int n = vsnprintf(s_line, sizeof(s_line), fmt, args);
     if (n > 0) {
         size_t len = (size_t)n < sizeof(s_line) ? (size_t)n : sizeof(s_line) - 1;
+        if ((size_t)n >= sizeof(s_line)) {
+            s_line[len - 1] = '\n'; /* cut short: keep its line break, or the next line joins it */
+        }
         fwrite(s_line, 1, len, stdout);
         ring_append(s_line, len);
     }

@@ -184,6 +184,11 @@ void ir_ctl_init(void)
     s_send = heap_caps_calloc(1, sizeof(ir_code_t), MALLOC_CAP_SPIRAM);
     s_learned = heap_caps_calloc(1, sizeof(ir_code_t), MALLOC_CAP_SPIRAM);
     s_learned_lock = xSemaphoreCreateMutex();
+    if (!s_remote || !s_inputs || !s_send || !s_learned || !s_learned_lock) {
+        ESP_LOGE(TAG, "no memory for IR: the remote goes on without it");
+        ui_set_ir_caps(false, false);
+        return;
+    }
 
     ir_config_t cfg = {
         .tx_gpio = CONFIG_HM_IR_TX_GPIO,
@@ -221,26 +226,24 @@ static void send_text(const char *what, const char *code, int repeats)
     ESP_LOGI(TAG, "%s (%.24s): %s", what, code, esp_err_to_name(err));
 }
 
-static void send_tv(const char *key, int repeats)
+/* False if the IR TV has no such key (or IR isn't ready). One code buffer
+ * (3.2 KB) on the caller's stack, not two. */
+static bool send_tv(const char *key, int repeats)
 {
     char code[IR_CODE_TEXT_MAX];
     if (!s_ok || !tv_ir_code(key, code, sizeof(code))) {
-        ESP_LOGW(TAG, "tv %s: %s", key, s_ok ? "no code" : "IR not ready");
-        return;
+        ESP_LOGI(TAG, "tv %s: %s", key, s_ok ? "no code" : "IR not ready");
+        return false;
     }
     char what[24];
     snprintf(what, sizeof(what), "tv %s", key);
     send_text(what, code, repeats);
+    return true;
 }
 
 bool ir_ctl_tv_send(const char *key)
 {
-    char code[IR_CODE_TEXT_MAX];
-    if (!s_ok || !tv_ir_code(key, code, sizeof(code))) {
-        return false;
-    }
-    send_tv(key, 0);
-    return true;
+    return send_tv(key, 0);
 }
 
 void ir_ctl_key(int key, ui_dir_t dir)
@@ -341,6 +344,10 @@ void ir_ctl_remote_delete(void)
     }
     esp_err_t err = ir_store_delete(s_remote->id);
     ESP_LOGI(TAG, "%s deleted: %s", s_remote->id, esp_err_to_name(err));
+    if (err != ESP_OK) {
+        ui_notify(ICON_ALERT, "Couldn't delete the remote");
+        return;
+    }
     s_remote_index = -1;
     publish_remotes();
     ui_learned_remote_deleted();
@@ -512,11 +519,23 @@ static int find_free_slot(const ir_remote_t *r)
     return -1;
 }
 
+/* The learned remote on screen, back in s_remote after a failed save
+ * borrowed it for another remote: else its buttons would send that one's
+ * codes, and Delete would delete it. */
+static void restore_shown(int shown)
+{
+    if (shown >= 0 && (size_t)shown < s_info_count && ir_store_load(s_infos[shown].id, s_remote) == ESP_OK) {
+        return;
+    }
+    s_remote_index = -1; /* gone, or unreadable: nothing on screen acts on it */
+}
+
 void ir_ctl_learn_save(void)
 {
     if (!s_have_learned) {
         return;
     }
+    int shown = s_remote_index;
     if (s_pending.tv_key[0]) {
         char code[IR_CODE_TEXT_MAX];
         xSemaphoreTake(s_learned_lock, portMAX_DELAY);
@@ -535,6 +554,7 @@ void ir_ctl_learn_save(void)
     }
     if (s_pending.index >= 0 && (size_t)s_pending.index < s_info_count) {
         if (ir_store_load(s_infos[s_pending.index].id, s_remote) != ESP_OK) {
+            restore_shown(shown);
             ui_learn_failed("Couldn't open that remote to add the button.");
             return;
         }
@@ -569,6 +589,7 @@ void ir_ctl_learn_save(void)
     if (!b) {
         int slot = s_pending.slot >= 0 ? s_pending.slot : find_free_slot(s_remote);
         if (slot < 0 || s_remote->button_count >= IR_STORE_MAX_BUTTONS) {
+            restore_shown(shown);
             ui_learn_failed("This remote is full (24 buttons).");
             return;
         }
@@ -583,6 +604,7 @@ void ir_ctl_learn_save(void)
         err = ir_store_save(s_remote);
     }
     if (err != ESP_OK) {
+        restore_shown(shown);
         char reason[64];
         snprintf(reason, sizeof(reason), "Couldn't save (%s).", esp_err_to_name(err));
         ui_learn_failed(reason);

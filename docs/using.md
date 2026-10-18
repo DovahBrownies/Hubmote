@@ -35,8 +35,9 @@ From left to right:
   Press and hold one to [arrange them](#modules).
 - **What's on**, in the middle: the app on the TV, **Typing** while you
   type, or the module you have open.
-- **On the right:** a module's glance (the weather), Wi-Fi, the battery,
-  and the **gear**. The gear opens Settings. Tap it again to go back.
+- **On the right:** a module's glance, a small icon and value such as
+  the weather's, then Wi-Fi, the battery, and the **gear**. The gear opens
+  Settings. Tap it again to go back.
 
 The battery icon:
 
@@ -237,9 +238,9 @@ the apps, most watched first.
 - **Count while:** **TV is on** counts while the Google TV is on, Home
   screen included. **Playing** counts only while something plays, which
   needs the companion app.
-- **Only while the remote is on:** it counts from the remote. With a
-  limit set, the remote stays on while the TV is on, but turning the
-  remote off from Settings stops the count.
+- **It counts only while the remote is on**, because it counts from the
+  remote. With a limit set, the remote stays on while the TV is on, but
+  turning the remote off from Settings stops the count.
 
 **Sleep timer.** Turns the TV off after 15 to 120 minutes. Tap a time to
 start it; **+ 15 min** adds time and **Cancel** stops it. While it runs,
@@ -303,7 +304,8 @@ version of the remote's software).
     while **Charging**.
 - **Appearance:** Midnight, Daylight, Black, Dusk or Terminal. Tap one,
   then **Restart to apply**. More in [themes](themes.md).
-- **Modules:** switches each one on or off.
+- **Modules:** the time zone, **Arrange Home**, and each module with
+  its switch and its settings ([modules](#modules)).
 - **About:**
   - the version, with **Check** to look for updates and **Install** for a
     new one;

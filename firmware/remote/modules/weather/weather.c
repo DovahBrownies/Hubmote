@@ -276,6 +276,7 @@ static void weather_event(hub_event_t event)
         break;
     case HUB_EV_NOW_PLAYING:
     case HUB_EV_TV:
+    case HUB_EV_OFF:
         break;
     }
 }

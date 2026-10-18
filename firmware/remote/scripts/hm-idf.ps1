@@ -81,7 +81,14 @@ try {
     $prevErrAction = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     $exports = & $venvPython $activate --export 2>$null
+    $activated = $LASTEXITCODE
     $ErrorActionPreference = $prevErrAction
+    # Without the toolchain on PATH, idf.py would configure a broken build
+    # (the CMakeCache trouble this wrapper exists to prevent): stop instead.
+    if ($activated -ne 0 -or -not $exports) {
+        Write-Host "ESP-IDF activation failed (activate.py exit $activated): not building."
+        exit 1
+    }
     foreach ($line in $exports) {
         if ($line -and $line.Trim()) {
             try { Invoke-Expression $line } catch { }

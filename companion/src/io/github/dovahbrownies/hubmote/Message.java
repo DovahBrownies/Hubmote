@@ -6,6 +6,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.drawable.GradientDrawable;
+import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -82,6 +83,8 @@ final class Message {
         body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
         body.setTextColor(0xFFECEEF2);
         body.setMaxWidth(Math.round(420 * density));
+        body.setMaxLines(4);
+        body.setEllipsize(TextUtils.TruncateAt.END);
         texts.addView(body);
         box.addView(texts);
 

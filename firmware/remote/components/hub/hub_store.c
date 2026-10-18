@@ -2,6 +2,7 @@
 #include "hub_store.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include "esp_heap_caps.h"
 #include "kv.h"
@@ -100,10 +101,14 @@ esp_err_t hub_file_read(const char *path, char **out, size_t *len, size_t max_le
     }
     size_t got = fread(buf, 1, (size_t)size, f);
     fclose(f);
+    if (got != (size_t)size) {
+        free(buf); /* a short read: nothing for the caller to free */
+        return ESP_FAIL;
+    }
     buf[got] = '\0';
     *out = buf;
     if (len) {
         *len = got;
     }
-    return got == (size_t)size ? ESP_OK : ESP_FAIL;
+    return ESP_OK;
 }

@@ -9,9 +9,17 @@ __pycache__/
 *.log
 
 # Signing keys. The companion's build makes its own debug.keystore when
-# there is none; keep yours on disk (companion/README.md).
+# there is none; keep yours on disk (companion/README.md). Private keys
+# (*.pem) too; the update key's public half is the one PEM in the repo.
 *.keystore
 *.jks
+*.pem
+!firmware/remote/main/update_key.pem
+
+# devtools.py's default output, from wherever it runs: screens can show
+# network and TV names
+screenshot.png
+screenshot.bmp
 
 # Editors and OS
 .vscode/

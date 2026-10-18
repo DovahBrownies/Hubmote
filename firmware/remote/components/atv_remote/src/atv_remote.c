@@ -867,16 +867,15 @@ static void log_rx_remote(const atv_remote_msg_t *m, size_t len)
         ESP_LOGD(TAG, "rx remote_ping_request val1=%d val2=%d", (int)m->ping_val1, (int)m->ping_val2);
     }
     if (p & ATV_RM_IME_KEY_INJECT) {
-        ESP_LOGD(TAG, "rx remote_ime_key_inject app_package='%s'%s%s%s", m->app_package,
-                 m->has_ime_text_field ? " text='" : "", m->has_ime_text_field ? m->ime_text_field.value : "",
-                 m->has_ime_text_field ? "'" : "");
+        ESP_LOGD(TAG, "rx remote_ime_key_inject app_package='%s' text %d chars", m->app_package,
+                 m->has_ime_text_field ? (int)strlen(m->ime_text_field.value) : -1);
     }
     if (p & ATV_RM_IME_BATCH_EDIT) {
         ESP_LOGD(TAG, "rx remote_ime_batch_edit ime_counter=%d field_counter=%d", (int)m->ime_counter,
                  (int)m->field_counter);
     }
     if (p & ATV_RM_IME_SHOW_REQUEST) {
-        ESP_LOGD(TAG, "rx remote_ime_show_request value='%s' label='%s'", m->show_text_field.value,
+        ESP_LOGD(TAG, "rx remote_ime_show_request value %d chars, label '%s'", (int)strlen(m->show_text_field.value),
                  m->show_text_field.label);
     }
     if (p & ATV_RM_VOICE_BEGIN) {
@@ -908,6 +907,8 @@ static void send_ping_response(ctx_t *c, int32_t val1)
 
 static void control_on_message(ctx_t *c, const uint8_t *buf, size_t len)
 {
+    /* Only what the TV sends counts as activity: our own keys would keep a
+     * dead connection "alive" for as long as the user presses them. */
     c->last_activity_us = now_us();
     atv_remote_msg_t *m = &c->rmsg;
     if (!atv_parse_remote(buf, len, m)) {
@@ -1288,7 +1289,6 @@ static void handle_cmd(ctx_t *c, cmd_t *cmd)
             ESP_LOGW(TAG, "key %d dropped: not connected", (int)cmd->key);
             break;
         }
-        c->last_activity_us = now_us();
         TX_BEGIN(c, w);
         {
             bool ok = atv_msg_key_inject(&w, cmd->key, cmd->dir);
@@ -1302,7 +1302,6 @@ static void handle_cmd(ctx_t *c, cmd_t *cmd)
             ESP_LOGW(TAG, "app link dropped: not connected");
             break;
         }
-        c->last_activity_us = now_us();
         TX_BEGIN(c, w);
         {
             bool ok = atv_msg_app_link(&w, cmd->str);
@@ -1316,12 +1315,11 @@ static void handle_cmd(ctx_t *c, cmd_t *cmd)
             ESP_LOGW(TAG, "text dropped: not connected");
             break;
         }
-        c->last_activity_us = now_us();
         TX_BEGIN(c, w);
         {
             bool ok = atv_msg_ime_batch_edit(&w, c->ime_counter, c->field_counter, cmd->str);
-            ESP_LOGD(TAG, "tx remote_ime_batch_edit ime_counter=%d field_counter=%d insert=1 value='%s'",
-                     (int)c->ime_counter, (int)c->field_counter, cmd->str);
+            ESP_LOGD(TAG, "tx remote_ime_batch_edit ime_counter=%d field_counter=%d insert=1 value %d chars",
+                     (int)c->ime_counter, (int)c->field_counter, (int)strlen(cmd->str));
             tx_flush(c, &w, ok);
         }
         break;

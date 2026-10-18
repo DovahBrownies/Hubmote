@@ -216,13 +216,24 @@ openssl ecparam -name prime256v1 -genkey -noout -out test-key.pem
 openssl ec -in test-key.pem -pubout -out test-pub.pem
 ```
 
+In PowerShell, use Git for Windows' openssl:
+`& "$env:ProgramFiles\Git\usr\bin\openssl.exe" ecparam ...`, with the
+same arguments.
+
 1. Build the test firmware in its own folder, with `HM_UPDATE_URL` set to
-   the site (in a defaults file) and `-D HM_UPDATE_KEY=<path to
-   test-pub.pem>`.
-2. Make the site with `tools/web/make_site.py`, then sign it:
-   `make_site.py --no-firmware --out <site> --sign test-key.pem --public
-   test-pub.pem`.
-3. Put the remote back on its normal build afterwards.
+   the site (in a defaults file; developer builds accept http://) and
+   `-D HM_UPDATE_KEY=<path to test-pub.pem>`. Flash it.
+2. Build the image the site offers the same way, with a newer version in
+   `version.txt` (the remote only offers a newer one) and
+   `-D HM_NO_SECRETS=1`.
+3. Make the site from that build, signed:
+   `python tools/web/make_site.py --build <build> --out <site> --developer
+   --sign test-key.pem --public test-pub.pem`. `--developer` lets a
+   developer build in; without it the site only takes release builds.
+4. Serve the site (`python -m http.server` in it), then check for updates
+   in **Settings > About**.
+5. Put the remote back on its normal build afterwards, and `version.txt`
+   back as it was.
 
 ## Options
 

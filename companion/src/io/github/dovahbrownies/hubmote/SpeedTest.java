@@ -26,7 +26,8 @@ final class SpeedTest {
     private static final String BASE = "https://speed.cloudflare.com";
     private static final int PINGS = 11;              /* the first, with the TLS handshake, is dropped */
     private static final int PINGS_MIN = 3;           /* enough to report, on a poor line */
-    private static final long PING_MS = 6000;         /* the latency's time, at most */
+    private static final long PING_MS = 6000;         /* the latency's time once it has PINGS_MIN */
+    private static final long PING_MAX_MS = 20000;    /* and at most, with whatever it has */
     private static final long PHASE_MS = 6000;        /* download, then upload */
     private static final long PHASE_BYTES = 250_000_000L; /* a fast line stops early */
     /* Request sizes, climbed while a request takes under a second. Cloudflare
@@ -46,6 +47,7 @@ final class SpeedTest {
     private volatile int progress;
     private volatile double pingMs, downMbps, upMbps;
     private long lastReport;
+    private volatile boolean stopped; /* the service is going: end the test */
 
     SpeedTest(CompanionService svc) {
         this.svc = svc;
@@ -57,11 +59,26 @@ final class SpeedTest {
             return false;
         }
         pingMs = downMbps = upMbps = 0;
+        state = "latency"; /* not the last test's result while this one starts */
+        progress = 0;
+        stopped = false;
         measId = Long.toString((long) (Math.random() * 1e15));
         thread = new Thread(this::run, "hm-speed");
         thread.setDaemon(true);
         thread.start();
         return true;
+    }
+
+    /** Ends a running test soon (its request finishes or times out first):
+     * the service is being unbound. */
+    void stop() {
+        stopped = true;
+    }
+
+    private void checkStopped() throws IOException {
+        if (stopped) {
+            throw new IOException("stopped");
+        }
     }
 
     /** The {"speed":...} event line for a remote that just connected, or
@@ -116,8 +133,10 @@ final class SpeedTest {
         long start = SystemClock.elapsedRealtime();
         IOException last = null;
         for (int i = 0; i < PINGS; i++) {
-            if (ms.size() >= PINGS_MIN && SystemClock.elapsedRealtime() - start > PING_MS) {
-                break; /* a slow line: enough samples */
+            checkStopped();
+            long ran = SystemClock.elapsedRealtime() - start;
+            if ((ms.size() >= PINGS_MIN && ran > PING_MS) || ran > PING_MAX_MS) {
+                break; /* a slow line: enough samples, or as many as it will get */
             }
             long t0 = SystemClock.elapsedRealtimeNanos();
             HttpURLConnection c = open("/__down?measId=" + measId + "&bytes=0");
@@ -176,11 +195,13 @@ final class SpeedTest {
 
     /**
      * Downloads (or uploads) ever larger amounts, up the LADDER while a
-     * request takes under a second, for PHASE_MS or PHASE_BYTES. A refused
-     * request is skipped (a rung down); one that fails (a stall the read
-     * timeout ends) ends the phase with what was measured, or the test if
-     * nothing was. The result is the 90th percentile of the requests that
-     * took 200 ms or more (a single slow start doesn't count), in Mbit/s.
+     * request takes under a second, for PHASE_MS or PHASE_BYTES; a request
+     * still running at PHASE_MS is cut short and counts as far as it got. A
+     * refused size is skipped (a rung down, and not climbed to again); a
+     * request that fails (a stall the read timeout ends) ends the phase with
+     * what was measured, or the test if nothing was. The result is the 90th
+     * percentile of the requests that took 200 ms or more (a single slow
+     * start doesn't count), in Mbit/s.
      */
     private double transfer(boolean up, int fromProgress, int toProgress) throws IOException {
         List<Double> speeds = new ArrayList<>();
@@ -191,9 +212,11 @@ final class SpeedTest {
         long start = SystemClock.elapsedRealtime();
         byte[] buf = new byte[64 * 1024];
         while (SystemClock.elapsedRealtime() - start < PHASE_MS && moved < PHASE_BYTES) {
+            checkStopped();
             long size = LADDER[rung];
             long t0 = SystemClock.elapsedRealtimeNanos();
             long done = 0;
+            boolean cut = false; /* stopped at PHASE_MS */
             HttpURLConnection c = open((up ? "/__up?measId=" + measId : "/__down?measId=" + measId + "&bytes=" + size));
             try {
                 try {
@@ -204,18 +227,29 @@ final class SpeedTest {
                         c.setFixedLengthStreamingMode(size);
                         try (OutputStream out = c.getOutputStream()) {
                             while (done < size) {
+                                if (over(start) || stopped) {
+                                    /* counted now: closing a short body fails */
+                                    measure(speeds, done, t0);
+                                    cut = true;
+                                    break;
+                                }
                                 int n = (int) Math.min(buf.length, size - done);
                                 out.write(buf, 0, n);
                                 done += n;
                                 live(up, done, t0, start, fromProgress, toProgress);
                             }
                         }
+                        if (cut) {
+                            break;
+                        }
                         if (refused(c.getResponseCode(), ++refused)) {
+                            top = Math.min(top, Math.max(0, rung - 1));
                             rung = Math.max(0, rung - 1);
                             continue;
                         }
                     } else {
                         if (refused(c.getResponseCode(), ++refused)) {
+                            top = Math.min(top, Math.max(0, rung - 1));
                             rung = Math.max(0, rung - 1);
                             continue;
                         }
@@ -223,6 +257,9 @@ final class SpeedTest {
                             for (int n; (n = in.read(buf)) > 0; ) {
                                 done += n;
                                 live(up, done, t0, start, fromProgress, toProgress);
+                                if (over(start) || stopped) {
+                                    break; /* counted below, as far as it got */
+                                }
                             }
                         }
                     }
@@ -239,18 +276,29 @@ final class SpeedTest {
             refused = 0;
             double seconds = (SystemClock.elapsedRealtimeNanos() - t0) / 1e9;
             moved += done;
-            if (seconds >= 0.2) {
-                speeds.add(done * 8 / seconds / 1e6);
-            }
+            measure(speeds, done, t0);
             if (seconds < 1.0 && rung < top) {
                 rung++;
             }
         }
+        checkStopped();
         if (speeds.isEmpty()) {
             throw new IOException("no measurement");
         }
         Collections.sort(speeds);
         return speeds.get(Math.min(speeds.size() - 1, (int) (speeds.size() * 0.9)));
+    }
+
+    private static boolean over(long start) {
+        return SystemClock.elapsedRealtime() - start >= PHASE_MS;
+    }
+
+    /** A request's speed, if it ran long enough (200 ms) to tell. */
+    private static void measure(List<Double> speeds, long done, long t0) {
+        double seconds = (SystemClock.elapsedRealtimeNanos() - t0) / 1e9;
+        if (seconds >= 0.2) {
+            speeds.add(done * 8 / seconds / 1e6);
+        }
     }
 
     /** False for 200; true for a refusal to skip; an IOException after

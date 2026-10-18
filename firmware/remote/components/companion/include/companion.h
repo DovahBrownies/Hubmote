@@ -132,8 +132,8 @@ bool companion_media(companion_media_t *out);
 
 /* The speed test's state, from the companion's events (idle until one runs). */
 void companion_speed(companion_speed_t *out);
-/* Starts a speed test on the TV (companion 0.7+); ESP_ERR_INVALID_STATE
- * while one runs. Blocks for one short HTTP request. */
+/* Starts a speed test on the TV (companion 0.7+); ESP_FAIL if it can't,
+ * also while one runs (409). Blocks for one short HTTP request. */
 esp_err_t companion_speedtest(void);
 
 /* Copies up to max apps of the current list (sorted by label) into out and

@@ -498,17 +498,24 @@ static void update_view(void)
 
     lv_label_set_text_fmt(s_tile_value[0], "%ld %s", lroundf(s->imperial ? wx_kmh_to_mph(d->now.wind) : d->now.wind),
                           s->imperial ? "mph" : "km/h");
+    /* A value the forecast doesn't have shows "-", not the last place's */
     if (d->now.humidity >= 0) {
         lv_label_set_text_fmt(s_tile_value[1], "%d%%", d->now.humidity);
+    } else {
+        lv_label_set_text(s_tile_value[1], "-");
     }
     if (d->days[0].uv >= 0) {
         lv_label_set_text_fmt(s_tile_value[2], "%ld %s", lroundf(d->days[0].uv), uv_word(d->days[0].uv));
+    } else {
+        lv_label_set_text(s_tile_value[2], "-");
     }
     if (d->days[0].sunrise && d->days[0].sunset) {
         char rise[8], set[8];
         hhmm(rise, sizeof(rise), d->days[0].sunrise);
         hhmm(set, sizeof(set), d->days[0].sunset);
         lv_label_set_text_fmt(s_tile_value[3], "%s / %s", rise, set);
+    } else {
+        lv_label_set_text(s_tile_value[3], "-");
     }
 
     for (int i = 0; i < WX_HOURS; i++) {

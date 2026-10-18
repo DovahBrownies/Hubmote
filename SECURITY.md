@@ -24,7 +24,7 @@ please allow a few weeks for a fix.
 ## Supported versions
 
 Only the latest release of the firmware and of the companion app is
-supported. For the companion app, that means version 0.6 or later:
+supported. Older companion apps are a particular risk:
 
 - Versions before 0.6 lack the pairing lockout and the request limits.
   The lockout limits how often someone on your network can guess the

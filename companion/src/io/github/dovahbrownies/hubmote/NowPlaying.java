@@ -50,7 +50,8 @@ final class NowPlaying {
     };
     private volatile boolean available;
     /* {"pkg":..,"title":..,"subtitle":..,"state":..,"position":ms,"duration":ms} */
-    private volatile String json = "{\"state\":\"none\"}";
+    private volatile String json = "{\"state\":\"none\"}"; /* without the position */
+    private volatile PlaybackState playback; /* the position is reckoned from it at each /media */
     private String reported = ""; /* json without the position, as last sent to the remote */
 
     NowPlaying(CompanionService svc, Handler main) {
@@ -89,7 +90,10 @@ final class NowPlaying {
     }
 
     String json() {
-        return json;
+        String now = json;
+        long position = position(playback);
+        return position >= 0 && now.contains("\"pkg\"") ? now.substring(0, now.length() - 1) + ",\"position\":" + position + "}"
+                : now;
     }
 
     private void setSessions(List<MediaController> list) {
@@ -136,8 +140,8 @@ final class NowPlaying {
                     + ",\"state\":\"" + state(best.getPlaybackState()) + "\""
                     + ",\"duration\":" + Math.max(duration, 0) + "}";
         }
-        long position = position(best);
-        json = position >= 0 ? now.substring(0, now.length() - 1) + ",\"position\":" + position + "}" : now;
+        playback = best != null ? best.getPlaybackState() : null;
+        json = now;
         if (!now.equals(reported)) {
             reported = now;
             Log.i(CompanionService.TAG, "now playing: " + (best == null ? "nothing"
@@ -185,8 +189,7 @@ final class NowPlaying {
     }
 
     /** The position now, in ms, or -1 if unknown. */
-    private static long position(MediaController c) {
-        PlaybackState st = c != null ? c.getPlaybackState() : null;
+    private static long position(PlaybackState st) {
         if (st == null || st.getPosition() < 0) {
             return -1;
         }

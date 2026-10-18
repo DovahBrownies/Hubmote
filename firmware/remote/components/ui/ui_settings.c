@@ -237,6 +237,7 @@ static void on_done(lv_event_t *e)
 
 void ui_settings_shown(void)
 {
+    s_token_shown = false; /* hidden again each time Settings opens */
     select_section(s_section);
 }
 
@@ -1268,10 +1269,16 @@ void ui_settings_pick_time_zone(const char *region)
         ui_modal_list("Time zone", items, s_tz_region_count + 1, selected, on_tz_region, NULL);
         return;
     }
-    if (!s_tz_labels) {
+    if (!s_tz_labels || !s_tz_index) {
+        lv_free(s_tz_labels); /* both or neither: a half-made pair isn't kept */
+        lv_free(s_tz_index);
         s_tz_labels = lv_malloc(total * sizeof(*s_tz_labels));
         s_tz_index = lv_malloc(total * sizeof(*s_tz_index));
         if (!s_tz_labels || !s_tz_index) {
+            lv_free(s_tz_labels);
+            lv_free(s_tz_index);
+            s_tz_labels = NULL;
+            s_tz_index = NULL;
             return;
         }
     }

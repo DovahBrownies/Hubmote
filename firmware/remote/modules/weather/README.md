@@ -9,7 +9,8 @@ settings, when it refreshes, what it sends, and its code.
   high/low, wind, humidity, UV and sunrise/sunset. Then the hourly
   forecast, which scrolls sideways, and 7 days with temperature ranges on
   the week's scale.
-- **Home card:** now, high/low and the next 6 hours.
+- **Home card:** now and high/low. Medium and Large (the default) add as
+  many of the next 6 hours as fit; Small has no hours.
 - **Glance:** an icon and the temperature, in the top bar and the
   switcher.
 

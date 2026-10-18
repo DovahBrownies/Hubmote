@@ -44,7 +44,7 @@ static const hub_setting_t k_weather_settings[] = {
 static const hub_module_t s_weather = {
     .id = WEATHER_ID,
     .name = "Weather",
-    .icon = NULL,
+    .icon = ICON_W_CLOUD_SUN, /* as modules/weather/weather.c */
     .create_view = weather_ui_create_view,
     .create_card = weather_ui_create_card,
     .glance = weather_ui_glance,
@@ -79,7 +79,7 @@ void sim_show_demo_module(bool on)
 }
 
 /* Modules that register themselves (HUB_MODULE), as on the remote. */
-static const hub_module_t *s_registered[8];
+static const hub_module_t *s_registered[HUB_MODULES_MAX];
 static size_t s_registered_count;
 
 void hub_module_register(const hub_module_t *module)
@@ -111,19 +111,19 @@ static size_t modules(const hub_module_t **out)
 
 size_t hub_module_count(void)
 {
-    const hub_module_t *list[8];
+    const hub_module_t *list[HUB_MODULES_MAX + 2]; /* the registered, Weather, the demo */
     return modules(list);
 }
 
 const hub_module_t *hub_module_get(size_t index)
 {
-    const hub_module_t *list[8];
+    const hub_module_t *list[HUB_MODULES_MAX + 2]; /* the registered, Weather, the demo */
     return index < modules(list) ? list[index] : NULL;
 }
 
 const hub_module_t *hub_module_find(const char *id)
 {
-    const hub_module_t *list[8];
+    const hub_module_t *list[HUB_MODULES_MAX + 2]; /* the registered, Weather, the demo */
     size_t n = modules(list);
     for (size_t i = 0; id && i < n; i++) {
         if (strcmp(list[i]->id, id) == 0) {
@@ -191,6 +191,11 @@ void hub_ui_async(void (*fn)(void *arg), void *arg)
 /* --- Time: fixed, so screenshots don't change from run to run ----------------- */
 
 static int32_t s_offset;
+
+bool hub_time_known(void)
+{
+    return true;
+}
 
 bool hub_time_valid(void)
 {

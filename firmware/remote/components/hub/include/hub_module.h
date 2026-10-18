@@ -51,6 +51,8 @@ typedef enum {
     HUB_EV_MINUTE,       /* once a minute */
     HUB_EV_NOW_PLAYING,  /* what the TV plays changed: hub_now_playing() */
     HUB_EV_TV,           /* the TV turned on or off, or another app came to the front: hub_tv_state() */
+    HUB_EV_OFF,          /* the user switched the module off: stop timers, release awake holds; no events
+                          * come until it is back on (then HUB_EV_NETWORK_UP if the network is up) */
 } hub_event_t;
 
 /*

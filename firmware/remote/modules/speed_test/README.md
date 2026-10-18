@@ -21,11 +21,15 @@ failed.
 
 The companion asks Cloudflare's speed test (speed.cloudflare.com):
 
-- **Latency:** the median time of ten empty requests, less the time
-  Cloudflare reports spending on them.
-- **Download and upload:** requests that grow (1 MB, then up to 100 MB)
-  until each takes about a second, for 6 seconds or 250 MB each. The
-  result is the 90th percentile of the requests' speeds.
+- **Latency:** the median time of empty requests, less the time
+  Cloudflare reports spending on them. It sends up to 11 and drops the
+  first (it opens the connection); it stops after 6 seconds once it has 3,
+  and after 20 seconds in any case.
+- **Download and upload:** requests that grow (1, 2.5, 10, 25, then 50 MB;
+  uploads stop at 25 MB) until each takes about a second, for 6 seconds or
+  250 MB each. The 6 seconds cut the last request short. A size Cloudflare
+  refuses makes the test step back to the size below. The result is the
+  90th percentile of the requests' speeds.
 
 A test on a fast line moves up to about 500 MB.
 

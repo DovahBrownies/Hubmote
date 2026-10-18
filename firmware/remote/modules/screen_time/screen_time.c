@@ -200,8 +200,8 @@ static void refresh(void);
 static int32_t today(void)
 {
     struct tm now;
-    if (!hub_time_local(&now)) {
-        return 0;
+    if (!hub_time_known() || !hub_time_local(&now)) {
+        return 0; /* not yet: the date could still be UTC's */
     }
     return (now.tm_year + 1900) * 10000 + (now.tm_mon + 1) * 100 + now.tm_mday;
 }
@@ -224,9 +224,11 @@ static void roll_day(void)
         s_told = false;
         s_up_seen = false;
     }
-    s.day = day;
+    if (day > was) { /* forward only: a time zone moved back and forth keeps the day's count */
+        s.day = day;
+    }
     taskEXIT_CRITICAL(&s_mux);
-    if (day != was) {
+    if (day > was) {
         ESP_LOGI(TAG, "%s", new_day ? "a new day" : "the date is set");
         save();
         refresh();
@@ -688,6 +690,7 @@ static void event(hub_event_t ev)
 {
     switch (ev) {
     case HUB_EV_MINUTE:
+        tv_changed(); /* in step after being switched off and on */
         roll_day();
         count_minute();
         check();
@@ -702,6 +705,15 @@ static void event(hub_event_t ev)
     case HUB_EV_NETWORK_DOWN:
     case HUB_EV_SCREEN_OFF:
     case HUB_EV_NOW_PLAYING:
+        break;
+    case HUB_EV_OFF:
+        /* Switched off: no TV turned off later, no remote kept awake */
+        esp_timer_stop(s_off_timer);
+        if (s_held) {
+            hub_release_awake();
+            s_held = false;
+        }
+        s_tv_on = false;
         break;
     }
 }

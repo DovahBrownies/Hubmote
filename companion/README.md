@@ -217,9 +217,12 @@ These need a token, except `/status`.
   until the message goes. A new message replaces the one showing. `400`
   without text or with too much (0.7+).
 - **`POST /speedtest`** starts an internet speed test on the TV, in the
-  background: latency (ten empty requests), then download, then upload
-  against speed.cloudflare.com, about 15 s in all. `409` while one runs
-  (0.7+).
+  background: latency, then download, then upload against
+  speed.cloudflare.com, about 15 s in all. `409` while one runs (0.7+).
+  How it measures is in the
+  [Internet speed module's README](../firmware/remote/modules/speed_test/README.md#how-it-measures).
+  Each part has a deadline that cuts its last request short, and a size
+  Cloudflare refuses makes it step back to a smaller one (0.8+).
 - **`GET /speedtest`** says how it goes:
   `{"state":"idle|latency|download|upload|done|failed","progress":0-100,"ping":ms,"down":Mbit/s,"up":Mbit/s}`.
   While it runs the numbers are the current request's; at `done`, the
@@ -228,8 +231,9 @@ These need a token, except `/status`.
   APK at U (http or https, N bytes, that SHA-256 in hex), in the
   background ([below](#updating-itself)). `400` if the request is unusable
   or the TV doesn't let apps install.
-- **`GET /events`** stays open and sends one JSON line per change,
-  starting with the current state:
+- **`GET /events`** stays open and sends one JSON line per change. On
+  connecting it sends the focused field, and the last speed test's result
+  if one ran (0.8+):
   - `{"field":"none|text|password|number","id":N}`. `id` changes whenever
     a different field gets focus.
   - While updating: `{"update":"downloading|installing|confirm|failed"}`.

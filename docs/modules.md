@@ -212,6 +212,7 @@ Every callback is optional.
 | `HUB_EV_MINUTE` | every 60 s from start-up (not on the minute) | periodic refresh, clocks |
 | `HUB_EV_NOW_PLAYING` | what the TV plays changed | read `hub_now_playing()` |
 | `HUB_EV_TV` | the TV turned on or off, or another app came to the front | read `hub_tv_state()` |
+| `HUB_EV_OFF` | the user switched the module off | stop timers, release `hub_hold_awake()` |
 
 At start-up the screen is on, and no `HUB_EV_SCREEN_ON` is sent for it.
 
@@ -227,8 +228,9 @@ shows nowhere.
 
 - **Switching it on later** runs `init` then (once), and sends
   `HUB_EV_NETWORK_UP` if the network is up.
-- **Switching it off** just stops the events. So keep nothing running
-  that events don't control.
+- **Switching it off** sends `HUB_EV_OFF`, then no more events. Stop your
+  timers there and release any `hub_hold_awake()`, so nothing of yours
+  runs on.
 
 ## Threads
 
@@ -431,6 +433,9 @@ the time zone in **Settings > Modules**:
 
 `hub_time_utc_offset()` gives the offset in use now. A module that knows a
 place should still report its offset, for remotes left on Automatic.
+`hub_time_known()` says whether local time can be trusted yet (the clock
+is set and the zone known); until a place is reported, Automatic's local
+time is UTC, so wait for it before keeping anything by date.
 
 ## The look (`ui_kit.h`)
 

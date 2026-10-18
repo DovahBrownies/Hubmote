@@ -20,7 +20,8 @@ and other devices over infrared (IR), like an ordinary remote.
   it learns them from the TV's own remote. It can learn other IR devices
   too, such as an HDMI switch or a soundbar.
 - **Modules, themes and battery power.** A Home tab holds modules, small
-  add-ons: Weather and a sleep timer so far. You can pick one of five themes. The
+  add-ons: Weather, a sleep timer, screen time, guest Wi-Fi and an internet
+  speed test so far. You can pick one of five themes. The
   remote can run on a battery, with a deep sleep to save power.
 - **No build tools needed.** You install it from a web page in Chrome or
   Edge. Later updates come from the remote itself.

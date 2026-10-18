@@ -63,6 +63,11 @@ static const char *TAG = "update";
 #define JSON_MAX       8192 /* update.json's size limit: tools/web/make_site.py checks it */
 #define TASK_STACK     8192 /* TLS; internal RAM, as it writes flash */
 #define SIG_MAX        128  /* base64 of an ECDSA P-256 signature: 72 bytes of DER at most */
+#ifdef CONFIG_HM_UPDATE_AUTO /* a bool option: undefined when off */
+#define AUTO_CHECKS true
+#else
+#define AUTO_CHECKS false
+#endif
 
 static TaskHandle_t s_task;
 static update_cb_t s_cb;
@@ -415,7 +420,7 @@ static void task(void *arg)
         }
         uint32_t bits = 0;
         bool woken = xTaskNotifyWait(0, UINT32_MAX, &bits, wait) == pdTRUE;
-        if ((bits & BIT_NET) && CONFIG_HM_UPDATE_AUTO && !next_auto) {
+        if ((bits & BIT_NET) && AUTO_CHECKS && !next_auto) {
             next_auto = esp_timer_get_time() + FIRST_CHECK_US;
         }
         if (bits & BIT_INSTALL) {

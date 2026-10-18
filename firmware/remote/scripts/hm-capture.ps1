@@ -47,6 +47,9 @@ if ($Reset) {
     Start-Sleep -Milliseconds 300
 }
 
+# .NET resolves relative paths against its own current folder, not
+# PowerShell's: make -Out absolute first.
+$Out = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Out)
 [System.IO.File]::WriteAllText($Out, "")
 $sp = Open-Port
 $end = (Get-Date).AddSeconds($Seconds)

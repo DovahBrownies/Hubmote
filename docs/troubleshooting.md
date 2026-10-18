@@ -146,7 +146,9 @@ the remote changes until an install completes.
 
 To find out why it failed, look for the `update:` lines in the
 [log](#logs). The usual causes are no internet, a download cut short, or a
-checksum mismatch (the download didn't match the release).
+checksum mismatch (the download didn't match the release). A release
+without a valid signature isn't offered at all: the remote only installs
+firmware the project signed.
 
 ## Logs
 
@@ -229,9 +231,10 @@ adb logcat -s HubmoteCompanion
 | `ctrl: text (N chars) via companion: ESP_OK` | Typing through the companion (lengths only, never the text) |
 | `ir_ctl: tv <key> (...): ESP_OK` | An IR code was sent |
 | `update: release 0.1.1, running 0.1.0: update available` | Updates from the releases |
+| `update: release X: no valid signature for <board>, not offered` | A release that isn't the project's, or a broken site: not installed |
 | `ota: new firmware confirmed (ota_1)` | A new version reached Wi-Fi, so it stays |
 | `battery: on USB (...)`, `battery: on battery (...)` | The power source changed |
-| `ctrl: heap ...: internal N KB free` | Memory. On the 7B, 90-115 KB internal is normal |
+| `ctrl: heap ...: internal N KB free` | Memory. On the 7B, about 85 KB internal before connecting and 60 KB after is normal |
 | `main: turned on by touch` | Woken from deep sleep |
 
 When the TV doesn't accept the remote during first setup, pairing starts

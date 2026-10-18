@@ -318,6 +318,14 @@ static void init(void)
     }
 }
 
+/* Switched off while running: the timer stops (LVGL task, as its buttons). */
+static void stop_ui(void *arg)
+{
+    if (minutes_left()) {
+        cancel();
+    }
+}
+
 static void event(hub_event_t ev)
 {
     switch (ev) {
@@ -332,6 +340,9 @@ static void event(hub_event_t ev)
     case HUB_EV_SCREEN_OFF:
     case HUB_EV_NOW_PLAYING:
     case HUB_EV_TV:
+        break;
+    case HUB_EV_OFF:
+        hub_ui_async(stop_ui, NULL);
         break;
     }
 }

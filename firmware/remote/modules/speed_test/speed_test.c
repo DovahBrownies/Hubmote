@@ -402,6 +402,7 @@ static void event(hub_event_t ev)
     case HUB_EV_MINUTE:
     case HUB_EV_NOW_PLAYING:
     case HUB_EV_TV:
+    case HUB_EV_OFF:
         break;
     }
 }

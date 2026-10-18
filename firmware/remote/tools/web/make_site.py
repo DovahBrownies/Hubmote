@@ -41,12 +41,17 @@ Paths are relative to firmware/remote. The version comes from the image
 It refuses an app image that contains a value from secrets.env (a Wi-Fi
 password, the update token): a site is for others to download. Build with
 HM_NO_SECRETS, as scripts/hm-web.ps1 does. Only the key's name is printed.
+It also refuses a developer build (HM_DEVELOPER: an update server, devtools,
+http:// updates), unless --developer says it's for a test site, and an image
+whose built-in update key (main/update_key.pem, or a test build's
+HM_UPDATE_KEY) isn't --public's: remotes would refuse the next release.
 """
 
 import argparse
 import base64
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -116,11 +121,22 @@ def write_update(path: Path, update: dict):
     path.write_text(text, encoding="utf-8", newline="\n")
 
 
+def config_of(build: Path) -> dict:
+    config = build / "config" / "sdkconfig.json"
+    return json.loads(config.read_text(encoding="utf-8")) if config.is_file() else {}
+
+
+def pem_body(path: Path) -> bytes:
+    """A PEM file's base64 lines, as the image embeds them (line ends aside)."""
+    lines = path.read_text(encoding="utf-8").replace("\r", "").split("\n")
+    return "\n".join(l for l in lines if l and not l.startswith("-----")).encode()
+
+
 def board_of(build: Path) -> dict:
     """The board a build is for: its id from the build's configuration, its
     name and whether it is untested from its header."""
     config = build / "config" / "sdkconfig.json"
-    board_id = json.loads(config.read_text(encoding="utf-8")).get("HM_BOARD_ID") if config.is_file() else None
+    board_id = config_of(build).get("HM_BOARD_ID")
     if not board_id:
         sys.exit(f"no HM_BOARD_ID in {config} (build first)")
     header = (PROJECT / "components" / "board" / "boards" / f"{board_id}.h").read_text(encoding="utf-8")
@@ -132,16 +148,23 @@ def board_of(build: Path) -> dict:
     }
 
 
-def add_board(build: Path, out: Path) -> dict:
+def add_board(build: Path, out: Path, developer: bool, public: Path) -> dict:
     """Copies one build's images into out/<id>/ with their manifest;
     returns the board's id, version, build time and update.json entry."""
     missing = [src for src, _, _ in PARTS if not (build / src).is_file()]
     if missing:
         sys.exit(f"not in {build}: {', '.join(missing)} (build first)")
-    leaked = secrets_in((build / "hubmote.bin").read_bytes())
+    image = (build / "hubmote.bin").read_bytes()
+    leaked = secrets_in(image)
     if leaked:
         sys.exit(f"{build / 'hubmote.bin'} contains {', '.join(leaked)} from secrets.env: "
                  "build it with -D HM_NO_SECRETS=1 (scripts/hm-web.ps1 does)")
+    if config_of(build).get("HM_DEVELOPER") and not developer:
+        sys.exit(f"{build} is a developer build (update server, devtools): build the release "
+                 "(scripts/hm-web.ps1), or pass --developer for a test site")
+    if public.is_file() and pem_body(public).split(b"\n")[0] not in image.replace(b"\r", b""):
+        sys.exit(f"{build / 'hubmote.bin'} doesn't carry {public.name} as its update key "
+                 "(a stale HM_UPDATE_KEY in its CMakeCache?): remotes would refuse the next release")
     board = board_of(build)
     folder = out / board["id"]
     if folder.exists():
@@ -206,9 +229,16 @@ def add_companion(out: Path, folder: Path, any_key: bool):
     print(f"companion {info['version']} (code {info['code']}, {info['key']} key): {name}")
 
 
+def openssl_path() -> str:
+    """openssl on the PATH, or Git for Windows' own."""
+    found = shutil.which("openssl")
+    git = Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Git" / "usr" / "bin" / "openssl.exe"
+    return found or (str(git) if git.is_file() else "openssl")
+
+
 def openssl(*args, data: bytes = b"") -> bytes:
     try:
-        return subprocess.run(["openssl", *args], input=data, capture_output=True, check=True).stdout
+        return subprocess.run([openssl_path(), *args], input=data, capture_output=True, check=True).stdout
     except FileNotFoundError:
         sys.exit("--sign needs the openssl command")
     except subprocess.CalledProcessError as e:
@@ -248,6 +278,7 @@ def main():
     ap.add_argument("--sign", metavar="KEY", help="sign the images in update.json with this private key (PEM)")
     ap.add_argument("--public", metavar="PEM", default="main/update_key.pem",
                     help="its public half, as the firmware has it (a test build's HM_UPDATE_KEY)")
+    ap.add_argument("--developer", action="store_true", help="allow developer builds (a test site)")
     args = ap.parse_args()
     builds = [(PROJECT / b).resolve() for b in args.build or ["build-web"]]
     out = (PROJECT / args.out).resolve()
@@ -278,7 +309,8 @@ def main():
     # running compares the version with its own (Settings > About) and
     # installs its board's image.
     # Tested boards first, then by name: the page lists them in this order.
-    boards = sorted((add_board(build, out) for build in builds),
+    public = (PROJECT / args.public).resolve()
+    boards = sorted((add_board(build, out, args.developer, public) for build in builds),
                     key=lambda b: (b["entry"]["untested"], b["entry"]["name"]))
     versions = sorted({b["version"] for b in boards})
     if len(versions) > 1:

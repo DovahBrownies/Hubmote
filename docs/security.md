@@ -181,9 +181,10 @@ Notes:
   rarely name the network.
 - It does show the TV's name and the Weather place, which is often the
   home's town.
-- Debug-level lines do print field text, but they aren't compiled in at
-  the default level (`CONFIG_LOG_MAXIMUM_LEVEL` INFO). Don't raise the
-  level on a shared network.
+- Debug-level lines add field labels and the links of apps opened (still
+  only the length of typed text), but they aren't compiled in at the
+  default level (`CONFIG_LOG_MAXIMUM_LEVEL` INFO). Don't raise the level
+  on a shared network.
 - The remote serves one client, the newest.
 - The PC tools drop control characters from what they show and save.
 
@@ -329,9 +330,14 @@ To get a new key on the remote, erase the remote with the web installer
   connect, header and body deadlines are checked between reads, and a
   read can wait 5 s. Requests run on a worker task of their own, so the
   rest of the remote keeps responding, but typing and launching wait.
-- **No signature on release images.** Updates from the releases should
-  check a signature on the image, not only the HTTPS download and a hash
-  from the same site.
+- **The companion entry in `update.json` isn't signed.** Only the
+  firmware images are. Android's own checks guard the companion: it
+  installs only an APK signed with the same key as the installed app, and
+  only a newer version.
+- **Pairing the companion can be disturbed from the network.** Anyone on
+  it can cancel a pairing in progress (`/pair/cancel`) or use up wrong
+  codes until pairing locks, for up to 4 hours. They can't pair without
+  the code on the TV.
 - **Certificate dates aren't checked**, because there is no trusted clock
   at start-up. So an expired certificate is accepted.
 - **Developer builds are for your own network.** Their update server and

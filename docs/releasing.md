@@ -89,7 +89,7 @@ whole workflow: seven firmware jobs, in about 10 minutes.
 
 ## Once, before the first release
 
-Do these three things once, in this order.
+Do these four things once, in this order.
 
 ### 1. A fresh history
 
@@ -150,7 +150,10 @@ need a public repository. So go in this order:
 2. Make the repository public (**Settings > General > Change
    visibility**).
 3. Apply the settings below.
-4. Add the signing key ([step 3](#3-the-companions-signing-key)).
+4. Add the signing keys: the companion's
+   ([step 3](#3-the-companions-signing-key)) and the update signing key
+   ([step 4](#4-the-update-signing-key)). Without either secret a tag build
+   fails.
 5. Push the first tag.
 
 You can apply each setting with `gh`, or on the settings page named next
@@ -255,9 +258,11 @@ and give it to the workflow.
 > If you lose the key, users must uninstall the companion before they can
 > install the next version.
 
-Make the key with keytool, in PowerShell:
+Make the key with keytool, in PowerShell. It goes in your home folder, not
+in the repository:
 
 ```powershell
+cd $HOME
 $kt = "$env:LOCALAPPDATA\Android\jdk-17\bin\keytool.exe"
 & $kt -genkeypair -keystore hubmote-release.keystore -alias hubmote -keyalg RSA -keysize 4096 `
     -validity 10000 -dname "CN=Hubmote"

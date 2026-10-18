@@ -70,9 +70,10 @@ static void run(const request_t *r)
 
 static void http_task(void *arg)
 {
+    QueueHandle_t queue = arg; /* s_queue is set only once this task exists */
     request_t r;
     for (;;) {
-        if (xQueueReceive(s_queue, &r, portMAX_DELAY) == pdTRUE) {
+        if (xQueueReceive(queue, &r, portMAX_DELAY) == pdTRUE) {
             run(&r);
             free(r.url);
         }
@@ -84,11 +85,25 @@ esp_err_t hub_http_get(const char *url, size_t max_len, hub_http_done_t done, vo
     if (!url || !done || max_len == 0) {
         return ESP_ERR_INVALID_ARG;
     }
-    if (!s_queue) {
-        s_queue = xQueueCreate(QUEUE_LEN, sizeof(request_t));
-        if (!s_queue || xTaskCreatePinnedToCore(http_task, "hub_http", STACK, NULL, 4, NULL, 0) != pdPASS) {
-            return ESP_ERR_NO_MEM;
+    /* The worker starts with the first request, from whichever task: made
+     * once, and a queue only kept with a task to read it. */
+    static portMUX_TYPE s_start_mux = portMUX_INITIALIZER_UNLOCKED;
+    static bool s_starting;
+    taskENTER_CRITICAL(&s_start_mux);
+    bool start = !s_queue && !s_starting;
+    s_starting |= start;
+    taskEXIT_CRITICAL(&s_start_mux);
+    if (start) {
+        QueueHandle_t q = xQueueCreate(QUEUE_LEN, sizeof(request_t));
+        if (q && xTaskCreatePinnedToCore(http_task, "hub_http", STACK, q, 4, NULL, 0) == pdPASS) {
+            s_queue = q;
+        } else if (q) {
+            vQueueDelete(q);
         }
+        s_starting = false;
+    }
+    if (!s_queue) {
+        return ESP_ERR_NO_MEM; /* or still starting on another task: try again */
     }
     request_t r = {.url = heap_caps_malloc(strlen(url) + 1, MALLOC_CAP_SPIRAM), .max_len = max_len,
                    .done = done, .ctx = ctx};

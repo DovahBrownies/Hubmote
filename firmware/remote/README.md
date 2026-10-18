@@ -235,10 +235,12 @@ When the TV's address changes, the remote finds it again by its mDNS name.
 | `ctrl` | `turn` | **Rotate 180°** |
 | `ctrl` | `theme` | The theme |
 | `ctrl` | `irtv_set`, `irtv_name`, `irtv_vol` | The IR TV |
+| `ctrl` | `home` | The Home tab's module cards: their order and sizes (**Arrange Home**) |
 | `wifi` | `ssid`, `pass` | The network's name and password |
 | `ota` | `token` | The update token |
 | `companion` | `token` | The token from pairing with companion 0.4+ |
 | `hub` | `tz` | The time zone (none: Automatic) |
+| `hub` | `utc_off` | The last UTC offset Weather reported, so local time is right from start-up while the zone is Automatic |
 | `hub_off` | The module's id | Modules switched off in Settings |
 | `m_<module>` | Set by the module | Each module's own settings, and the values of its declared settings (Settings > Modules) |
 
@@ -317,6 +319,13 @@ port 6470 of the TV. When the companion is reachable:
   typing pauses, once there are 3 or more characters, or at once on Enter.
   The values are `SEARCH_PAUSE_US` and `SEARCH_MIN_CHARS` in
   `main/ctrl_companion.c`.
+- **Messages on the TV** (companion 0.7+). `hub_notify()` with a module's
+  **Show on the TV** setting on sends the text to `/notify`, which shows it
+  at the top right of the TV for a few seconds.
+- **The speed test** (companion 0.7+). `hub_tv_speedtest()` starts it with
+  `/speedtest`; the progress and the result come back as `{"speed":...}`
+  events. The test itself runs on the TV (the companion README has the
+  details).
 
 ## IR
 
@@ -374,6 +383,10 @@ UI then leaves out what can't work (`ui_set_ir_caps()`).
   - It reads `update.json` at `HM_UPDATE_URL`, with the release's
     companion if there is one.
   - It compares versions. A release beats its own pre-releases.
+  - It offers a release only if its board's entry carries a valid
+    signature (`sig`, ECDSA P-256 over the board, version and SHA-256),
+    checked with the public key in `main/update_key.pem`. Test builds can
+    point `HM_UPDATE_KEY` at another public key.
   - It downloads its board's image (`HM_BOARD_ID`) into the spare slot,
     with size and SHA-256 checks.
   - It checks a minute after Wi-Fi comes up, then daily, and on request
@@ -475,7 +488,11 @@ There are more files besides these.
   it draws a preview of them.
 - **`tools/web/make_site.py`** assembles the installer site and
   `update.json` from release builds, one folder per board, optionally with
-  the companion. CI and `hm-web.ps1` use it.
+  the companion. CI and `hm-web.ps1` use it. With `--sign` and `--public`
+  it signs each board's image for updates; it refuses developer builds
+  unless given `--developer`.
+- **`tools/web/make_update_key.py`** makes the update signing key pair
+  once ([docs/releasing.md](../../docs/releasing.md)).
 - **`tools/time/gen_zones.py`** builds `components/hub/hub_tz.c`, the
   time zones and their rules, from the IANA tz database (needs the
   `tzdata` Python package).

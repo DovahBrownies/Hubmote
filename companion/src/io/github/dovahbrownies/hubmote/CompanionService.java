@@ -52,6 +52,7 @@ public final class CompanionService extends AccessibilityService {
     private NowPlaying nowPlaying;
     private SpeedTest speedTest;
     private View codeView; /* the pairing code on screen; main thread only */
+    private volatile String codeShown; /* its code, for callers on other threads */
     private View messageView; /* a message from the remote (/notify); main thread only */
 
     /* An app's own on-screen keyboard (OnScreenKeyboard), main thread only:
@@ -92,6 +93,9 @@ public final class CompanionService extends AccessibilityService {
         hideKeyboard(false);
         hideCode();
         main.post(this::removeMessageView);
+        if (speedTest != null) {
+            speedTest.stop(); /* a rebound service makes a new one: no two tests at once */
+        }
         if (updater != null) {
             updater.unregister();
         }
@@ -399,6 +403,10 @@ public final class CompanionService extends AccessibilityService {
     /** Shows a pairing code over whatever is on the TV, until it is used,
      * cancelled or expires. An accessibility overlay needs no permission. */
     void showCode(String code) {
+        if (code.equals(codeShown)) {
+            return; /* on screen already, its hide timer running: /pair/start again changes nothing */
+        }
+        codeShown = code;
         main.post(() -> {
             removeCodeView();
             LinearLayout box = new LinearLayout(this);
@@ -491,6 +499,7 @@ public final class CompanionService extends AccessibilityService {
     }
 
     private void removeCodeView() {
+        codeShown = null;
         if (codeView != null) {
             try {
                 ((WindowManager) getSystemService(WINDOW_SERVICE)).removeView(codeView);

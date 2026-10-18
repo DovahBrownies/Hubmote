@@ -58,7 +58,7 @@ LF, and CRLF for `.ps1`.
 - `firmware/remote/`: the real firmware (ESP-IDF 5.4.4, LVGL 9). See its
   README for the code layout.
   - `components/hub/`: the module platform (registry, events, HTTP worker,
-    storage, time). `components/ui/include/ui_kit.h` is the UI part
+    storage, time, actions on the TV and its data). `components/ui/include/ui_kit.h` is the UI part
     modules may use.
   - `modules/<id>/`: one component per module (Weather, Sleep timer, Screen time,
     Guest Wi-Fi, Internet speed), each with
@@ -274,8 +274,9 @@ untested: their facts and sources are in their headers in
 - **Threads.** Module `init`/`event` run on the controller task; LVGL only
   on the LVGL task or through `hub_ui_async()`.
 - **Modules act on the TV** through `hub_actions.h` (keys, IR TV keys,
-  turning the TV off, opening apps, what's playing, holding the remote
-  awake). The calls queue `MSG_HUB` for the controller (`handle_hub()` in
+  turning the TV off, opening apps, messages on the remote and the TV
+  (`hub_notify`), the TV's state, what's playing, the app list, the speed
+  test, holding the remote awake). The calls queue `MSG_HUB` for the controller (`handle_hub()` in
   `controller.c`), which takes the UI's own paths.
 - **Weather** (Open-Meteo, no key): the place's UTC offset sets the
   remote's local time (`hub_time`) while the time zone (Settings >
@@ -293,11 +294,14 @@ untested: their facts and sources are in their headers in
   `tools/web/make_update_key.py`; never handle it). CI's Pages job signs
   (`make_site.py --sign`). Test sites need a throwaway key and a test
   build with `-D HM_UPDATE_KEY=<its public half>` (`docs/building.md`).
-  To test before the repo is public: build in a scratch folder with
+  To test updates from a PC: build in a scratch folder with
   `HM_UPDATE_URL` pointing at a site on the PC (developer builds accept
-  http://), serve `make_site.py` output from a developer build made with
-  `-D HM_NO_SECRETS=1` (make_site refuses images with secrets.env values),
-  and put the remote back on its normal developer build afterwards.
+  http://) and that throwaway key; serve `make_site.py` output from a
+  developer build made with `-D HM_NO_SECRETS=1`, with `--developer` (it
+  refuses developer builds otherwise, and images with secrets.env values),
+  signed with `--sign <key> --public <its public half>`. The site's
+  version must be newer than the remote's. Put the remote back on its
+  normal developer build afterwards.
 - **Version.** `firmware/remote/version.txt` sets the app version
   (the coming release with `-dev`, `0.1.1-dev` after 0.1.0); reconfigure after changing it. Settings shows version and
   build time in the context chip (`ui_settings_version_text()`), and TV

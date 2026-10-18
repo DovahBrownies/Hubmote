@@ -279,23 +279,35 @@ esp_err_t tv_ir_learn(const char *key, const char *code)
         strlcpy(s_learned->name, "TV keys", sizeof(s_learned->name));
     }
     ir_button_t *b = NULL;
+    uint32_t used = 0; /* the slots taken: ir_store refuses a repeated one */
     for (int i = 0; i < s_learned->button_count; i++) {
+        used |= 1u << s_learned->buttons[i].slot;
         if (strcmp(s_learned->buttons[i].label, key) == 0) {
             b = &s_learned->buttons[i];
         }
     }
-    if (!b) {
+    bool added = !b;
+    if (added) {
         if (s_learned->button_count >= IR_STORE_MAX_BUTTONS) {
             return ESP_ERR_NO_MEM;
+        }
+        /* The TV's keys are found by name, not by place: any free slot will
+         * do (the key's index won't, past the 24 slots). */
+        int slot = 0;
+        while (slot < IR_STORE_MAX_BUTTONS && (used & (1u << slot))) {
+            slot++;
         }
         b = &s_learned->buttons[s_learned->button_count++];
         memset(b, 0, sizeof(*b));
         strlcpy(b->label, key, sizeof(b->label));
-        b->slot = (uint8_t)(index < IR_STORE_MAX_BUTTONS ? index : IR_STORE_MAX_BUTTONS - 1);
+        b->slot = (uint8_t)slot;
     }
     strlcpy(b->code, code, sizeof(b->code));
     esp_err_t err = ir_store_save(s_learned);
-    ESP_LOGI(TAG, "learned %s: %s", key, esp_err_to_name(err));
+    if (err != ESP_OK && added) {
+        s_learned->button_count--; /* not kept: it would block the next save too */
+    }
+    ESP_LOGI(TAG, "learned %s (key %d): %s", key, index, esp_err_to_name(err));
     return err;
 }
 
