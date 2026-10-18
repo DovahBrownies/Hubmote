@@ -25,6 +25,8 @@ final class SpeedTest {
     private static final String TAG = "HubmoteSpeed";
     private static final String BASE = "https://speed.cloudflare.com";
     private static final int PINGS = 11;              /* the first, with the TLS handshake, is dropped */
+    private static final int PINGS_MIN = 3;           /* enough to report, on a poor line */
+    private static final long PING_MS = 6000;         /* the latency's time, at most */
     private static final long PHASE_MS = 6000;        /* download, then upload */
     private static final long PHASE_BYTES = 250_000_000L; /* a fast line stops early */
     /* Request sizes, climbed while a request takes under a second. Cloudflare
@@ -60,6 +62,12 @@ final class SpeedTest {
         thread.setDaemon(true);
         thread.start();
         return true;
+    }
+
+    /** The {"speed":...} event line for a remote that just connected, or
+     * null before any test. */
+    String eventLine() {
+        return state.equals("idle") ? null : "{\"speed\":" + json() + "}";
     }
 
     String json() {
@@ -105,7 +113,12 @@ final class SpeedTest {
      * Cloudflare says it spent on it (Server-Timing). */
     private double latency() throws IOException {
         List<Double> ms = new ArrayList<>();
+        long start = SystemClock.elapsedRealtime();
+        IOException last = null;
         for (int i = 0; i < PINGS; i++) {
+            if (ms.size() >= PINGS_MIN && SystemClock.elapsedRealtime() - start > PING_MS) {
+                break; /* a slow line: enough samples */
+            }
             long t0 = SystemClock.elapsedRealtimeNanos();
             HttpURLConnection c = open("/__down?measId=" + measId + "&bytes=0");
             try {
@@ -121,10 +134,15 @@ final class SpeedTest {
                 if (i > 0) {
                     ms.add(Math.max(0, took));
                 }
+            } catch (IOException e) {
+                last = e; /* a lost sample; the others count */
             } finally {
                 c.disconnect();
             }
             report("latency", 10 * (i + 1) / PINGS, false);
+        }
+        if (ms.isEmpty()) {
+            throw last != null ? last : new IOException("no latency");
         }
         Collections.sort(ms);
         return ms.get(ms.size() / 2);
@@ -159,9 +177,10 @@ final class SpeedTest {
     /**
      * Downloads (or uploads) ever larger amounts, up the LADDER while a
      * request takes under a second, for PHASE_MS or PHASE_BYTES. A refused
-     * request is skipped (a rung down). The result is the 90th percentile of
-     * the requests that took 200 ms or more (a single slow start doesn't
-     * count), in Mbit/s.
+     * request is skipped (a rung down); one that fails (a stall the read
+     * timeout ends) ends the phase with what was measured, or the test if
+     * nothing was. The result is the 90th percentile of the requests that
+     * took 200 ms or more (a single slow start doesn't count), in Mbit/s.
      */
     private double transfer(boolean up, int fromProgress, int toProgress) throws IOException {
         List<Double> speeds = new ArrayList<>();
@@ -177,34 +196,42 @@ final class SpeedTest {
             long done = 0;
             HttpURLConnection c = open((up ? "/__up?measId=" + measId : "/__down?measId=" + measId + "&bytes=" + size));
             try {
-                if (up) {
-                    c.setDoOutput(true);
-                    c.setRequestMethod("POST");
-                    c.setRequestProperty("Content-Type", "application/octet-stream");
-                    c.setFixedLengthStreamingMode(size);
-                    try (OutputStream out = c.getOutputStream()) {
-                        while (done < size) {
-                            int n = (int) Math.min(buf.length, size - done);
-                            out.write(buf, 0, n);
-                            done += n;
-                            live(up, done, t0, start, fromProgress, toProgress);
+                try {
+                    if (up) {
+                        c.setDoOutput(true);
+                        c.setRequestMethod("POST");
+                        c.setRequestProperty("Content-Type", "application/octet-stream");
+                        c.setFixedLengthStreamingMode(size);
+                        try (OutputStream out = c.getOutputStream()) {
+                            while (done < size) {
+                                int n = (int) Math.min(buf.length, size - done);
+                                out.write(buf, 0, n);
+                                done += n;
+                                live(up, done, t0, start, fromProgress, toProgress);
+                            }
+                        }
+                        if (refused(c.getResponseCode(), ++refused)) {
+                            rung = Math.max(0, rung - 1);
+                            continue;
+                        }
+                    } else {
+                        if (refused(c.getResponseCode(), ++refused)) {
+                            rung = Math.max(0, rung - 1);
+                            continue;
+                        }
+                        try (InputStream in = c.getInputStream()) {
+                            for (int n; (n = in.read(buf)) > 0; ) {
+                                done += n;
+                                live(up, done, t0, start, fromProgress, toProgress);
+                            }
                         }
                     }
-                    if (refused(c.getResponseCode(), ++refused)) {
-                        rung = Math.max(0, rung - 1);
-                        continue;
+                } catch (IOException e) {
+                    if (speeds.isEmpty()) {
+                        throw e;
                     }
-                } else {
-                    if (refused(c.getResponseCode(), ++refused)) {
-                        rung = Math.max(0, rung - 1);
-                        continue;
-                    }
-                    try (InputStream in = c.getInputStream()) {
-                        for (int n; (n = in.read(buf)) > 0; ) {
-                            done += n;
-                            live(up, done, t0, start, fromProgress, toProgress);
-                        }
-                    }
+                    Log.i(TAG, (up ? "upload" : "download") + " stalled; keeping " + speeds.size() + " measurements");
+                    break;
                 }
             } finally {
                 c.disconnect();

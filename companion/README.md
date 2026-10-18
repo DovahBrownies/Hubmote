@@ -34,6 +34,9 @@ what.
 - **0.7:** shows the remote's messages at the top right of the TV
   (`/notify`), such as the Sleep timer's and Screen time's warnings, and
   runs an internet speed test for the remote (`/speedtest`).
+- **0.8:** the speed test copes with a poor connection: a stalled request
+  ends that part with what was measured, latency skips lost samples, and
+  a remote that reconnects is told how the test went.
 
 ## Files
 
@@ -233,7 +236,7 @@ These need a token, except `/status`.
   - When the title or playback state changes: `{"media":{...}}`, as
     `/media` without the position.
   - While a speed test runs, about twice a second: `{"speed":{...}}`, as
-    `/speedtest`.
+    `/speedtest`; and on connecting, once a test has run (0.8+).
   - An empty line every 15 s.
 
 ### Apps, icons and fields

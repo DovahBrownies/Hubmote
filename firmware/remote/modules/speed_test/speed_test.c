@@ -241,9 +241,10 @@ static void on_poll(lv_timer_t *t)
     hub_speedtest(&st);
     s_seen |= running_state(st.state);
     /* Done or failed counts once the TV has said it runs: until then they
-     * are the last test's. */
-    bool ended = (s_seen && (st.state == HUB_SPEED_DONE || st.state == HUB_SPEED_FAILED)) ||
-                 st.state == HUB_SPEED_UNAVAILABLE;
+     * are the last test's. The companion going offline for a moment
+     * doesn't end it (the TV goes on testing, and companion 0.8+ says how
+     * it ended when it is back); only GIVE_UP_US does. */
+    bool ended = s_seen && (st.state == HUB_SPEED_DONE || st.state == HUB_SPEED_FAILED);
     bool waited = esp_timer_get_time() - s_started_us > GIVE_UP_US;
     if (s_running && (ended || waited)) {
         s_running = false;

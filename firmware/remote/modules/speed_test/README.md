@@ -12,6 +12,11 @@ Tests the internet speed of the TV: download, upload and latency.
 
 Without the companion app 0.7 the screen says so, and **Test now** is off.
 
+On a poor connection the test still ends with what it could measure
+(companion 0.8+). If the remote loses the companion for a moment, the
+test goes on; after 90 seconds without an end, the remote calls it
+failed.
+
 ## How it measures
 
 The companion asks Cloudflare's speed test (speed.cloudflare.com):

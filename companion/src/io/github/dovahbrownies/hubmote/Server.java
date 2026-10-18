@@ -83,7 +83,8 @@ import java.util.concurrent.Semaphore;
  *                             while it updates, {"media":{...}} (as /media,
  *                             without the position) when the title or state
  *                             changes, {"speed":{...}} (as /speedtest)
- *                             while a speed test runs, and an empty line
+ *                             while a speed test runs (and on connecting,
+ *                             once one has run, 0.8+), and an empty line
  *                             every 15 s
  */
 final class Server {
@@ -401,8 +402,10 @@ final class Server {
 
     /** Streams events until the client goes away. */
     private void events(Socket c, InputStream in, OutputStream out) throws IOException {
+        String speed = svc.speedTest().eventLine(); /* how a test went, if one ran while it was away */
         out.write(("HTTP/1.1 200 OK\r\nContent-Type: application/x-ndjson\r\nCache-Control: no-cache\r\n"
-                + "Connection: close\r\n\r\n" + svc.fieldJson() + "\n").getBytes(StandardCharsets.UTF_8));
+                + "Connection: close\r\n\r\n" + svc.fieldJson() + "\n" + (speed != null ? speed + "\n" : ""))
+                .getBytes(StandardCharsets.UTF_8));
         out.flush();
         streams.add(out);
         try {

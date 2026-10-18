@@ -100,7 +100,7 @@ LF, and CRLF for `.ps1`.
   `install.py` / `install.ps1`), a pairing lockout and request limits, 0.7
   modules' messages at the top right of the TV (`/notify`, `hub_notify()`)
   and an internet speed test against Cloudflare's (`/speedtest`,
-  `hub_tv_speedtest()`). `setup-tools.ps1` installs JDK 17 and
+  `hub_tv_speedtest()`), 0.8 a speed test that copes with a poor line. `setup-tools.ps1` installs JDK 17 and
   the Android SDK; `build.ps1` builds it without Gradle; `install.ps1`
   installs and enables it over ADB.
 
