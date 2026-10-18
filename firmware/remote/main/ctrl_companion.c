@@ -69,6 +69,7 @@ typedef enum {
     REQ_PAIR_CANCEL,
     REQ_UPDATE,
     REQ_NOTIFY,
+    REQ_SPEEDTEST,
 } req_type_t;
 
 typedef struct {
@@ -164,6 +165,10 @@ static void run(const req_t *r)
         err = companion_notify(r->text, r->size);
         ESP_LOGI(TAG, "message on the TV: %s", esp_err_to_name(err));
         break;
+    case REQ_SPEEDTEST:
+        err = companion_speedtest();
+        ESP_LOGI(TAG, "speed test on the TV: %s", esp_err_to_name(err));
+        break;
     case REQ_UPDATE:
         err = companion_update(r->text, r->size, r->sha256);
         ESP_LOGI(TAG, "companion update request: %s", esp_err_to_name(err));
@@ -197,12 +202,12 @@ void ctrl_companion_launch(const char *package)
     request_text(REQ_LAUNCH, package);
 }
 
-#define NOTIFY_VERSION 7 /* companion 0.7 shows messages (/notify) */
+#define VERSION_07     7 /* companion 0.7: messages (/notify), the speed test */
 #define NOTIFY_SECONDS 10
 
 bool ctrl_companion_notify(const char *text)
 {
-    if (!s_companion_online || s_comp_code < NOTIFY_VERSION) {
+    if (!s_companion_online || s_comp_code < VERSION_07) {
         return false;
     }
     req_t r = {.type = REQ_NOTIFY, .size = NOTIFY_SECONDS};
@@ -338,6 +343,36 @@ void ctrl_companion_release(const update_companion_t *c)
 
 /* --- The companion's events ------------------------------------------------------------------ */
 
+bool ctrl_companion_speedtest(void)
+{
+    if (!s_companion_online || s_comp_code < VERSION_07) {
+        return false;
+    }
+    req_t r = {.type = REQ_SPEEDTEST};
+    return request(&r);
+}
+
+/* The speed test for modules: unavailable without companion 0.7 online. */
+static void show_speed(void)
+{
+    hub_speedtest_t h = {0};
+    if (s_companion_online && s_comp_code >= VERSION_07) {
+        companion_speed_t c;
+        companion_speed(&c);
+        static const hub_speed_state_t map[] = {
+            [COMPANION_SPEED_IDLE] = HUB_SPEED_IDLE,         [COMPANION_SPEED_LATENCY] = HUB_SPEED_LATENCY,
+            [COMPANION_SPEED_DOWNLOAD] = HUB_SPEED_DOWNLOAD, [COMPANION_SPEED_UPLOAD] = HUB_SPEED_UPLOAD,
+            [COMPANION_SPEED_DONE] = HUB_SPEED_DONE,         [COMPANION_SPEED_FAILED] = HUB_SPEED_FAILED,
+        };
+        h = (hub_speedtest_t){.state = map[c.state],
+                              .progress = c.progress,
+                              .ping_ms = c.ping_ms,
+                              .down_mbps = c.down_mbps,
+                              .up_mbps = c.up_mbps};
+    }
+    hub_set_speedtest(&h);
+}
+
 void ctrl_companion_event(const companion_event_t *e)
 {
     ui_set_companion(e->online ? UI_COMPANION_ON : e->needs_pairing ? UI_COMPANION_UNPAIRED : UI_COMPANION_NONE);
@@ -346,6 +381,9 @@ void ctrl_companion_event(const companion_event_t *e)
         break;
     case COMPANION_EVT_MEDIA:
         show_media();
+        break;
+    case COMPANION_EVT_SPEED:
+        show_speed();
         break;
     case COMPANION_EVT_UPDATE: {
         static const ui_companion_update_t map[] = {
@@ -386,6 +424,7 @@ void ctrl_companion_event(const companion_event_t *e)
         }
         show_companion_update();
         show_media();
+        show_speed();
         break;
     case COMPANION_EVT_APPS:
         show_companion_apps();

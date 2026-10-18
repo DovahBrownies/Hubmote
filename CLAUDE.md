@@ -60,7 +60,8 @@ LF, and CRLF for `.ps1`.
   - `components/hub/`: the module platform (registry, events, HTTP worker,
     storage, time). `components/ui/include/ui_kit.h` is the UI part
     modules may use.
-  - `modules/<id>/`: one component per module (Weather, Sleep timer, Screen time), each with
+  - `modules/<id>/`: one component per module (Weather, Sleep timer, Screen time,
+    Guest Wi-Fi, Internet speed), each with
     a `Kconfig.module` and a README.
   - `scripts/`: `hm-idf.ps1` (build/flash), `hm-ota.ps1` (firmware over
     Wi-Fi to `hubmote.local:8080`, token from `secrets.env`),
@@ -97,7 +98,9 @@ LF, and CRLF for `.ps1`.
   keyboard). 0.4 adds the pairing token, 0.5 updating itself when the remote
   asks, 0.6 what is playing (`/media`, with notification access granted by
   `install.py` / `install.ps1`), a pairing lockout and request limits, 0.7
-  modules' messages at the top right of the TV (`/notify`, `hub_notify()`). `setup-tools.ps1` installs JDK 17 and
+  modules' messages at the top right of the TV (`/notify`, `hub_notify()`)
+  and an internet speed test against Cloudflare's (`/speedtest`,
+  `hub_tv_speedtest()`). `setup-tools.ps1` installs JDK 17 and
   the Android SDK; `build.ps1` builds it without Gradle; `install.ps1`
   installs and enables it over ADB.
 

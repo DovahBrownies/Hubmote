@@ -216,6 +216,10 @@ static void screens(void)
     shot("sleep_timer");
     ui_module_open("screen_time");
     shot("screen_time");
+    ui_module_open("guest_wifi");
+    shot("guest_wifi");
+    ui_module_open("speed_test");
+    shot("speed_test");
 
     /* IR */
     ui_show_ir_tv();

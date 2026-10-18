@@ -37,7 +37,9 @@ Espressif components from the ESP Component Registry, fetched at build time
 LVGL (https://lvgl.io)
   MIT License. Copyright (c) LVGL Kft. Its built-in Montserrat 14 font
   (SIL Open Font License 1.1, with Font Awesome symbols) is compiled in as
-  LVGL's default font.
+  LVGL's default font. Its QR code widget, used by Guest Wi-Fi, includes
+  the QR Code generator library, MIT License, Copyright (c) Project Nayuki
+  (https://www.nayuki.io/page/qr-code-generator-library).
 
 esp_littlefs (https://github.com/joltwallet/esp_littlefs)
   MIT License. Copyright 2020 Brian Pugh. It contains littlefs
@@ -93,6 +95,11 @@ Open-Meteo (https://open-meteo.com)
   The Weather module's forecasts come from the Open-Meteo API, whose data is
   licensed under CC BY 4.0. The module shows the attribution "Weather data
   by Open-Meteo.com", which must stay.
+
+Cloudflare speed test (https://speed.cloudflare.com)
+  The companion app's speed test (the Internet speed module) downloads from
+  and uploads to Cloudflare's speed test service. Hubmote isn't affiliated
+  with Cloudflare.
 
 Models
 ------

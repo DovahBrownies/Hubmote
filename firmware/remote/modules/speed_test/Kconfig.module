@@ -1,0 +1,5 @@
+config HUB_MODULE_SPEED_TEST
+    bool "Internet speed"
+    default y
+    help
+        Tests the TV's internet speed (download, upload, latency) through the companion app.

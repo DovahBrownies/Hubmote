@@ -67,6 +67,7 @@ static struct {
     companion_update_t update;
     bool media_known; /* the companion reads media sessions (/status "media") */
     companion_media_t media; /* under lock */
+    companion_speed_t speed; /* under lock */
     companion_app_t *apps; /* written by the task only; copied out under lock */
     size_t count;
     uint32_t gen;
@@ -759,6 +760,36 @@ static void read_status(const char *host)
              s.can_update ? ", updates itself" : "");
 }
 
+static void set_speed(const cJSON *m)
+{
+    const cJSON *state = cJSON_GetObjectItemCaseSensitive(m, "state");
+    const char *st = cJSON_IsString(state) ? state->valuestring : "idle";
+    const cJSON *progress = cJSON_GetObjectItemCaseSensitive(m, "progress");
+    const cJSON *ping = cJSON_GetObjectItemCaseSensitive(m, "ping");
+    const cJSON *down = cJSON_GetObjectItemCaseSensitive(m, "down");
+    const cJSON *up = cJSON_GetObjectItemCaseSensitive(m, "up");
+    companion_speed_t now = {
+        .state = strcmp(st, "latency") == 0    ? COMPANION_SPEED_LATENCY
+                 : strcmp(st, "download") == 0 ? COMPANION_SPEED_DOWNLOAD
+                 : strcmp(st, "upload") == 0   ? COMPANION_SPEED_UPLOAD
+                 : strcmp(st, "done") == 0     ? COMPANION_SPEED_DONE
+                 : strcmp(st, "failed") == 0   ? COMPANION_SPEED_FAILED
+                                               : COMPANION_SPEED_IDLE,
+        .progress = cJSON_IsNumber(progress) ? progress->valueint : 0,
+        .ping_ms = cJSON_IsNumber(ping) ? (float)ping->valuedouble : 0,
+        .down_mbps = cJSON_IsNumber(down) ? (float)down->valuedouble : 0,
+        .up_mbps = cJSON_IsNumber(up) ? (float)up->valuedouble : 0,
+    };
+    xSemaphoreTake(s.lock, portMAX_DELAY);
+    companion_speed_state_t was = s.speed.state;
+    s.speed = now;
+    xSemaphoreGive(s.lock);
+    if (now.state != was) {
+        ESP_LOGI(TAG, "speed test: %s", st);
+    }
+    emit(COMPANION_EVT_SPEED);
+}
+
 static void handle_line(const char *line)
 {
     if (!line[0]) {
@@ -779,6 +810,10 @@ static void handle_line(const char *line)
     const cJSON *media = cJSON_GetObjectItemCaseSensitive(root, "media");
     if (cJSON_IsObject(media)) {
         set_media(media);
+    }
+    const cJSON *speed = cJSON_GetObjectItemCaseSensitive(root, "speed");
+    if (cJSON_IsObject(speed)) {
+        set_speed(speed);
     }
     const cJSON *f = cJSON_GetObjectItemCaseSensitive(root, "field");
     const cJSON *id = cJSON_GetObjectItemCaseSensitive(root, "id");
@@ -959,6 +994,17 @@ void companion_set_host(const char *host)
     }
 }
 
+void companion_speed(companion_speed_t *out)
+{
+    memset(out, 0, sizeof(*out));
+    if (!s.task) {
+        return;
+    }
+    xSemaphoreTake(s.lock, portMAX_DELAY);
+    *out = s.speed;
+    xSemaphoreGive(s.lock);
+}
+
 bool companion_media(companion_media_t *out)
 {
     memset(out, 0, sizeof(*out));
@@ -1063,6 +1109,11 @@ esp_err_t companion_search(const char *text)
 esp_err_t companion_enter(void)
 {
     return post("/enter");
+}
+
+esp_err_t companion_speedtest(void)
+{
+    return post("/speedtest");
 }
 
 esp_err_t companion_notify(const char *text, int seconds)

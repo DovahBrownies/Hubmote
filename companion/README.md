@@ -32,7 +32,8 @@ what.
   and `install.py` grant. Also a pairing lockout after wrong codes, and
   limits on requests.
 - **0.7:** shows the remote's messages at the top right of the TV
-  (`/notify`), such as the Sleep timer's and Screen time's warnings.
+  (`/notify`), such as the Sleep timer's and Screen time's warnings, and
+  runs an internet speed test for the remote (`/speedtest`).
 
 ## Files
 
@@ -42,6 +43,7 @@ what.
 | `src/.../Server.java` | The HTTP server (one thread per connection) and the event stream |
 | `src/.../Pairing.java` | Pairing codes and the paired remotes' tokens |
 | `src/.../Message.java` | A message at the top right of the TV, with a ring that empties until it goes (`/notify`) |
+| `src/.../SpeedTest.java` | The internet speed test against Cloudflare's speed test (`/speedtest`) |
 | `src/.../OnScreenKeyboard.java` | Finding an app's own on-screen keyboard and its keys |
 | `src/.../Apps.java` | The TV app list, and icons rendered to RGB565A8 |
 | `src/.../Updater.java` | Updating itself: download, checks, Android's package installer |
@@ -211,6 +213,14 @@ These need a token, except `/status`.
   10 if left out), over whatever is on screen, with a ring that empties
   until the message goes. A new message replaces the one showing. `400`
   without text or with too much (0.7+).
+- **`POST /speedtest`** starts an internet speed test on the TV, in the
+  background: latency (ten empty requests), then download, then upload
+  against speed.cloudflare.com, about 15 s in all. `409` while one runs
+  (0.7+).
+- **`GET /speedtest`** says how it goes:
+  `{"state":"idle|latency|download|upload|done|failed","progress":0-100,"ping":ms,"down":Mbit/s,"up":Mbit/s}`.
+  While it runs the numbers are the current request's; at `done`, the
+  result.
 - **`POST /update?url=U&size=N&sha256=H`** updates the companion from the
   APK at U (http or https, N bytes, that SHA-256 in hex), in the
   background ([below](#updating-itself)). `400` if the request is unusable
@@ -222,6 +232,8 @@ These need a token, except `/status`.
   - While updating: `{"update":"downloading|installing|confirm|failed"}`.
   - When the title or playback state changes: `{"media":{...}}`, as
     `/media` without the position.
+  - While a speed test runs, about twice a second: `{"speed":{...}}`, as
+    `/speedtest`.
   - An empty line every 15 s.
 
 ### Apps, icons and fields

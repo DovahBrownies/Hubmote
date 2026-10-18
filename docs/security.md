@@ -41,6 +41,7 @@ It does not try to stop:
 | Companion app on the Streamer | TV port 6470 | A token from pairing, with limits |
 | Updates from the releases | The project's site (GitHub Pages), HTTPS | Certificate, size and SHA-256 checked |
 | Module web requests (Weather) | Internet | HTTPS for Weather; not enforced for others |
+| Speed test (companion app, when asked) | The TV to speed.cloudflare.com | HTTPS, with Android's certificate checks |
 | Clock | `pool.ntp.org` (SNTP) | None |
 | mDNS | Local network | None |
 
@@ -113,6 +114,8 @@ It does not try to stop:
   - open Google TV's search;
   - read what is playing;
   - show a short message over the TV picture for up to 30 s (0.7+);
+  - run an internet speed test from the TV to speed.cloudflare.com, which
+    moves up to about 500 MB on a fast line (0.7+);
   - make the companion install a newer version of itself from a given
     address.
 
@@ -195,7 +198,7 @@ In NVS (the `nvs` partition), not encrypted:
 | `wifi` | The Wi-Fi network name and password |
 | `ota` | The update token (developer builds) |
 | `companion` | The companion token |
-| `ctrl`, `hub`, `hub_off`, `m_<module>` | Settings, the time zone and its UTC offset (`hub`); Weather's include the chosen place's name and coordinates; Screen time's include today's minutes per app |
+| `ctrl`, `hub`, `hub_off`, `m_<module>` | Settings, the time zone and its UTC offset (`hub`); Weather's include the chosen place's name and coordinates; Screen time's include today's minutes per app; Guest Wi-Fi's the guest network's name and password (also shown on screen); Internet speed's its last results |
 
 In the `storage` partition (LittleFS):
 

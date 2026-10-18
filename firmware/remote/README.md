@@ -433,7 +433,8 @@ UI then leaves out what can't work (`ui_set_ir_caps()`).
   are in `host_test/` (`run_host_tests.ps1`).
 - **`modules/`** has one component per module, each with a
   `Kconfig.module` and a README. There are `weather/` (Open-Meteo), with
-  a host test in `test/`, `sleep_timer/` and `screen_time/`.
+  a host test in `test/`, `sleep_timer/`, `screen_time/`, `guest_wifi/`
+  and `speed_test/`.
 
 ### The UI (`components/ui`)
 

@@ -1,0 +1,5 @@
+config HUB_MODULE_GUEST_WIFI
+    bool "Guest Wi-Fi"
+    default y
+    help
+        A QR code and the details of a guest network, for guests to join it.

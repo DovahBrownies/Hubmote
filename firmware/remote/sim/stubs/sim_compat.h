@@ -10,3 +10,5 @@
 
 size_t sim_strlcpy(char *dst, const char *src, size_t size);
 #define strlcpy sim_strlcpy
+size_t sim_strlcat(char *dst, const char *src, size_t size);
+#define strlcat sim_strlcat

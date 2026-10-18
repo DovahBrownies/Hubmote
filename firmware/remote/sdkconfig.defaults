@@ -52,3 +52,5 @@ CONFIG_LV_USE_CUSTOM_MALLOC=y
 # Dark until ui_init() picks light or dark from the theme (ui_themes.c).
 CONFIG_LV_THEME_DEFAULT_DARK=y
 CONFIG_LV_FONT_MONTSERRAT_14=y
+# QR codes (Guest Wi-Fi), LVGL's widget on Nayuki's QR code generator (MIT).
+CONFIG_LV_USE_QRCODE=y

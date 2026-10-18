@@ -50,6 +50,7 @@ public final class CompanionService extends AccessibilityService {
     private Pairing pairing;
     private Updater updater;
     private NowPlaying nowPlaying;
+    private SpeedTest speedTest;
     private View codeView; /* the pairing code on screen; main thread only */
     private View messageView; /* a message from the remote (/notify); main thread only */
 
@@ -78,6 +79,7 @@ public final class CompanionService extends AccessibilityService {
         updater = new Updater(this);
         updater.register();
         nowPlaying = new NowPlaying(this, main);
+        speedTest = new SpeedTest(this);
         server = new Server(this, PORT);
         server.start();
         Log.i(TAG, "listening on port " + PORT);
@@ -363,6 +365,18 @@ public final class CompanionService extends AccessibilityService {
 
     NowPlaying nowPlaying() {
         return nowPlaying;
+    }
+
+    SpeedTest speedTest() {
+        return speedTest;
+    }
+
+    /** The speed test's progress or result: tell the remote. */
+    void speedChanged(String json) {
+        Server s = server;
+        if (s != null) {
+            s.broadcast("{\"speed\":" + json + "}");
+        }
     }
 
     /** What is playing changed (title or state): tell the remote. */

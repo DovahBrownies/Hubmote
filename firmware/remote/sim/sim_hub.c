@@ -2,7 +2,8 @@
  * The simulator's stand-in for the module platform (components/hub) and the
  * Weather module's data side (modules/weather/weather.c): Weather, showing
  * the forecast from the module's test fixture, and the modules that
- * register themselves (Screen time, the Sleep timer).
+ * register themselves (Screen time, the Sleep timer, Guest Wi-Fi, Internet
+ * speed).
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,6 +27,12 @@ size_t sim_strlcpy(char *dst, const char *src, size_t size)
         dst[k] = '\0';
     }
     return n;
+}
+
+size_t sim_strlcat(char *dst, const char *src, size_t size)
+{
+    size_t used = strnlen(dst, size);
+    return used + (used < size ? sim_strlcpy(dst + used, src, size - used) : strlen(src));
 }
 
 /* --- Modules ----------------------------------------------------------------- */
@@ -72,7 +79,7 @@ void sim_show_demo_module(bool on)
 }
 
 /* Modules that register themselves (HUB_MODULE), as on the remote. */
-static const hub_module_t *s_registered[4];
+static const hub_module_t *s_registered[8];
 static size_t s_registered_count;
 
 void hub_module_register(const hub_module_t *module)
@@ -351,8 +358,25 @@ esp_err_t hub_kv_get_i32(const char *module, const char *key, int32_t *out)
     return ESP_FAIL;
 }
 
+/* The TV's last speed test, finished */
+void hub_speedtest(hub_speedtest_t *out)
+{
+    *out = (hub_speedtest_t){.state = HUB_SPEED_DONE, .progress = 100, .ping_ms = 11, .down_mbps = 312.4f,
+                             .up_mbps = 41.2f};
+}
+
+esp_err_t hub_tv_speedtest(void)
+{
+    return ESP_OK;
+}
+
 esp_err_t hub_kv_get_str(const char *module, const char *key, char *out, size_t len)
 {
+    if (strcmp(module, "speed_test") == 0 && strcmp(key, "hist") == 0) {
+        /* No clock in the simulator's results (0): they show "-" for the time */
+        strlcpy(out, "0,312.4,41.2,11.0;0,298.0,39.8,12.0;0,8.6,2.1,48.0", len);
+        return ESP_OK;
+    }
     if (strcmp(module, "screen_time") == 0 && strcmp(key, "apps") == 0) {
         strlcpy(out,
                 "com.netflix.ninja=48;com.google.android.youtube.tv=27;com.google.android.apps.tv.launcherx=12;"
@@ -381,5 +405,10 @@ esp_err_t hub_kv_set_str(const char *module, const char *key, const char *value)
 
 void hub_setting_str(const hub_module_t *module, const char *key, char *out, size_t len)
 {
-    snprintf(out, len, "%s", strcmp(key, "stop") == 0 ? "Central Station" : "");
+    (void)module;
+    snprintf(out, len, "%s",
+             strcmp(key, "stop") == 0   ? "Central Station"
+             : strcmp(key, "ssid") == 0 ? "Hubmote Guest"
+             : strcmp(key, "pass") == 0 ? "welcome-home-42"
+                                        : "");
 }

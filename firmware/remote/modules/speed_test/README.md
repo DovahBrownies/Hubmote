@@ -1,0 +1,44 @@
+# Internet speed
+
+Tests the internet speed of the TV: download, upload and latency.
+
+- **On the TV, not the remote:** the companion app (0.7 or later) runs the
+  test on the Google TV Streamer, so it measures what streaming gets. The
+  remote's own Wi-Fi couldn't measure more than about 10-20 Mbit/s.
+- **Its screen:** **Test now** runs it, in about 15 seconds: latency, then
+  download, then upload. The numbers show as it goes, then the result.
+  **Recent** lists the last 6 results by time.
+- **Its card:** the last download speed, with upload and latency.
+
+Without the companion app 0.7 the screen says so, and **Test now** is off.
+
+## How it measures
+
+The companion asks Cloudflare's speed test (speed.cloudflare.com):
+
+- **Latency:** the median time of ten empty requests, less the time
+  Cloudflare reports spending on them.
+- **Download and upload:** requests that grow (1 MB, then up to 100 MB)
+  until each takes about a second, for 6 seconds or 250 MB each. The
+  result is the 90th percentile of the requests' speeds.
+
+A test on a fast line moves up to about 500 MB.
+
+## Settings
+
+None. The last results are kept in NVS (`m_speed_test`: `hist`).
+
+## Data and privacy
+
+The test runs from the TV to Cloudflare, which sees the TV's public
+address, as with any website. Nothing is published. The results stay on
+the remote.
+
+## Credits and licenses
+
+Cloudflare's speed test service (NOTICE); the gauge and arrow icons are
+Lucide's.
+
+## Author
+
+the Hubmote authors

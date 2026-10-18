@@ -222,6 +222,11 @@ ICONS = [
     ("MAP_PIN",          "map-pin",            "location"),
     ("CLOCK",            "clock",              "time zone"),
     ("HOURGLASS",        "hourglass",          "Screen time"),
+    ("GAUGE",            "gauge",              "Internet speed"),
+    ("ARROW_DOWN",       "arrow-down",         "download"),
+    ("ARROW_UP",         "arrow-up",           "upload"),
+    ("QR",               "qr-code",            "Guest Wi-Fi"),
+    ("PENCIL",           "pencil",             "edit"),
     # Weather (WMO codes map to these in modules/weather)
     ("W_SUN",            "sun",                ""),
     ("W_MOON",           "moon",               ""),

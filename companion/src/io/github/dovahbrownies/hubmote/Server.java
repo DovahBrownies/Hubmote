@@ -64,6 +64,15 @@ import java.util.concurrent.Semaphore;
  *                             updates the companion from the APK at U (N
  *                             bytes, that SHA-256), see Updater; 400 if the
  *                             request is unusable
+ *   POST /notify?text=T&seconds=S
+ *                             shows T at the top right of the TV for S
+ *                             seconds (3-30, 10 if left out); 400 without
+ *                             text or past 160 characters (0.7+)
+ *   POST /speedtest           starts an internet speed test (SpeedTest);
+ *                             409 while one runs (0.7+)
+ *   GET  /speedtest           {"state":"idle|latency|download|upload|done|
+ *                             failed","progress":0-100,"ping":ms,"down":
+ *                             Mbit/s,"up":Mbit/s}
  *   POST /keyboard?hidden=1|0 hides (1) or allows (0) the TV's on-screen
  *                             keyboard; it comes back by itself when no
  *                             remote is connected to /events
@@ -73,7 +82,9 @@ import java.util.concurrent.Semaphore;
  *                             {"update":"downloading|installing|confirm|failed"}
  *                             while it updates, {"media":{...}} (as /media,
  *                             without the position) when the title or state
- *                             changes, and an empty line every 15 s
+ *                             changes, {"speed":{...}} (as /speedtest)
+ *                             while a speed test runs, and an empty line
+ *                             every 15 s
  */
 final class Server {
     private static final int PING_MS = 15000;
@@ -284,6 +295,11 @@ final class Server {
             } else if (method.equals("POST") && path.equals("/update")) {
                 boolean ok = svc.updater().start(q.get("url"), parseLong(q.get("size")), q.get("sha256"));
                 json(out, ok ? 200 : 400, ok ? "{\"ok\":true}" : "{\"error\":\"bad request\"}");
+            } else if (method.equals("POST") && path.equals("/speedtest")) {
+                boolean ok = svc.speedTest().start();
+                json(out, ok ? 200 : 409, ok ? "{\"ok\":true}" : "{\"error\":\"running\"}");
+            } else if (method.equals("GET") && path.equals("/speedtest")) {
+                json(out, 200, svc.speedTest().json());
             } else if (method.equals("POST") && path.equals("/notify")) {
                 /* A message at the top right of the TV for 3 to 30 s (0.7+). */
                 String text = q.get("text");
@@ -417,6 +433,7 @@ final class Server {
                 : status == 431 ? "Request Header Fields Too Large"
                 : status == 401 ? "Unauthorized"
                 : status == 403 ? "Forbidden"
+                : status == 409 ? "Conflict"
                 : status == 410 ? "Gone"
                 : status == 429 ? "Too Many Requests"
                 : "Not Found";

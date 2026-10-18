@@ -388,6 +388,12 @@ And read what the TV is doing:
 - `hub_tv_apps(list, max)` gives the apps on the TV, package and name,
   from the companion app.
 
+And the TV's internet speed (companion app 0.7+):
+`hub_tv_speedtest()` starts a test on the TV (latency, download, upload,
+about 15 s), and `hub_speedtest(&st)` gives its state, progress and
+numbers; poll it with an `lv_timer` while it runs. `HUB_SPEED_UNAVAILABLE`
+means no companion 0.7 is online. `modules/speed_test` uses it.
+
 A module that needs the remote to stay on, such as a timer, calls
 `hub_hold_awake()` and later `hub_release_awake()`: the remote doesn't
 turn itself off after idle hours in between. The screen still dims.

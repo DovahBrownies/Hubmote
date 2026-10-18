@@ -18,6 +18,7 @@ static size_t s_app_count;
 static portMUX_TYPE s_awake_mux = portMUX_INITIALIZER_UNLOCKED;
 static int s_awake;
 static hub_tv_state_t s_tv; /* under s_lock */
+static hub_speedtest_t s_speed; /* under s_lock */
 
 void hub_set_action_handler(hub_action_handler_t handler)
 {
@@ -87,6 +88,33 @@ esp_err_t hub_tv_notify(const char *text)
     hub_action_t a = {.type = HUB_ACTION_NOTIFY, .tv = true};
     strlcpy(a.text, text, sizeof(a.text));
     return queue(&a);
+}
+
+esp_err_t hub_tv_speedtest(void)
+{
+    hub_action_t a = {.type = HUB_ACTION_SPEEDTEST};
+    return queue(&a);
+}
+
+void hub_speedtest(hub_speedtest_t *out)
+{
+    memset(out, 0, sizeof(*out));
+    if (!s_lock) {
+        return;
+    }
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    *out = s_speed;
+    xSemaphoreGive(s_lock);
+}
+
+void hub_set_speedtest(const hub_speedtest_t *speed)
+{
+    if (!s_lock) {
+        return;
+    }
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    s_speed = *speed;
+    xSemaphoreGive(s_lock);
 }
 
 void hub_tv_state(hub_tv_state_t *out)

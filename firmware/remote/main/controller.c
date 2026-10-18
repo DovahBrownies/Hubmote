@@ -321,6 +321,9 @@ static void handle_hub(const hub_action_t *a)
         ESP_LOGI(TAG, "module message%s", on_tv ? ", on the TV too" : "");
         return;
     }
+    case HUB_ACTION_SPEEDTEST:
+        ESP_LOGI(TAG, "module: speed test on the TV%s", ctrl_companion_speedtest() ? "" : ": no companion 0.7");
+        return;
     case HUB_ACTION_OPEN:
         if (strstr(a->text, "://")) {
             esp_err_t err = atv_launch_app_link(a->text);

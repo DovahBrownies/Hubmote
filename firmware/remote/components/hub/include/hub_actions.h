@@ -106,6 +106,34 @@ typedef struct {
 /* Copies up to max and returns how many (0 without the companion). Any task. */
 size_t hub_tv_apps(hub_tv_app_t *out, size_t max);
 
+/* --- The TV's internet speed (companion app 0.7+) ------------------------- */
+
+typedef enum {
+    HUB_SPEED_UNAVAILABLE = 0, /* no companion app 0.7+ on the TV right now */
+    HUB_SPEED_IDLE,
+    HUB_SPEED_LATENCY,
+    HUB_SPEED_DOWNLOAD,
+    HUB_SPEED_UPLOAD,
+    HUB_SPEED_DONE,
+    HUB_SPEED_FAILED,
+} hub_speed_state_t;
+
+typedef struct {
+    hub_speed_state_t state;
+    int progress;    /* 0-100 */
+    float ping_ms;   /* the result, or the reading so far while it runs */
+    float down_mbps;
+    float up_mbps;
+} hub_speedtest_t;
+
+/* Starts an internet speed test on the TV, through the companion app:
+ * latency, then download, then upload, about 15 s in all, against
+ * Cloudflare's speed test. */
+esp_err_t hub_tv_speedtest(void);
+/* Its state; while it runs it changes about twice a second, so poll it
+ * then (an lv_timer on your screen). Any task. */
+void hub_speedtest(hub_speedtest_t *out);
+
 /* Keeps the remote from turning itself off after idle hours (Settings >
  * Screen), for example while a timer runs; the screen still dims and goes
  * dark. Each hold needs a release. Any task. */
@@ -120,6 +148,7 @@ typedef enum {
     HUB_ACTION_TV_OFF,
     HUB_ACTION_OPEN,
     HUB_ACTION_NOTIFY,
+    HUB_ACTION_SPEEDTEST,
 } hub_action_type_t;
 
 typedef struct {
@@ -144,6 +173,8 @@ void hub_set_tv_apps(const hub_tv_app_t *apps, size_t count);
  * raises HUB_EV_TV. */
 void hub_set_tv_power(bool on);
 void hub_set_tv_app(const char *app);
+/* The speed test's state, from the companion. */
+void hub_set_speedtest(const hub_speedtest_t *speed);
 
 /* True while a module holds the remote awake. */
 bool hub_awake_held(void);

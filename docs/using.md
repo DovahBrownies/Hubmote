@@ -248,6 +248,17 @@ default the Streamer goes to sleep and takes the TV with it over HDMI-CEC;
 **Settings > Modules > Sleep timer > Turn off with** can use the TV's IR
 instead.
 
+**Guest Wi-Fi.** A QR code that guests scan with their phone's camera to
+join your guest network, with its name and password beside it. Tap **Set
+up** on its screen to enter them (or use **Settings > Modules > Guest
+Wi-Fi**); leave the password empty for an open network. Use a guest
+network: the password shows on the remote.
+
+**Internet speed.** Tap **Test now** to measure the TV's download, upload
+and latency. The companion app (0.7 or later) runs the test on the TV, in
+about 15 seconds, so it shows what streaming gets. The last results are
+listed by time.
+
 **Messages on the TV.** The Sleep timer's and Screen time's messages show
 on the remote and, with the companion app 0.7 or later, at the top right
 of the TV for 10 seconds. Each module's **Show messages on the TV**

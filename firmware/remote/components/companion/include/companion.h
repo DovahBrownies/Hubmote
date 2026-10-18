@@ -73,6 +73,24 @@ typedef struct {
     companion_media_state_t state;
 } companion_media_t;
 
+/* An internet speed test on the TV (companion 0.7+). */
+typedef enum {
+    COMPANION_SPEED_IDLE = 0,
+    COMPANION_SPEED_LATENCY,
+    COMPANION_SPEED_DOWNLOAD,
+    COMPANION_SPEED_UPLOAD,
+    COMPANION_SPEED_DONE,
+    COMPANION_SPEED_FAILED,
+} companion_speed_state_t;
+
+typedef struct {
+    companion_speed_state_t state;
+    int progress;    /* 0-100 */
+    float ping_ms;   /* the result, or the reading so far while it runs */
+    float down_mbps;
+    float up_mbps;
+} companion_speed_t;
+
 typedef enum {
     COMPANION_EVT_ONLINE, /* .online changed; going offline also means the field is unknown */
     COMPANION_EVT_APPS,   /* the app list changed: read it with companion_apps() */
@@ -80,6 +98,7 @@ typedef enum {
     COMPANION_EVT_PAIRING, /* .needs_pairing changed */
     COMPANION_EVT_UPDATE, /* .update changed */
     COMPANION_EVT_MEDIA,  /* what is playing changed: read it with companion_media() */
+    COMPANION_EVT_SPEED,  /* the speed test moved on: read it with companion_speed() */
 } companion_evt_type_t;
 
 typedef struct {
@@ -110,6 +129,12 @@ void companion_set_host(const char *host);
 /* What is playing; false (and *out cleared) if the companion doesn't know
  * (offline, older than 0.6, or without notification access). */
 bool companion_media(companion_media_t *out);
+
+/* The speed test's state, from the companion's events (idle until one runs). */
+void companion_speed(companion_speed_t *out);
+/* Starts a speed test on the TV (companion 0.7+); ESP_ERR_INVALID_STATE
+ * while one runs. Blocks for one short HTTP request. */
+esp_err_t companion_speedtest(void);
 
 /* Copies up to max apps of the current list (sorted by label) into out and
  * returns how many. *gen identifies the list for companion_apps_applied(). */

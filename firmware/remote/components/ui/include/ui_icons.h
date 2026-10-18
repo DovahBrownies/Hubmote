@@ -62,6 +62,11 @@
 #define ICON_MAP_PIN          "\xEE\x84\x91"  /* U+E111 lucide: map-pin (location) */
 #define ICON_CLOCK            "\xEE\x82\x87"  /* U+E087 lucide: clock (time zone) */
 #define ICON_HOURGLASS        "\xEE\x8A\x96"  /* U+E296 lucide: hourglass (Screen time) */
+#define ICON_GAUGE            "\xEE\x86\xBF"  /* U+E1BF lucide: gauge (Internet speed) */
+#define ICON_ARROW_DOWN       "\xEE\x81\x82"  /* U+E042 lucide: arrow-down (download) */
+#define ICON_ARROW_UP         "\xEE\x81\x8A"  /* U+E04A lucide: arrow-up (upload) */
+#define ICON_QR               "\xEE\x87\x9F"  /* U+E1DF lucide: qr-code (Guest Wi-Fi) */
+#define ICON_PENCIL           "\xEE\x87\xB9"  /* U+E1F9 lucide: pencil (edit) */
 #define ICON_W_SUN            "\xEE\x85\xB8"  /* U+E178 lucide: sun */
 #define ICON_W_MOON           "\xEE\x84\x9E"  /* U+E11E lucide: moon */
 #define ICON_W_CLOUD          "\xEE\x82\x88"  /* U+E088 lucide: cloud */
