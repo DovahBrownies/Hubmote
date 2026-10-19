@@ -1,0 +1,6 @@
+# SHA-256 of the companion's release certificate (CN=Hubmote), as hex
+# (keytool's form, with colons, works too). The release workflow refuses
+# an APK signed with any other key: Android installs an update only with
+# the installed app's key, so such a release would strand every installed
+# companion (docs/releasing.md).
+0cb0273ee2c319fa17cbd7f1b89f98fa129086a62f3ffaca96d6041488b7cd54

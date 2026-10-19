@@ -311,6 +311,19 @@ jobs:
         if: always()
         run: rm -f "$RUNNER_TEMP/release.keystore"
 
+      # Android installs an update only with the installed app's key: a
+      # companion signed with another keystore would strand every one
+      # installed. companion/release-cert.txt holds the project's.
+      - name: Companion signed with the project's key
+        run: |
+          got=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs companion/build/companion.apk | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          want=$(grep -v '^#' companion/release-cert.txt | tr -d '[:space:]:' | tr 'A-F' 'a-f')
+          if [ -z "$got" ] || [ "$got" != "$want" ]; then
+            echo "::error::The companion's certificate is ${got:-unreadable}, not the project's $want (companion/release-cert.txt): COMPANION_KEYSTORE_BASE64 holds another keystore"
+            exit 1
+          fi
+          echo "Signed with the project's certificate ($got)"
+
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: installer-site

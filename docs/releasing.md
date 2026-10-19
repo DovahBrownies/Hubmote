@@ -63,7 +63,8 @@ A tag's run is never cancelled.
   (`make_site.py --no-firmware --companion`), and signs each board's image
   in `update.json` with the update signing key
   ([step 4](#4-the-update-signing-key)). Each key exists only for its
-  step and is deleted right after.
+  step and is deleted right after. It stops if the companion's certificate
+  isn't the one in `companion/release-cert.txt`.
 - **GitHub Pages** runs on a tag only. It publishes the site Release
   signing made at https://dovahbrownies.github.io/Hubmote/. The
   companion goes on the site in two forms:
@@ -304,6 +305,15 @@ $kt = "$env:LOCALAPPDATA\Android\jdk-17\bin\keytool.exe"
 
 keytool asks for a password, which protects the key too. Keep the password
 with the keystore's backup, in a password manager for example.
+
+Put the certificate's SHA-256 in `companion/release-cert.txt` (as keytool
+prints it, or in lowercase hex) and commit it. The workflow refuses a release whose
+companion is signed with any other key, so a wrong keystore in the secret
+stops the release before anything is published. This prints it:
+
+```powershell
+& $kt -list -v -alias hubmote -keystore hubmote-release.keystore | Select-String "SHA256:"
+```
 
 Then add the three secrets to the `release` environment
 ([step 2](#2-repository-settings-on-github)) with `gh`. The second command asks
