@@ -112,10 +112,11 @@ The right side is a **D-pad** or a **touchpad**. Switch between them with
 the **D-pad** and **Touchpad** buttons above it.
 
 - **D-pad:** holding an arrow is a long press.
-- **Touchpad:** it works like a joystick around where your finger lands. A
-  swipe moves one item. Keep your finger away from where it landed to keep
-  going, faster the farther away; bring it back to stop. Tap for OK; hold
-  without moving for a long OK.
+- **Touchpad:** it works like an analog stick around where your finger
+  lands. A swipe moves one item. Keep your finger out there to keep going:
+  about once a second just past where it landed, up to three times a
+  second farther out. Bring it back to stop. Tap for OK; hold without
+  moving for a long OK.
 
 ## The keyboard
 

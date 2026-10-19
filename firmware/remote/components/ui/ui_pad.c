@@ -3,27 +3,32 @@
  *
  * D-pad: arrows and OK, with press-and-hold sent as a real long press.
  *
- * Touchpad, a joystick around the point the finger lands on:
- * - a swipe is one move: leaving the dead zone (ZONE_PX) around that point
- *   sends one arrow, its way (the larger of the two axes);
- * - staying out there repeats it after HOLD_START_MS, faster the farther the
- *   finger is (REPEAT_SLOW_MS at the zone's edge, REPEAT_FAST_MS at FAR_PX);
- * - back in the dead zone it stops; out the other side, one arrow that way;
- * - a tap sends OK; holding LONG_OK_MS inside the dead zone is a long OK
- *   (not LVGL's long press: a finger resting before a swipe isn't one).
+ * Touchpad, an analog stick around the point the finger lands on
+ * (ui_pad_joy.h, with a host test): a swipe is one move; held out there it
+ * repeats, faster the farther out, 3 a second at most; back in the middle
+ * it stops. A tap sends OK; holding LONG_OK_MS inside the dead zone is a
+ * long OK (not LVGL's long press: a finger resting before a swipe isn't
+ * one).
  */
 #include <stdlib.h>
 #include <string.h>
 #include "ui_internal.h"
+#include "ui_pad_joy.h"
 
-#define ZONE_PX        UI_S(28)  /* the dead zone around where the finger landed */
-#define ZONE_BACK_PX   UI_S(20)  /* back inside this: the zone again (no flicker at its edge) */
-#define FAR_PX         UI_S(110) /* this far out, the fastest repeat */
-#define HOLD_START_MS  450
 #define LONG_OK_MS     600
-#define REPEAT_SLOW_MS 220
-#define REPEAT_FAST_MS 70
 #define FLASH_MS       140
+
+/* The stick: one arrow on a swipe; held out, about 1 a second just
+ * outside the dead zone, up to 3 a second 140 px out (a third of the pad's
+ * width) and beyond; the first repeat after half a second at least. */
+static const pad_joy_cfg_t k_joy = {
+    .zone = UI_S(36),
+    .zone_back = UI_S(26),
+    .far = UI_S(140),
+    .slow_ms = 1000,
+    .fast_ms = 333,
+    .first_ms = 500,
+};
 #define TILE           UI_S(22)
 
 static lv_obj_t *s_pad_area;
@@ -36,9 +41,7 @@ static lv_timer_t *s_flash_timer;
 static lv_point_t s_origin;     /* where the finger landed */
 static bool s_moved;            /* an arrow was sent: no OK on release */
 static bool s_long_ok;
-static int s_dir;               /* the arrow held: 0 in the dead zone */
-static uint32_t s_dir_since_ms; /* when the finger left the zone that way */
-static uint32_t s_last_step_ms;
+static pad_joy_t s_joy;
 static uint32_t s_press_ms;
 
 /* Background dot grid: one 22x22 ARGB tile, repeated. */
@@ -74,39 +77,11 @@ static void flash(int key)
     lv_timer_resume(s_flash_timer);
 }
 
-static void step(int key, uint32_t now)
+static void step(int key)
 {
     ui_emit_key(key, UI_DIR_SHORT);
     flash(key);
     s_moved = true;
-    s_last_step_ms = now;
-}
-
-/* The arrow for the finger's offset from where it landed, 0 in the dead
- * zone. While an arrow is held, its axis wins ties, and the zone ends a bit
- * further in, so the edge doesn't flicker. */
-static int dir_for(int32_t dx, int32_t dy, int held)
-{
-    int32_t ax = abs(dx), ay = abs(dy);
-    int32_t out = ax > ay ? ax : ay;
-    if (out < (held ? ZONE_BACK_PX : ZONE_PX)) {
-        return 0;
-    }
-    bool held_x = held == UI_KEY_DPAD_LEFT || held == UI_KEY_DPAD_RIGHT;
-    bool horizontal = held ? (held_x ? ax * 3 >= ay * 2 : ax * 2 > ay * 3) : ax >= ay;
-    if (horizontal) {
-        return dx > 0 ? UI_KEY_DPAD_RIGHT : UI_KEY_DPAD_LEFT;
-    }
-    return dy > 0 ? UI_KEY_DPAD_DOWN : UI_KEY_DPAD_UP;
-}
-
-/* The repeat interval: slower near the zone, faster further out. */
-static uint32_t repeat_ms(int32_t dx, int32_t dy)
-{
-    int32_t out = abs(dx) > abs(dy) ? abs(dx) : abs(dy);
-    float t = (float)(out - ZONE_PX) / (float)(FAR_PX - ZONE_PX);
-    t = t < 0 ? 0 : (t > 1 ? 1 : t);
-    return (uint32_t)(REPEAT_SLOW_MS - t * (REPEAT_SLOW_MS - REPEAT_FAST_MS));
 }
 
 static void pad_event_cb(lv_event_t *e)
@@ -126,7 +101,7 @@ static void pad_event_cb(lv_event_t *e)
         s_press_ms = now;
         s_moved = false;
         s_long_ok = false;
-        s_dir = 0;
+        pad_joy_start(&s_joy);
         break;
 
     case LV_EVENT_PRESSING: {
@@ -135,20 +110,21 @@ static void pad_event_cb(lv_event_t *e)
         }
         int32_t dx = p.x - s_origin.x;
         int32_t dy = p.y - s_origin.y;
-        int dir = dir_for(dx, dy, s_dir);
-        if (!dir && !s_moved && now - s_press_ms >= LONG_OK_MS) {
+        bool in_zone = abs(dx) < k_joy.zone && abs(dy) < k_joy.zone;
+        if (in_zone && !s_moved && now - s_press_ms >= LONG_OK_MS) {
             ui_emit_key(UI_KEY_DPAD_CENTER, UI_DIR_START_LONG);
             s_long_ok = true;
             break;
         }
-        if (dir != s_dir) {
-            s_dir = dir;
-            s_dir_since_ms = now;
-            if (dir) {
-                step(dir, now); /* out of the zone, or across to another way: one arrow */
-            }
-        } else if (dir && now - s_dir_since_ms >= HOLD_START_MS && now - s_last_step_ms >= repeat_ms(dx, dy)) {
-            step(dir, now); /* held out there: again */
+        static const int keys[] = {
+            [PAD_UP] = UI_KEY_DPAD_UP,
+            [PAD_DOWN] = UI_KEY_DPAD_DOWN,
+            [PAD_LEFT] = UI_KEY_DPAD_LEFT,
+            [PAD_RIGHT] = UI_KEY_DPAD_RIGHT,
+        };
+        pad_dir_t dir = pad_joy_update(&s_joy, &k_joy, dx, dy, now);
+        if (dir != PAD_NONE) {
+            step(keys[dir]);
         }
         break;
     }

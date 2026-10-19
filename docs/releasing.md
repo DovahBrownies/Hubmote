@@ -26,6 +26,7 @@ A tag's run is never cancelled.
 
 - **Host tests** run these checks without a board:
   - the IR codec test (gcc, with the undefined-behavior sanitizer);
+  - the touchpad's stick (`components/ui/host_test/test_pad_joy.c`);
   - the contrast of every theme (`tools/check_themes.py`);
   - the Weather test (with cJSON 1.7.18);
   - a check that `atv_keycodes.h` and `atv_golden.h` match their

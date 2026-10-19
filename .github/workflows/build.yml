@@ -53,6 +53,12 @@ jobs:
             -I host_test/stub -I include -I . host_test/test_ir_codec.c ir_codec.c -o "$RUNNER_TEMP/ir_codec_test"
           "$RUNNER_TEMP/ir_codec_test"
 
+      - name: Touchpad
+        working-directory: firmware/remote/components/ui
+        run: |
+          gcc -std=c11 -O2 -Wall -Wextra -Werror -Wshadow -Wconversion -Wno-sign-conversion             -I . host_test/test_pad_joy.c ui_pad_joy.c -o "$RUNNER_TEMP/pad_joy_test"
+          "$RUNNER_TEMP/pad_joy_test"
+
       - name: Theme contrast
         run: python3 firmware/remote/tools/check_themes.py
 
