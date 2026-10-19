@@ -21,7 +21,7 @@
 static const char *TAG = "guest_wifi";
 
 static const hub_setting_t k_settings[] = {
-    {.key = "ssid", .label = "Network name", .type = HUB_SETTING_TEXT, .max_len = SSID_MAX},
+    {.key = "ssid", .label = "Network name", .type = HUB_SETTING_TEXT, .max_len = SSID_MAX, .wifi = true},
     {.key = "pass", .label = "Password", .type = HUB_SETTING_TEXT, .max_len = PASS_MAX},
 };
 
@@ -126,7 +126,7 @@ static void show(void *arg)
     }
 }
 
-/* --- Setting it up: the name, then the password, on the remote's keyboard --- */
+/* --- Setting it up: the network from a list, then its password ------------- */
 
 static void back(void)
 {
@@ -141,13 +141,15 @@ static void on_pass_done(const char *text)
     back();
 }
 
-static void on_ssid_done(const char *text)
+static void on_network(const char *ssid, bool secure)
 {
-    if (!text[0]) {
+    hub_kv_set_str(MODULE_ID, "ssid", ssid);
+    if (!secure) {
+        hub_kv_set_str(MODULE_ID, "pass", ""); /* an open network: no password to ask */
+        ESP_LOGI(TAG, "network set");
         back();
         return;
     }
-    hub_kv_set_str(MODULE_ID, "ssid", text); /* before the next keyboard reuses text */
     load();
     ui_kb_open_local(s_pass, "Password", PASS_MAX, on_pass_done, back);
 }
@@ -155,7 +157,7 @@ static void on_ssid_done(const char *text)
 static void on_edit(lv_event_t *e)
 {
     load();
-    ui_kb_open_local(s_ssid, "Network name", SSID_MAX, on_ssid_done, back);
+    ui_wifi_pick("Guest network", s_ssid, on_network, back);
 }
 
 /* --- Screen and card ----------------------------------------------------------- */
@@ -262,6 +264,7 @@ static void event(hub_event_t ev)
     case HUB_EV_NOW_PLAYING:
     case HUB_EV_TV:
     case HUB_EV_OFF:
+    case HUB_EV_CLOCK:
         break;
     }
 }

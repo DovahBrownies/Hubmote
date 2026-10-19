@@ -30,9 +30,10 @@ typedef enum {
     VIEW_IR_REMOTE, /* a learned remote */
     VIEW_LEARN,     /* the learn flow */
     VIEW_INPUTS,    /* the HDMI switch's inputs */
-    VIEW_DASH,      /* the Home tab, one card per module */
+    VIEW_DASH,      /* the Modules tab, one card per module */
     VIEW_MODULE,    /* a module's own screen */
     VIEW_TV_SETUP,  /* Add a TV, its keys */
+    VIEW_WIFI_PICK, /* a Wi-Fi network for a module or a setting: ui_wifi_pick() */
     VIEW_COUNT
 } ui_view_t;
 
@@ -104,7 +105,7 @@ void ui_apps_copy_layout(char *order, char *hidden);
 
 /* --- The top bar (ui_topbar.c) -------------------------------------------- */
 lv_obj_t *ui_topbar_create(lv_obj_t *parent);
-/* Which tab looks selected: the remote tab, the Home tab, or neither (Settings). */
+/* Which tab looks selected: the remote tab, the Modules tab, or neither (Settings). */
 typedef enum { UI_TAB_REMOTE, UI_TAB_HOME, UI_TAB_NONE } ui_tab_t;
 void ui_topbar_set_tab(ui_tab_t tab);
 /* Shows the first module glance there is (e.g. the weather) in the top bar. */
@@ -128,18 +129,18 @@ void ui_switcher_open(void);
 void ui_switcher_close(void);
 bool ui_switcher_is_open(void);
 
-/* --- The Home tab and the module screen (ui_dash.c) ----------------------- */
+/* --- The Modules tab and the module screen (ui_dash.c) ----------------------- */
 lv_obj_t *ui_dash_create(lv_obj_t *parent);
 void ui_dash_show(void);
 void ui_dash_leave(void);
 /* Shows or hides cards after modules were switched on or off. */
 void ui_dash_refresh(void);
-/* Arranging the Home tab: arrows and a size button on each card. */
+/* Arranging the Modules tab: arrows and a size button on each card. */
 void ui_dash_arrange(bool on);
 /* Takes a saved layout (NULL: keeps the one it has, for new modules). */
 void ui_dash_set_layout(const char *layout);
 void ui_dash_layout(char *out, size_t len);
-/* The modules in the Home tab's order, which the switcher and the top
+/* The modules in the Modules tab's order, which the switcher and the top
  * bar's glance follow. */
 size_t ui_home_module_count(void);
 const hub_module_t *ui_home_module(size_t index);
@@ -301,7 +302,8 @@ void ui_inputs_show(void);
 
 /* --- Wi-Fi network pickers (ui_wifi.c): one in setup, one in Settings ----- */
 /* Each returns to `origin` after the keyboard. */
-typedef enum { UI_WIFI_SETUP, UI_WIFI_SETTINGS, UI_WIFI_PICKERS } ui_wifi_picker_t;
+typedef enum { UI_WIFI_SETUP, UI_WIFI_SETTINGS, UI_WIFI_PICK, UI_WIFI_PICKERS } ui_wifi_picker_t;
+lv_obj_t *ui_wifi_pick_create(lv_obj_t *parent); /* VIEW_WIFI_PICK */
 lv_obj_t *ui_wifi_picker_create(lv_obj_t *parent, ui_wifi_picker_t which, ui_view_t origin);
 void ui_wifi_picker_message(ui_wifi_picker_t which, const char *message);
 void ui_wifi_scan(void);

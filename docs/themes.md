@@ -46,8 +46,8 @@ Code uses these names, from `ui_kit.h`. Each one reads the active theme.
 | `COL_IR` | IR devices' icons and tags |
 | `COL_ON_IR` | Text on an IR fill |
 | `COL_IR_LINE` | IR outlines |
-| `COL_GOOD` | Charging |
-| `COL_BAD` | Errors, low battery, Power |
+| `COL_GOOD` | Charging, the speed test's download |
+| `COL_BAD` | Errors, low battery, Power, the speed test's upload |
 | `COL_SUN`, `COL_SUN_SOFT`, `COL_RAIN`, `COL_STORM`, `COL_COOL`, `COL_WARM`, `COL_MOON` | Data colors (weather icons, temperature bars) |
 
 Rules for screens and modules:
@@ -88,8 +88,9 @@ Rules for screens and modules:
    ```
 
    It wants a contrast of at least 4.5:1 for main and secondary text on
-   every surface, and for text on accent and IR fills. Faint text, accent
-   text, IR and error colors need at least 3:1.
+   every surface, for text on accent and IR fills, and for the good and
+   bad colors on panels (`surface1`), where they color text. Faint text,
+   accent text, IR and error colors need at least 3:1 elsewhere.
 
 3. Look at every screen, at every board's size, in the simulator. Run it
    from `firmware/remote`:

@@ -11,6 +11,17 @@ static void on_keyboard(lv_event_t *e)
     ui_keyboard_toggle();
 }
 
+/* With the remote's keyboard open, Back only closes it: the Streamer gets
+ * nothing (Back there would leave the app or the search). */
+static void on_back(lv_event_t *e)
+{
+    if (ui_current_view() == VIEW_KEYBOARD) {
+        ui_kb_close();
+        return;
+    }
+    ui_emit_key(UI_KEY_BACK, UI_DIR_SHORT);
+}
+
 static lv_obj_t *rail_key(lv_obj_t *parent, int32_t h, const char *icon, const char *caption, ui_key_t key)
 {
     lv_obj_t *b = ui_btn_icon(parent, UI_RAIL_W, h, 18, COL_SURFACE2, &font_icons_24, icon, COL_TEXT, caption, true);
@@ -27,7 +38,9 @@ lv_obj_t *ui_rail_create(lv_obj_t *parent)
     lv_obj_t *power = ui_btn_icon(rail, UI_RAIL_W, UI_S(48), 14, COL_SURFACE1, &font_icons_20, ICON_POWER, COL_TEXT2, NULL, false);
     ui_btn_bind_key(power, UI_KEY_POWER, UI_KEYMODE_TAP);
 
-    rail_key(rail, UI_S(76), ICON_BACK, "Back", UI_KEY_BACK);
+    lv_obj_t *back = ui_btn_icon(rail, UI_RAIL_W, UI_S(76), 18, COL_SURFACE2, &font_icons_24, ICON_BACK, COL_TEXT, "Back",
+                                 true);
+    lv_obj_add_event_cb(back, on_back, LV_EVENT_CLICKED, NULL);
     rail_key(rail, UI_S(76), ICON_HOME, "Home", UI_KEY_HOME);
     /* Play lives in the app panel; the rail's third key opens the keyboard. */
     s_kb_btn = ui_btn_icon(rail, UI_RAIL_W, UI_S(76), 18, COL_SURFACE2, &font_icons_24, ICON_KEYBOARD, COL_TEXT, "Keyboard",

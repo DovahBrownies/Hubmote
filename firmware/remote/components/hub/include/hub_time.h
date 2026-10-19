@@ -44,12 +44,23 @@ const char *hub_time_zone_name(size_t index);
 /* The time zone in use: "" for Automatic. */
 const char *hub_time_zone(void);
 
+/* The clock in Settings > Modules: true for 12-hour (1:05 PM), false for
+ * 24-hour (13:05, the default). Show times with these, which follow it;
+ * HUB_EV_CLOCK says when it changed. */
+bool hub_time_12h(void);
+/* "13:05" or "1:05 PM" (12 bytes is enough). */
+void hub_time_fmt_hm(char *out, size_t len, int hour, int min);
+/* An hour on its own: "13:00" or "1 PM". */
+void hub_time_fmt_hour(char *out, size_t len, int hour);
+
 /* For the platform (main/ and the UI), not for modules. */
 /* Reads the saved time zone; call once at start-up. */
 void hub_time_init(void);
 /* Sets the time zone ("" = Automatic) and saves it. False if the name
  * isn't in the list. Controller task. */
 bool hub_time_set_zone(const char *name);
+/* Sets the clock (true: 12-hour) and saves it. Controller task. */
+void hub_time_set_12h(bool on);
 
 #ifdef __cplusplus
 }

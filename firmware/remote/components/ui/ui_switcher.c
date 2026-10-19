@@ -124,7 +124,7 @@ void ui_switcher_open(void)
     }
 
     bool header = false;
-    for (size_t i = 0; i < ui_home_module_count(); i++) { /* in the Home tab's order */
+    for (size_t i = 0; i < ui_home_module_count(); i++) { /* in the Modules tab's order */
         const hub_module_t *m = ui_home_module(i);
         if (!hub_module_enabled(m)) {
             continue;

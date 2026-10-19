@@ -36,6 +36,7 @@ add_executable(hubmote_sim
     sim_main.c sim_hub.c
     ${UI_SRCS} ${FONT_SRCS}
     "${REMOTE_DIR}/components/hub/hub_tz.c"
+    "${REMOTE_DIR}/components/hub/hub_clock.c"
     "${REMOTE_DIR}/modules/weather/weather_ui.c"
     "${REMOTE_DIR}/modules/weather/weather_data.c"
     "${REMOTE_DIR}/modules/sleep_timer/sleep_timer.c"

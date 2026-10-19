@@ -151,6 +151,13 @@ typedef void (*ui_kb_cancel_cb_t)(void);
 void ui_kb_open_local(const char *value, const char *title, size_t max_len, ui_kb_done_cb_t done,
                       ui_kb_cancel_cb_t cancel);
 
+/* Picks a Wi-Fi network: the networks around the remote (it scans), or
+ * Other network to type a name. done gets the name, and whether it needs a
+ * password (true for a typed name: not known). selected (or NULL) is
+ * marked. As with ui_kb_open_local(), show your screen again afterwards. */
+typedef void (*ui_wifi_pick_cb_t)(const char *ssid, bool secure);
+void ui_wifi_pick(const char *title, const char *selected, ui_wifi_pick_cb_t done, ui_kb_cancel_cb_t cancel);
+
 /*
  * Dialogs over the whole screen, one at a time: opening one closes the one
  * before it. done runs after the dialog has closed, with the index of the

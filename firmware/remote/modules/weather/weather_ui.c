@@ -1,6 +1,6 @@
 /*
  * Weather screens: the full screen (now on the left; the next 24 hours and
- * 7 days on the right), the Home tab card, the top-bar glance, and the
+ * 7 days on the right), the Modules tab card, the top-bar glance, and the
  * location search. Everything here runs on the LVGL task.
  */
 #include <math.h>
@@ -121,7 +121,20 @@ static void hhmm(char *out, size_t len, int64_t t)
 {
     struct tm tm;
     local_tm(t, &tm);
-    snprintf(out, len, "%02d:%02d", tm.tm_hour, tm.tm_min);
+    hub_time_fmt_hm(out, len, tm.tm_hour, tm.tm_min);
+}
+
+/* Sunrise and sunset: on a 12-hour clock without AM/PM (they can't be
+ * anything else), so both fit the tile at every size. */
+static void sun_time(char *out, size_t len, int64_t t)
+{
+    struct tm tm;
+    local_tm(t, &tm);
+    if (hub_time_12h()) {
+        snprintf(out, len, "%d:%02d", tm.tm_hour % 12 ? tm.tm_hour % 12 : 12, tm.tm_min);
+    } else {
+        hub_time_fmt_hm(out, len, tm.tm_hour, tm.tm_min);
+    }
 }
 
 static const char *uv_word(float uv)
@@ -510,9 +523,9 @@ static void update_view(void)
         lv_label_set_text(s_tile_value[2], "-");
     }
     if (d->days[0].sunrise && d->days[0].sunset) {
-        char rise[8], set[8];
-        hhmm(rise, sizeof(rise), d->days[0].sunrise);
-        hhmm(set, sizeof(set), d->days[0].sunset);
+        char rise[12], set[12];
+        sun_time(rise, sizeof(rise), d->days[0].sunrise);
+        sun_time(set, sizeof(set), d->days[0].sunset);
         lv_label_set_text_fmt(s_tile_value[3], "%s / %s", rise, set);
     } else {
         lv_label_set_text(s_tile_value[3], "-");
@@ -530,7 +543,9 @@ static void update_view(void)
         if (i == 0) {
             lv_label_set_text(s_hour_time[i], "Now");
         } else {
-            lv_label_set_text_fmt(s_hour_time[i], "%02d", tm.tm_hour);
+            char hour[12];
+            hub_time_fmt_hour(hour, sizeof(hour), tm.tm_hour);
+            lv_label_set_text(s_hour_time[i], hour);
         }
         set_look(s_hour_icon[i], h->code, h->day);
         set_temp(s_hour_temp[i], h->temp);
@@ -727,7 +742,9 @@ static void update_card(void)
         if (i == 0) {
             lv_label_set_text(s_c_time[i], "Now");
         } else {
-            lv_label_set_text_fmt(s_c_time[i], "%02d", tm.tm_hour);
+            char hour[12];
+            hub_time_fmt_hour(hour, sizeof(hour), tm.tm_hour);
+            lv_label_set_text(s_c_time[i], hour);
         }
         set_look(s_c_hicon[i], h->code, h->day);
         set_temp(s_c_htemp[i], h->temp);

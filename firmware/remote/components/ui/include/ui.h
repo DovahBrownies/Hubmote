@@ -61,7 +61,7 @@ typedef enum {
     UI_ACT_LAUNCH,       /* .text = app deep link */
     UI_ACT_LAUNCH_APP,   /* .text = package name (an app from ui_set_apps()) */
     UI_ACT_APP_LAYOUT,   /* the user hid, showed or moved apps on Home: save ui_app_layout() */
-    UI_ACT_HOME_LAYOUT,  /* the user moved or resized module cards on the Home tab: save ui_home_layout() */
+    UI_ACT_HOME_LAYOUT,  /* the user moved or resized module cards on the Modules tab: save ui_home_layout() */
     UI_ACT_MEDIA_KEYS,   /* the user showed or hid an app's playback keys: save ui_media_apps() */
     UI_ACT_INPUT,        /* .index = HDMI switch input (0..UI_INPUTS-1): send its code */
     UI_ACT_INPUT_RENAME, /* .index, .text = the input's new name */
@@ -102,6 +102,7 @@ typedef enum {
     UI_ACT_SLEEP_AFTER,      /* .index = idle hours before the remote turns off, 0 = never */
     UI_ACT_MODULE_ENABLE,    /* .text = module id, .index = 1 on, 0 off */
     UI_ACT_TIME_ZONE,        /* .text = IANA name, "" = Automatic: set it, then ui_set_time_zone() */
+    UI_ACT_CLOCK,            /* .index = 1 for a 12-hour clock, 0 for 24-hour */
     UI_ACT_MODULE_SETTING,   /* .name = "<module id>/<key>", .index = value, .text = a TEXT setting's value */
     UI_ACT_THEME,            /* .text = theme id: save it and restart to apply */
     UI_ACT_TV_BRAND,         /* .text = brand: send its code sets with ui_tv_setup_sets() */
@@ -237,7 +238,7 @@ typedef struct {
 } ui_app_t;
 void ui_set_apps(const ui_app_t *apps, size_t count);
 
-/* The Home tab's module cards, in order with their sizes, as saved:
+/* The Modules tab's module cards, in order with their sizes, as saved:
  * "weather:L,sleep_timer:M" ("" = the defaults). Modules missing from it
  * follow in name order. */
 #define UI_HOME_LAYOUT_MAX 400

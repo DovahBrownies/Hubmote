@@ -6,7 +6,7 @@ set the remote up the first time, see [getting started](getting-started.md).
 > [!NOTE]
 > Two different "Homes" come up on this page:
 >
-> - **The Home tab** is in the remote's top bar. It shows a card for each
+> - **The Modules tab** is in the remote's top bar. It shows a card for each
 >   module (an extra feature, such as the weather).
 > - **Google TV's Home** is the grid of apps the remote shows while the TV
 >   is on its Home screen.
@@ -29,9 +29,9 @@ From left to right:
   TV over IR (infrared, like the TV's own remote), or a learned remote.
   Tap it to open the **switcher**. The switcher lists your remotes (with
   **Add a TV** and **Add a remote**), your modules, and **Settings**. If
-  you're on the Home tab or in Settings, tapping the remote tab takes you
+  you're on the Modules tab or in Settings, tapping the remote tab takes you
   back to the remote instead.
-- **The Home tab** shows a card for each module. Tap one to open it.
+- **The Modules tab** shows a card for each module. Tap one to open it.
   Press and hold one to [arrange them](#modules).
 - **What's on**, in the middle: the app on the TV, **Typing** while you
   type, or the module you have open.
@@ -121,7 +121,8 @@ the **D-pad** and **Touchpad** buttons above it.
 The keyboard opens by itself when the TV asks for one, as in Google TV's
 own fields or YouTube's search. Elsewhere, as in browsers and apps with
 their own keyboard, tap **Keyboard** on the rail. To close it, tap
-**Keyboard** again, **Back** or **Home**.
+**Keyboard** again, **Back** or **Home**. **Back** then only closes the
+keyboard: the TV doesn't get it.
 
 It has QWERTY letters, a symbols layer (**#+=**) and a number pad.
 
@@ -204,12 +205,12 @@ under Google TV's Home, or **HDMI switch** in the switcher.
 
 ## Modules
 
-Each module has a card on the Home tab. **Settings > Modules** switches
+Each module has a card on the Modules tab. **Settings > Modules** switches
 modules on and off. A module's settings, such as Weather's **Units**, show
 under it while it is on.
 
-**Arrange the Home tab.** Press and hold any card, or tap **Settings >
-Modules > Arrange Home**. Each card then shows:
+**Arrange the Modules tab.** Press and hold any card, or tap **Settings >
+Modules > Arrange modules**. Each card then shows:
 
 - **‹ and ›** to move it earlier or later. The order is also the
   switcher's, and the top bar shows the glance of the first module in it
@@ -222,6 +223,9 @@ Tap **Done** when you're finished. The layout is saved on the remote.
 **Time zone.** At the top of **Settings > Modules**. **Automatic** follows
 Weather's place. To choose a zone instead, tap **Time zone**, pick a
 region, then the city whose time you use.
+
+**Clock.** Under the time zone: **12-hour** shows times as 1:05 PM and
+Weather's hours as 1 PM; **24-hour** (the default) as 13:05 and 13:00.
 
 **Screen time.** Counts how long the TV is on each day, and in which
 apps. A new day starts at midnight. Its screen shows today's time and
@@ -252,14 +256,16 @@ instead.
 
 **Guest Wi-Fi.** A QR code that guests scan with their phone's camera to
 join your guest network, with its name and password beside it. Tap **Set
-up** on its screen to enter them (or use **Settings > Modules > Guest
-Wi-Fi**); leave the password empty for an open network. Use a guest
-network: the password shows on the remote.
+up** on its screen and pick the network from the ones around the remote,
+or **Other network** to type its name, then enter its password (an open
+network needs none). **Settings > Modules > Guest Wi-Fi** changes them
+too. Use a guest network: the password shows on the remote.
 
 **Internet speed.** Tap **Test now** to measure the TV's download, upload
 and latency. The companion app (0.7 or later) runs the test on the TV, in
-about 15 seconds, so it shows what streaming gets. The last results are
-listed by time.
+about 15 seconds, so it shows what streaming gets. Download shows in
+green and upload in red. The last results are listed by time; **Clear**
+removes them.
 
 **Messages on the TV.** The Sleep timer's and Screen time's messages show
 on the remote and, with the companion app 0.7 or later, at the top right
@@ -305,7 +311,7 @@ version of the remote's software).
     while **Charging**.
 - **Appearance:** Midnight, Daylight, Black, Dusk or Terminal. Tap one,
   then **Restart to apply**. More in [themes](themes.md).
-- **Modules:** the time zone, **Arrange Home**, and each module with
+- **Modules:** the time zone, the clock, **Arrange modules**, and each module with
   its switch and its settings ([modules](#modules)).
 - **About:**
   - the version, with **Check** to look for updates and **Install** for a

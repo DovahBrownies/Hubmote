@@ -60,7 +60,7 @@ _Static_assert(NET_SCAN_MAX <= UI_WIFI_APS_MAX, "the UI must hold every scanned 
 #define TICK_MS         200
 #define NVS_HIDDEN_APPS "hidden_apps"
 #define NVS_APP_ORDER   "app_order"
-#define NVS_HOME_LAYOUT "home" /* the Home tab's module cards: ui_home_layout() */
+#define NVS_HOME_LAYOUT "home" /* the Modules tab's module cards: ui_home_layout() */
 
 typedef enum { MSG_UI, MSG_ATV, MSG_NET, MSG_COMPANION, MSG_UPDATE, MSG_HUB } msg_kind_t;
 
@@ -184,7 +184,7 @@ static void load_app_layout(void)
     free(order);
 }
 
-/* The Home tab's cards: their order and sizes. */
+/* The Modules tab's cards: their order and sizes. */
 static void load_home_layout(void)
 {
     char layout[UI_HOME_LAYOUT_MAX] = "";
@@ -466,7 +466,12 @@ static void handle_ui(const ctrl_ui_t *a)
     case UI_ACT_TIME_ZONE:
         if (hub_time_set_zone(a->text)) {
             ui_set_time_zone(hub_time_zone());
+            hub_modules_event(HUB_EV_CLOCK);
         }
+        return;
+    case UI_ACT_CLOCK:
+        hub_time_set_12h(a->index != 0);
+        hub_modules_event(HUB_EV_CLOCK);
         return;
     case UI_ACT_MODULE_SETTING: {
         char id[HUB_MODULE_ID_MAX + 1];

@@ -17,11 +17,13 @@ static const char *TAG = "hub_time";
 #define NVS_NS      "hub"
 #define NVS_ZONE    "tz"
 #define NVS_OFFSET  "utc_off" /* the last offset reported, so local time is right from start-up */
+#define NVS_CLOCK   "clock12" /* 1: 12-hour */
 
 static bool s_started;
 static int32_t s_offset;
 static bool s_offset_known; /* reported, or saved from an earlier report */
 static const hub_tz_t *s_zone; /* NULL: Automatic */
+static bool s_12h;
 /* TZ and localtime_r() are the C library's shared state: the zone can
  * change on the controller task while a module reads the time on another. */
 static SemaphoreHandle_t s_lock;
@@ -69,6 +71,9 @@ void hub_time_init(void)
         s_lock = xSemaphoreCreateMutex();
     }
     s_offset_known = kv_get_i32(NVS_NS, NVS_OFFSET, &s_offset) == ESP_OK;
+    int32_t clock12 = 0;
+    kv_get_i32(NVS_NS, NVS_CLOCK, &clock12);
+    s_12h = clock12 != 0;
     char name[48];
     kv_get_str(NVS_NS, NVS_ZONE, name, sizeof(name));
     const hub_tz_t *zone = name[0] ? find(name) : NULL;
@@ -93,6 +98,18 @@ bool hub_time_set_zone(const char *name)
     }
     ESP_LOGI(TAG, "time zone: %s", zone ? zone->name : "automatic");
     return true;
+}
+
+bool hub_time_12h(void)
+{
+    return s_12h;
+}
+
+void hub_time_set_12h(bool on)
+{
+    s_12h = on;
+    kv_set_i32(NVS_NS, NVS_CLOCK, on);
+    ESP_LOGI(TAG, "clock: %s", on ? "12-hour" : "24-hour");
 }
 
 const char *hub_time_zone(void)

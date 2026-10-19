@@ -7,7 +7,9 @@ Tests the internet speed of the TV: download, upload and latency.
   remote's own Wi-Fi couldn't measure more than about 10-20 Mbit/s.
 - **Its screen:** **Test now** runs it, in about 15 seconds: latency, then
   download, then upload. The numbers show as it goes, then the result.
-  **Recent** lists the last 6 results by time.
+  Download is green and upload red (`COL_GOOD`, `COL_BAD`). **Recent**
+  lists the last 6 results by time; **Clear** removes them all, after
+  asking.
 - **Its card:** the last download speed, with upload and latency.
 
 Without the companion app 0.7 the screen says so, and **Test now** is off.

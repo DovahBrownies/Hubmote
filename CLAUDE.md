@@ -204,7 +204,7 @@ untested: their facts and sources are in their headers in
   default `HM_SLEEP_AFTER_H`) do it.
 - **The rail** (the Streamer's keys) is hidden on every screen that isn't
   the Streamer's (`k_view_flags` in `ui.c`, one row per view: no rail, no
-  pad, full width, a remote's screen, not the TV). Settings, the Home tab,
+  pad, full width, a remote's screen, not the TV). Settings, the Modules tab,
   modules, the learn flow, Add a TV and the TV panel widen to the full
   width (`UI_WIDE_W`, 1000 px on the 7B); learned remotes and Inputs stay a
   centered column (`UI_CENTER_W`). The TV panel has its own VOL keys, sent via the Streamer
@@ -239,9 +239,9 @@ untested: their facts and sources are in their headers in
   can be checked by comparing them before and after.
 - **Navigation:**
   the top bar has a remote tab (current remote; its chevron opens the
-  switcher sheet, `ui_switcher.c`), a Home tab (module cards,
+  switcher sheet, `ui_switcher.c`), a Modules tab (module cards,
   `ui_dash.c`: small, medium or large on a four-column grid, arranged with
-  a long press or Settings > Modules > Arrange Home, saved in NVS
+  a long press or Settings > Modules > Arrange modules, saved in NVS
   `ctrl`/`home`; the switcher and the top bar's glance follow its order),
   a context pill, a module glance, Wi-Fi, battery and a gear
   (Settings, `VIEW_SETTINGS`, `ui_settings.c`: Remotes, Wi-Fi, Screen,
@@ -318,7 +318,7 @@ untested: their facts and sources are in their headers in
   `tools/devtools.py` wraps them.
   Use it to verify UI changes instead of asking the user. The first tap on
   a dark screen only wakes it. Top bar targets: remote tab (120, 27),
-  Home tab (275, 27).
+  Modules tab (275, 27).
 
 ## Streamer and protocol facts
 

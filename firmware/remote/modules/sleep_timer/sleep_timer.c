@@ -79,7 +79,9 @@ static void off_at(char *out, size_t len, int minutes)
     out[0] = '\0';
     if (minutes > 0 && hub_time_local(&now)) {
         int at = (now.tm_hour * 60 + now.tm_min + minutes) % (24 * 60);
-        snprintf(out, len, "TV off at %02d:%02d", at / 60, at % 60);
+        char hm[12];
+        hub_time_fmt_hm(hm, sizeof(hm), at / 60, at % 60);
+        snprintf(out, len, "TV off at %s", hm);
     }
 }
 
@@ -331,6 +333,7 @@ static void event(hub_event_t ev)
     switch (ev) {
     case HUB_EV_MINUTE:
     case HUB_EV_SCREEN_ON:
+    case HUB_EV_CLOCK:
         if (minutes_left()) {
             refresh();
         }

@@ -29,7 +29,7 @@ static const ui_theme_t s_themes[] = {
         .text = C(0x16181C), .text2 = C(0x4C5058), .text3 = C(0x6E727A),
         .accent = C(0xF2A93B), .on_accent = C(0x1A1204), .accent_text = C(0x9C5A00),
         .ir = C(0x0E7466), .on_ir = C(0xFFFFFF), .ir_line = C(0x7FB8AE),
-        .good = C(0x1E8E3E), .bad = C(0xC62F35),
+        .good = C(0x1B8037), .bad = C(0xC62F35),
         .sun = C(0xD98A00), .sun_soft = C(0xE0A030), .rain = C(0x2F6FD6), .storm = C(0x7B5CD6),
         .cool = C(0x2F6FD6), .warm = C(0xD98A00), .moon = C(0x6E7690),
     },

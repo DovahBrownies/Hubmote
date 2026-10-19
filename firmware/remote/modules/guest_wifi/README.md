@@ -4,8 +4,9 @@ A QR code for a guest network, with its name and password beside it.
 Guests point their phone's camera at the remote's screen to join.
 
 - **Its screen:** the code, the network's name and password, and **Edit**.
-  Until a network is set, **Set up** asks for the name, then the password,
-  on the remote's keyboard.
+  Until a network is set, **Set up** lists the networks around the remote
+  to pick from (**Other network** to type a name), then asks for the
+  password on the remote's keyboard. An open network skips the password.
 - **Its card:** the code and the name; at medium and large sizes the
   password too.
 - **An open network:** leave the password empty.
@@ -17,7 +18,8 @@ the cameras of current phones read.
 
 In **Settings > Modules > Guest Wi-Fi**, kept in NVS (`m_guest_wifi`):
 
-- **Network name** (`ssid`), 32 characters at most.
+- **Network name** (`ssid`), 32 characters at most, picked from the
+  networks around (`.wifi`, `ui_wifi_pick()`).
 - **Password** (`pass`), 63 characters at most.
 
 ## Data and privacy

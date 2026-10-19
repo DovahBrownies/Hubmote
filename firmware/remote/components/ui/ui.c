@@ -8,7 +8,7 @@
  * shown or hidden.
  *
  * Navigation: the remote tab shows the remote in use (tap again for the
- * switcher), the Home tab shows the modules, the gear opens Settings.
+ * switcher), the Modules tab shows the modules, the gear opens Settings.
  */
 #include <string.h>
 #include "esp_log.h"
@@ -121,6 +121,7 @@ static const uint8_t k_view_flags[VIEW_COUNT] = {
     [VIEW_TV_SETUP] = VF_NO_PAD | VF_NO_RAIL | VF_FULL | VF_NOT_TV,
     [VIEW_DASH] = VF_NO_PAD | VF_NO_RAIL | VF_FULL | VF_NOT_TV,
     [VIEW_MODULE] = VF_NO_PAD | VF_NO_RAIL | VF_FULL | VF_NOT_TV,
+    [VIEW_WIFI_PICK] = VF_NO_PAD | VF_NO_RAIL | VF_FULL | VF_NOT_TV,
 };
 
 static bool view_has(ui_view_t v, unsigned flag)
@@ -150,10 +151,13 @@ void ui_show_view(ui_view_t view)
         s_remote_view = view;
     }
     ui_switcher_close();
-    ui_view_t tab_view = local_kb ? s_view : view;
-    ui_topbar_set_tab(tab_view == VIEW_DASH || tab_view == VIEW_MODULE ? UI_TAB_HOME
-                      : tab_view == VIEW_SETTINGS                       ? UI_TAB_NONE
-                                                                       : UI_TAB_REMOTE);
+    /* The remote's own keyboard and the network picker belong to the
+     * screen that opened them: its tab stays. */
+    if (!local_kb && view != VIEW_WIFI_PICK) {
+        ui_topbar_set_tab(view == VIEW_DASH || view == VIEW_MODULE ? UI_TAB_HOME
+                          : view == VIEW_SETTINGS                   ? UI_TAB_NONE
+                                                                    : UI_TAB_REMOTE);
+    }
     if (view == VIEW_DASH) {
         ui_dash_show();
     }
@@ -447,6 +451,7 @@ void ui_init(ui_action_cb_t cb, void *ctx)
     s_views[VIEW_DASH] = ui_dash_create(stage);
     s_views[VIEW_MODULE] = ui_modview_create(stage);
     s_views[VIEW_TV_SETUP] = ui_tv_setup_create(stage);
+    s_views[VIEW_WIFI_PICK] = ui_wifi_pick_create(stage);
     s_pad = ui_pad_create(stage);
     lv_obj_set_pos(s_pad, UI_CENTER_W + UI_GAP, 0);
 

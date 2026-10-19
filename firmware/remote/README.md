@@ -235,11 +235,12 @@ When the TV's address changes, the remote finds it again by its mDNS name.
 | `ctrl` | `turn` | **Rotate 180°** |
 | `ctrl` | `theme` | The theme |
 | `ctrl` | `irtv_set`, `irtv_name`, `irtv_vol` | The IR TV |
-| `ctrl` | `home` | The Home tab's module cards: their order and sizes (**Arrange Home**) |
+| `ctrl` | `home` | The Modules tab's module cards: their order and sizes (**Arrange modules**) |
 | `wifi` | `ssid`, `pass` | The network's name and password |
 | `ota` | `token` | The update token |
 | `companion` | `token` | The token from pairing with companion 0.4+ |
 | `hub` | `tz` | The time zone (none: Automatic) |
+| `hub` | `clock12` | The clock: 1 for 12-hour, else 24-hour (**Settings > Modules**) |
 | `hub` | `utc_off` | The last UTC offset Weather reported, so local time is right from start-up while the zone is Automatic |
 | `hub_off` | The module's id | Modules switched off in Settings |
 | `m_<module>` | Set by the module | Each module's own settings, and the values of its declared settings (Settings > Modules) |
@@ -461,7 +462,7 @@ UI then leaves out what can't work (`ui_set_ir_caps()`).
 | `ui.c` | View switching |
 | `ui_topbar.c` | The tabs and glance |
 | `ui_switcher.c` | The switcher sheet |
-| `ui_dash.c` | The Home tab and module host |
+| `ui_dash.c` | The Modules tab and module host |
 | `ui_tv_home.c` | Google TV's Home: the app grid and Edit |
 | `ui_app.c` | The app context panel |
 | `ui_rail.c` | The Streamer's keys |
@@ -573,7 +574,7 @@ HDMI-CEC:
   (served from a PC), and the web installer;
 - IR transmit, receive and learning, and the Inputs page;
 - the battery level, charging indicator, deep sleep and touch wake;
-- the top bar, switcher and Home tab; Weather (location search, forecast,
+- the top bar, switcher and Modules tab; Weather (location search, forecast,
   card, glance); Settings and themes.
 
 Not checked on hardware yet:

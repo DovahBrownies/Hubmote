@@ -705,6 +705,7 @@ static void event(hub_event_t ev)
     case HUB_EV_NETWORK_DOWN:
     case HUB_EV_SCREEN_OFF:
     case HUB_EV_NOW_PLAYING:
+    case HUB_EV_CLOCK:
         break;
     case HUB_EV_OFF:
         /* Switched off: no TV turned off later, no remote kept awake */

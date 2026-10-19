@@ -1,6 +1,6 @@
 /*
  * Google TV's Home (VIEW_TV_HOME, the panel while the TV shows its home
- * screen; the Home tab is ui_dash.c): app launcher plus quick actions.
+ * screen; the Modules tab is ui_dash.c): app launcher plus quick actions.
  *
  * Edit mode shows every app. A tap hides or shows one; press and hold picks
  * it up to move it. While it is carried, the other apps make room, and

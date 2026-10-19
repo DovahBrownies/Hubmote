@@ -1,7 +1,7 @@
 /*
  * Hubmote for the Waveshare ESP32-S3-Touch-LCD-7B: a touchscreen remote for
  * a Google TV Streamer (Android TV Remote protocol v2 over Wi-Fi), a TV and
- * other devices over IR, with modules on a Home tab. This starts the board,
+ * other devices over IR, with modules on a Modules tab. This starts the board,
  * the display and the controller (controller.c), which runs everything else.
  */
 #include <stdlib.h>

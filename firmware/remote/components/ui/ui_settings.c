@@ -1037,12 +1037,21 @@ static void on_mset_text_cancel(void)
     ui_show_view(VIEW_SETTINGS);
 }
 
+static void on_mset_network(const char *ssid, bool secure)
+{
+    on_mset_text_done(ssid);
+}
+
 static void on_mset_text(lv_event_t *e)
 {
     mod_setting_t *ms = lv_event_get_user_data(e);
     char value[64];
     hub_setting_str(ms->module, ms->setting->key, value, sizeof(value));
     s_mset_editing = ms;
+    if (ms->setting->wifi) {
+        ui_wifi_pick(ms->setting->label, value, on_mset_network, on_mset_text_cancel);
+        return;
+    }
     size_t max_len = ms->setting->max_len && ms->setting->max_len < sizeof(value) ? ms->setting->max_len
                                                                                   : sizeof(value) - 1;
     ui_kb_open_local(value, ms->setting->label, max_len, on_mset_text_done, on_mset_text_cancel);
@@ -1329,13 +1338,62 @@ static void build_time_zone(lv_obj_t *page)
     lv_obj_set_style_pad_hor(row, UI_S(14), 0);
     ui_flex(row, LV_FLEX_FLOW_ROW, UI_S(12));
     lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    icon_box(row, ICON_CLOCK, COL_ACCENT_TEXT);
+    icon_box(row, ICON_MAP_PIN, COL_ACCENT_TEXT); /* Automatic follows a place */
     lv_obj_t *title = ui_label(row, &font_sora_15m, COL_TEXT, "Time zone");
     lv_obj_set_flex_grow(title, 1);
     s_tz_value = ui_label(row, &font_sora_15m, COL_TEXT2, "Automatic");
     ui_label(row, &font_icons_20, COL_TEXT3, ICON_CHEVRON_RIGHT);
     lv_obj_add_event_cb(row, on_tz_row, LV_EVENT_CLICKED, NULL);
     ui_settings_set_time_zone(s_tz);
+}
+
+/* --- Clock (12-hour or 24-hour), under the time zone ------------------------------ */
+
+static lv_obj_t *s_clock_seg[2]; /* 12-hour, 24-hour */
+
+static void clock_paint(bool h12)
+{
+    for (int i = 0; i < 2; i++) {
+        bool on = (i == 0) == h12;
+        lv_obj_set_style_bg_color(s_clock_seg[i], on ? COL_SURFACE3 : COL_SURFACE1, 0);
+        lv_obj_set_style_text_color(lv_obj_get_child(s_clock_seg[i], 0), on ? COL_ACCENT_TEXT : COL_TEXT2, 0);
+    }
+}
+
+static void on_clock(lv_event_t *e)
+{
+    bool h12 = lv_event_get_user_data(e) != NULL;
+    clock_paint(h12);
+    ui_action_t a = {.type = UI_ACT_CLOCK, .index = h12};
+    ui_emit(&a);
+}
+
+static void build_clock(lv_obj_t *page)
+{
+    lv_obj_t *row = ui_box(page);
+    lv_obj_set_size(row, LV_PCT(100), UI_S(64));
+    lv_obj_set_style_bg_color(row, COL_SURFACE2, 0);
+    lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(row, ui_radius(16), 0);
+    lv_obj_set_style_pad_hor(row, UI_S(14), 0);
+    ui_flex(row, LV_FLEX_FLOW_ROW, UI_S(12));
+    lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    icon_box(row, ICON_CLOCK, COL_ACCENT_TEXT);
+    lv_obj_t *title = ui_label(row, &font_sora_15m, COL_TEXT, "Clock");
+    lv_obj_set_flex_grow(title, 1);
+    lv_obj_t *seg = ui_box(row);
+    lv_obj_set_size(seg, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_color(seg, COL_SURFACE1, 0);
+    lv_obj_set_style_bg_opa(seg, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(seg, ui_radius(12), 0);
+    lv_obj_set_style_pad_all(seg, UI_S(3), 0);
+    ui_flex(seg, LV_FLEX_FLOW_ROW, UI_S(2));
+    static const char *const names[] = {"12-hour", "24-hour"};
+    for (int i = 0; i < 2; i++) {
+        s_clock_seg[i] = ui_btn_text(seg, UI_S(110), UI_S(40), 10, COL_SURFACE1, &font_sora_13m, COL_TEXT2, names[i]);
+        lv_obj_add_event_cb(s_clock_seg[i], on_clock, LV_EVENT_CLICKED, i == 0 ? (void *)1 : NULL);
+    }
+    clock_paint(hub_time_12h());
 }
 
 static void on_arrange(lv_event_t *e)
@@ -1351,7 +1409,7 @@ static void build_arrange(lv_obj_t *page)
     ui_flex(row, LV_FLEX_FLOW_ROW, UI_S(12));
     lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     icon_box(row, ICON_GRID, COL_ACCENT_TEXT);
-    lv_obj_t *title = ui_label(row, &font_sora_15m, COL_TEXT, "Arrange Home");
+    lv_obj_t *title = ui_label(row, &font_sora_15m, COL_TEXT, "Arrange modules");
     lv_obj_set_flex_grow(title, 1);
     ui_label(row, &font_icons_20, COL_TEXT3, ICON_CHEVRON_RIGHT);
     lv_obj_add_event_cb(row, on_arrange, LV_EVENT_CLICKED, NULL);
@@ -1361,6 +1419,7 @@ static void build_modules(lv_obj_t *page)
 {
     page_scrolls(page); /* the modules' settings outgrow the screen */
     build_time_zone(page);
+    build_clock(page);
     build_arrange(page);
     subhead(page, "Modules");
     s_mod_none = ui_label(page, &font_sora_15m, COL_TEXT3, "No modules");

@@ -1,8 +1,8 @@
 /*
- * The Home tab (VIEW_DASH): a card per module that is on and has one, on a
+ * The Modules tab (VIEW_DASH): a card per module that is on and has one, on a
  * grid of four columns (HUB_CARD_*: small cards take one, medium two,
  * large all four), scrolling if there are many. The user arranges it: a
- * long press on a card, or Settings > Modules > Arrange Home, puts arrows
+ * long press on a card, or Settings > Modules > Arrange modules, puts arrows
  * on each card to move it and a button to change its size. The order also
  * sets the switcher's and which module's glance the top bar shows; it is
  * saved as ui_home_layout() gives it.
@@ -85,7 +85,7 @@ void ui_module_open(const char *id)
 typedef struct {
     const hub_module_t *m;
     hub_card_size_t size;
-    lv_obj_t *card;        /* NULL until the Home tab shows it */
+    lv_obj_t *card;        /* NULL until the Modules tab shows it */
     hub_card_size_t built; /* the size card was made at */
     lv_obj_t *cover;       /* over the card while arranging */
     lv_obj_t *prev, *next; /* its arrows */
@@ -215,7 +215,7 @@ const hub_module_t *ui_home_module(size_t index)
     return index < s_slots ? s_slot[index].m : NULL;
 }
 
-/* --- Home tab --------------------------------------------------------------- */
+/* --- Modules tab --------------------------------------------------------------- */
 
 static lv_obj_t *s_dash;
 static lv_obj_t *s_cards;
@@ -429,13 +429,13 @@ void ui_dash_refresh(void)
 void ui_dash_arrange(bool on)
 {
     s_arranging = on;
-    ui_topbar_set_context(on ? "Arrange Home" : "Home");
+    ui_topbar_set_context(on ? "Arrange modules" : "Modules");
     ui_dash_refresh();
 }
 
 void ui_dash_show(void)
 {
-    ui_topbar_set_context(s_arranging ? "Arrange Home" : "Home");
+    ui_topbar_set_context(s_arranging ? "Arrange modules" : "Modules");
     s_shown = true;
     ui_dash_refresh();
 }

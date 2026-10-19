@@ -7,7 +7,7 @@ to a daily limit.
   the apps, most watched first (up to 6; past 7 apps a day, the rest
   count as **Other apps**). App names come from the companion app's list;
   without it, the package shows.
-- **Its card** on the Home tab: today's time and the time left.
+- **Its card** on the Modules tab: today's time and the time left.
 - **Near the limit,** the top bar shows the minutes left, then
   **Time's up**. That goes when the TV is turned on again, at midnight,
   with **+ 15 min**, or when the limit is raised or switched off.

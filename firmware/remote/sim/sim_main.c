@@ -17,10 +17,12 @@
 #include "lvgl.h"
 #include "ui.h"
 #include "ui_internal.h"
+#include "hub_time.h"
 
 void sim_show_demo_module(bool on); /* sim_hub.c */
 
 void sim_weather_load(void);
+void weather_ui_update(void *arg);
 void hub_glance_changed(void);
 
 static uint32_t s_ms;
@@ -201,7 +203,7 @@ static void screens(void)
     shot("toast");
     run(4000);
 
-    /* Home tab and Weather */
+    /* Modules tab and Weather */
     ui_show_view(VIEW_DASH);
     shot("home_tab");
     ui_dash_arrange(true);
@@ -217,12 +219,26 @@ static void screens(void)
     ui_set_home_layout("");
     ui_module_open("weather");
     shot("weather");
+    hub_time_set_12h(true); /* the 12-hour clock: hours as "1 AM" */
+    weather_ui_update(NULL);
+    shot("weather_12h");
+    ui_set_home_layout("weather:L,speed_test:M,sleep_timer:M"); /* Weather's card on top */
+    ui_show_view(VIEW_DASH);
+    weather_ui_update(NULL);
+    shot("home_tab_12h");
+    ui_set_home_layout("");
+    hub_time_set_12h(false);
+    ui_module_open("weather");
+    weather_ui_update(NULL);
     ui_module_open("sleep_timer");
     shot("sleep_timer");
     ui_module_open("screen_time");
     shot("screen_time");
     ui_module_open("guest_wifi");
     shot("guest_wifi");
+    ui_wifi_pick("Guest network", "Guest", NULL, NULL); /* Set up: the networks around */
+    ui_set_wifi_networks(aps, sizeof(aps) / sizeof(aps[0]));
+    shot("wifi_pick");
     ui_module_open("speed_test");
     shot("speed_test");
 

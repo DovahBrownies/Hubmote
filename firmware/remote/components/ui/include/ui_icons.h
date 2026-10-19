@@ -58,7 +58,7 @@
 #define ICON_ALERT            "\xEE\x86\x93"  /* U+E193 lucide: triangle-alert */
 #define ICON_GEAR             "\xEE\x85\x94"  /* U+E154 lucide: settings (the remote's own settings) */
 #define ICON_PALETTE          "\xEE\x87\x9D"  /* U+E1DD lucide: palette (Settings > Appearance (themes)) */
-#define ICON_GRID             "\xEE\x83\xBF"  /* U+E0FF lucide: layout-grid (Home tab: modules) */
+#define ICON_GRID             "\xEE\x83\xBF"  /* U+E0FF lucide: layout-grid (the Modules tab) */
 #define ICON_MAP_PIN          "\xEE\x84\x91"  /* U+E111 lucide: map-pin (location) */
 #define ICON_CLOCK            "\xEE\x82\x87"  /* U+E087 lucide: clock (time zone) */
 #define ICON_HOURGLASS        "\xEE\x8A\x96"  /* U+E296 lucide: hourglass (Screen time) */

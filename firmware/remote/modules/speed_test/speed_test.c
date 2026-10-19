@@ -21,6 +21,9 @@
 #define HISTORY    6
 #define POLL_MS    500
 #define GIVE_UP_US (90 * 1000000LL) /* no end from the TV by then: failed */
+/* Download green, upload red, wherever they show: arrows, labels, values. */
+#define COL_DOWN   COL_GOOD
+#define COL_UP     COL_BAD
 
 static const char *TAG = "speed_test";
 
@@ -43,7 +46,7 @@ static lv_obj_t *s_down, *s_down_unit, *s_none;
 static lv_obj_t *s_up, *s_ping;
 static lv_obj_t *s_bar, *s_line, *s_test;
 static lv_obj_t *s_rows[HISTORY], *s_row_when[HISTORY], *s_row_down[HISTORY], *s_row_up[HISTORY];
-static lv_obj_t *s_hist_status;
+static lv_obj_t *s_hist_status, *s_clear;
 static lv_obj_t *s_card_value, *s_card_detail;
 
 /* --- Results, kept in NVS as "at,down,up,ping;..." ----------------------------- */
@@ -128,7 +131,7 @@ static void fmt_when(char *out, size_t len, int64_t at)
     }
     hub_time_to_local((time_t)at, &then);
     if (then.tm_year == now.tm_year && then.tm_yday == now.tm_yday) {
-        strftime(out, len, "%H:%M", &then);
+        hub_time_fmt_hm(out, len, then.tm_hour, then.tm_min);
     } else {
         strftime(out, len, "%b %d", &then);
     }
@@ -166,7 +169,10 @@ static void show(void)
     float up = live ? st.up_mbps : last ? last->up : 0;
     float ping = live ? st.ping_ms : last ? last->ping : 0;
     bool known = live || last;
-    lv_color_t color = live ? COL_TEXT2 : COL_TEXT;
+    /* Live readings are dimmed until the test ends. */
+    lv_color_t down_color = live ? COL_TEXT2 : COL_DOWN;
+    lv_color_t up_color = live ? COL_TEXT2 : COL_UP;
+    lv_color_t ping_color = live ? COL_TEXT2 : COL_TEXT;
 
     char num[16], when[16], line[48], line2[40];
     fmt_when(when, sizeof(when), last ? last->at : 0);
@@ -183,9 +189,12 @@ static void show(void)
     }
 
     if (s_down) {
-        snprintf(num, sizeof(num), "%.0f", down);
+        fmt_mbps(num, sizeof(num), down); /* 0.2, not 0 */
         lv_label_set_text(s_down, num);
-        lv_obj_set_style_text_color(s_down, color, 0);
+        lv_obj_set_style_text_color(s_down, down_color, 0);
+        lv_obj_set_style_text_color(s_down_unit, down_color, 0);
+        lv_obj_set_style_text_color(s_up, up_color, 0);
+        lv_obj_set_style_text_color(s_ping, ping_color, 0);
         lv_obj_set_hidden(s_down, !known);
         lv_obj_set_hidden(s_down_unit, !known);
         lv_obj_set_hidden(s_none, known);
@@ -215,6 +224,7 @@ static void show(void)
             }
         }
         ui_status_set(s_hist_status, s_count ? UI_STATUS_NONE : UI_STATUS_EMPTY, "No tests yet", NULL);
+        lv_obj_set_hidden(s_clear, !s_count || live);
     }
     if (s_card_value) {
         if (known) {
@@ -231,7 +241,7 @@ static void show(void)
             lv_label_set_text(s_card_value, "Not tested");
             lv_label_set_text(s_card_detail, can ? "" : "Needs the companion app");
         }
-        lv_obj_set_style_text_color(s_card_value, color, 0);
+        lv_obj_set_style_text_color(s_card_value, known ? down_color : COL_TEXT, 0);
     }
 }
 
@@ -262,6 +272,24 @@ static void on_poll(lv_timer_t *t)
     }
 }
 
+static void on_clear_done(int choice, void *user_data)
+{
+    if (choice != 1 || s_running) {
+        return;
+    }
+    s_count = 0;
+    s_failed = false;
+    save();
+    ESP_LOGI(TAG, "results cleared");
+    show();
+}
+
+static void on_clear(lv_event_t *e)
+{
+    static const char *const buttons[] = {"Cancel", "Clear"};
+    ui_modal("Clear recent tests?", NULL, buttons, 2, on_clear_done, NULL);
+}
+
 static void on_test(lv_event_t *e)
 {
     ensure();
@@ -278,7 +306,7 @@ static void on_test(lv_event_t *e)
 }
 
 /* A result: label above, value below. */
-static lv_obj_t *figure(lv_obj_t *parent, const char *icon, const char *label)
+static lv_obj_t *figure(lv_obj_t *parent, const char *icon, const char *label, lv_color_t color)
 {
     lv_obj_t *box = ui_box(parent);
     lv_obj_set_size(box, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
@@ -288,9 +316,9 @@ static lv_obj_t *figure(lv_obj_t *parent, const char *icon, const char *label)
     ui_flex(head, LV_FLEX_FLOW_ROW, UI_S(6));
     lv_obj_set_flex_align(head, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     if (icon) {
-        ui_label(head, &font_icons_16, COL_TEXT2, icon);
+        ui_label(head, &font_icons_16, color, icon);
     }
-    ui_label(head, &font_sora_15m, COL_TEXT2, label);
+    ui_label(head, &font_sora_15m, color, label);
     return ui_label(box, &font_sora_24m, COL_TEXT, "");
 }
 
@@ -309,8 +337,8 @@ static lv_obj_t *create_view(lv_obj_t *parent)
     lv_obj_set_size(head, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
     ui_flex(head, LV_FLEX_FLOW_ROW, UI_S(6));
     lv_obj_set_flex_align(head, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    ui_label(head, &font_icons_16, COL_TEXT2, ICON_ARROW_DOWN);
-    ui_label(head, &font_sora_16sb, COL_TEXT2, "Download");
+    ui_label(head, &font_icons_16, COL_DOWN, ICON_ARROW_DOWN);
+    ui_label(head, &font_sora_16sb, COL_DOWN, "Download");
     lv_obj_t *big = ui_box(p);
     lv_obj_set_size(big, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
     ui_flex(big, LV_FLEX_FLOW_ROW, UI_S(10));
@@ -322,8 +350,8 @@ static lv_obj_t *create_view(lv_obj_t *parent)
     lv_obj_t *row = ui_box(p);
     lv_obj_set_size(row, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
     ui_flex(row, LV_FLEX_FLOW_ROW, UI_S(56));
-    s_up = figure(row, ICON_ARROW_UP, "Upload");
-    s_ping = figure(row, NULL, "Latency");
+    s_up = figure(row, ICON_ARROW_UP, "Upload", COL_UP);
+    s_ping = figure(row, NULL, "Latency", COL_TEXT2);
     lv_obj_t *spacer = ui_box(p);
     lv_obj_set_flex_grow(spacer, 1);
     s_bar = lv_bar_create(p);
@@ -345,7 +373,14 @@ static lv_obj_t *create_view(lv_obj_t *parent)
     lv_obj_t *h = ui_panel(v, HUB_VIEW_W - UI_GAP - main_w, HUB_VIEW_H);
     lv_obj_set_style_pad_all(h, UI_S(28), 0);
     ui_flex(h, LV_FLEX_FLOW_COLUMN, UI_S(14));
-    ui_label(h, &font_sora_16sb, COL_TEXT2, "Recent");
+    lv_obj_t *hh = ui_box(h);
+    lv_obj_set_size(hh, LV_PCT(100), UI_S(32));
+    ui_flex(hh, LV_FLEX_FLOW_ROW, UI_S(8));
+    lv_obj_set_flex_align(hh, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    ui_label(hh, &font_sora_16sb, COL_TEXT2, "Recent");
+    s_clear = ui_btn_text(hh, LV_SIZE_CONTENT, UI_S(32), 10, COL_SURFACE2, &font_sora_12, COL_TEXT2, "Clear");
+    lv_obj_set_style_pad_hor(s_clear, UI_S(14), 0);
+    lv_obj_add_event_cb(s_clear, on_clear, LV_EVENT_CLICKED, NULL);
     for (int i = 0; i < HISTORY; i++) {
         lv_obj_t *r = s_rows[i] = ui_box(h);
         lv_obj_set_size(r, LV_PCT(100), UI_S(44));
@@ -353,11 +388,11 @@ static lv_obj_t *create_view(lv_obj_t *parent)
         lv_obj_set_flex_align(r, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
         s_row_when[i] = ui_label(r, &font_sora_15m, COL_TEXT2, "");
         lv_obj_set_flex_grow(s_row_when[i], 1);
-        ui_label(r, &font_icons_16, COL_TEXT3, ICON_ARROW_DOWN);
-        s_row_down[i] = ui_label(r, &font_sora_15m, COL_TEXT, "");
+        ui_label(r, &font_icons_16, COL_DOWN, ICON_ARROW_DOWN);
+        s_row_down[i] = ui_label(r, &font_sora_15m, COL_DOWN, "");
         lv_obj_set_style_min_width(s_row_down[i], UI_S(52), 0);
-        ui_label(r, &font_icons_16, COL_TEXT3, ICON_ARROW_UP);
-        s_row_up[i] = ui_label(r, &font_sora_15m, COL_TEXT, "");
+        ui_label(r, &font_icons_16, COL_UP, ICON_ARROW_UP);
+        s_row_up[i] = ui_label(r, &font_sora_15m, COL_UP, "");
         lv_obj_set_style_min_width(s_row_up[i], UI_S(44), 0);
     }
     s_hist_status = ui_status_create(h, LV_PCT(100), UI_S(120), false);
@@ -390,6 +425,11 @@ static void on_show(void)
     show();
 }
 
+static void redraw(void *arg)
+{
+    show();
+}
+
 /* --- Module (controller task) ----------------------------------------------------- */
 
 static void event(hub_event_t ev)
@@ -399,6 +439,9 @@ static void event(hub_event_t ev)
     case HUB_EV_NETWORK_DOWN:
     case HUB_EV_SCREEN_ON:
     case HUB_EV_SCREEN_OFF:
+    case HUB_EV_CLOCK:
+        hub_ui_async(redraw, NULL); /* the results' times */
+        break;
     case HUB_EV_MINUTE:
     case HUB_EV_NOW_PLAYING:
     case HUB_EV_TV:

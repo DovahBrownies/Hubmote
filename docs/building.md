@@ -173,7 +173,7 @@ simulated touches too:
 
 ```powershell
 python tools\devtools.py shot screen.png      # PNG with Pillow, else BMP
-python tools\devtools.py tap 275 27           # x y in screen pixels: the Home tab on the 7B
+python tools\devtools.py tap 275 27           # x y in screen pixels: the Modules tab on the 7B
 python tools\devtools.py swipe 700 300 300 300
 ```
 

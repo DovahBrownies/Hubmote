@@ -1,6 +1,6 @@
 /*
  * Top bar: the remote tab (the remote in use; tapping it again opens the
- * switcher) and the Home tab (modules), the current context, a module
+ * switcher) and the Modules tab (modules), the current context, a module
  * glance (e.g. the weather), Wi-Fi, battery and Settings.
  */
 #include "hub_module.h"
@@ -107,7 +107,7 @@ lv_obj_t *ui_topbar_create(lv_obj_t *parent)
 
     s_tab_home = tab(tabs, on_home_tab);
     s_home_icon = ui_label(s_tab_home, &font_icons_20, COL_TEXT2, ICON_GRID);
-    s_home_label = ui_label(s_tab_home, &font_sora_13m, COL_TEXT2, "Home");
+    s_home_label = ui_label(s_tab_home, &font_sora_13m, COL_TEXT2, "Modules");
     style_tabs();
 
     /* Context pill, centered in the remaining space */
@@ -173,7 +173,7 @@ void ui_topbar_refresh_glance(void)
 {
     hub_glance_t g = {0};
     s_glance_module = NULL;
-    for (size_t i = 0; i < ui_home_module_count() && !s_glance_module; i++) { /* the first in the Home tab's order */
+    for (size_t i = 0; i < ui_home_module_count() && !s_glance_module; i++) { /* the first in the Modules tab's order */
         const hub_module_t *m = ui_home_module(i);
         if (hub_module_enabled(m) && m->glance && m->glance(&g)) {
             s_glance_module = m;

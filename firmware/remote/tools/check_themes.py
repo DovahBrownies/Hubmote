@@ -23,6 +23,10 @@ CHECKS = [
     ("on_ir", ["ir"], 4.5),
     ("ir", ["surface1", "surface2"], 3.0),
     ("bad", ["surface1", "surface2"], 3.0),
+    # Text on panels too: the speed test's download and upload.
+    ("good", ["surface1"], 4.5),
+    ("bad", ["surface1"], 4.5),
+    ("good", ["surface2"], 3.0),
 ]
 
 

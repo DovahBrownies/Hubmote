@@ -48,8 +48,8 @@ static void on_tap(lv_event_t *e)
     show_value(NULL);
 }
 
-/* Its card on the Home tab, at the size the user picked among card_sizes.
- * The Home tab makes the whole card open the module's screen when tapped. */
+/* Its card on the Modules tab, at the size the user picked among card_sizes.
+ * The Modules tab makes the whole card open the module's screen when tapped. */
 static lv_obj_t *create_card(lv_obj_t *parent, hub_card_size_t size)
 {
     lv_obj_t *card = ui_panel(parent, HUB_CARD_W(size), HUB_CARD_H);
@@ -101,6 +101,7 @@ static void event(hub_event_t ev)
     case HUB_EV_NOW_PLAYING:
     case HUB_EV_TV:
     case HUB_EV_OFF:
+    case HUB_EV_CLOCK: /* times you show: redraw them in the new format */
         break;
     }
 }

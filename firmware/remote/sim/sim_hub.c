@@ -193,6 +193,18 @@ bool hub_ui_async(void (*fn)(void *arg), void *arg)
 
 static int32_t s_offset;
 
+static bool s_12h;
+
+bool hub_time_12h(void)
+{
+    return s_12h;
+}
+
+void hub_time_set_12h(bool on)
+{
+    s_12h = on;
+}
+
 bool hub_time_known(void)
 {
     return true;
@@ -380,7 +392,7 @@ esp_err_t hub_kv_get_str(const char *module, const char *key, char *out, size_t 
 {
     if (strcmp(module, "speed_test") == 0 && strcmp(key, "hist") == 0) {
         /* No clock in the simulator's results (0): they show "-" for the time */
-        strlcpy(out, "0,312.4,41.2,11.0;0,298.0,39.8,12.0;0,8.6,2.1,48.0", len);
+        strlcpy(out, "0,8.6,2.1,48.0;0,312.4,41.2,11.0;0,298.0,39.8,12.0", len); /* the latest under 10: a decimal point in the big font */
         return ESP_OK;
     }
     if (strcmp(module, "screen_time") == 0 && strcmp(key, "apps") == 0) {

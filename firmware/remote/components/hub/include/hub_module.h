@@ -1,7 +1,7 @@
 #pragma once
 
 /*
- * Modules: optional features reached from the Home tab (Weather, ...).
+ * Modules: optional features reached from the Modules tab (Weather, ...).
  *
  * A module is one ESP-IDF component in modules/<id>/. It fills in a
  * hub_module_t and registers it with HUB_MODULE(); nothing else in the
@@ -31,7 +31,7 @@ extern "C" {
 #define HUB_VIEW_W UI_WIDE_W /* ui_kit.h: 1000 at 1024 x 600 */
 #define HUB_VIEW_H UI_BODY_H /* 532 at 1024 x 600 */
 
-/* Cards on the Home tab sit on a grid of four columns, two rows to the
+/* Cards on the Modules tab sit on a grid of four columns, two rows to the
  * screen. The user picks each card's size among those its module offers
  * (card_sizes), long-pressing a card. */
 typedef enum {
@@ -53,6 +53,7 @@ typedef enum {
     HUB_EV_TV,           /* the TV turned on or off, or another app came to the front: hub_tv_state() */
     HUB_EV_OFF,          /* the user switched the module off: stop timers, release awake holds; no events
                           * come until it is back on (then HUB_EV_NETWORK_UP if the network is up) */
+    HUB_EV_CLOCK,        /* the time zone or the clock (12/24-hour) changed: redraw the times you show */
 } hub_event_t;
 
 /*
@@ -80,6 +81,7 @@ typedef struct {
     const char *unit;           /* NUMBER: after the value ("min"), or NULL */
     const char *zero;           /* NUMBER: shown instead of 0 ("Off"), or NULL */
     size_t max_len;             /* TEXT: the longest value, 63 at most */
+    bool wifi;                  /* TEXT: a Wi-Fi network's name, picked from the networks around (or typed) */
 } hub_setting_t;
 
 /* A one-line summary for the top bar and the switcher, e.g. a weather icon
@@ -92,7 +94,7 @@ typedef struct {
 
 typedef struct {
     const char *id;   /* a lowercase letter, then letters, digits and '_'; HUB_MODULE_ID_MAX at most */
-    const char *name; /* shown on the Home tab and in the switcher */
+    const char *name; /* shown on the Modules tab and in the switcher */
     const char *icon; /* an ICON_* string for lists */
 
     /* All callbacks are optional. */
@@ -102,7 +104,7 @@ typedef struct {
     lv_obj_t *(*create_view)(lv_obj_t *parent); /* its screen, HUB_VIEW_W x HUB_VIEW_H; built when first opened */
     void (*show)(void);                          /* its screen came into view */
     void (*hide)(void);                          /* its screen left */
-    /* Its card on the Home tab, HUB_CARD_W(size) x HUB_CARD_H. Made again
+    /* Its card on the Modules tab, HUB_CARD_W(size) x HUB_CARD_H. Made again
      * when the user picks another size: keep no pointers into an old one. */
     lv_obj_t *(*create_card)(lv_obj_t *parent, hub_card_size_t size);
     bool (*glance)(hub_glance_t *out); /* false: nothing to show yet */
