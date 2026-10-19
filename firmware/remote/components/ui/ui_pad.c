@@ -3,27 +3,26 @@
  *
  * D-pad: arrows and OK, with press-and-hold sent as a real long press.
  *
- * Touchpad, meant to feel like a laptop trackpad driving a focus cursor:
- * - each swipe locks to the axis it starts on, so a slightly diagonal
- *   swipe doesn't zig-zag;
- * - the distance per arrow shrinks with speed: slow movement steps one item
- *   per STEP_SLOW_PX, a quick flick moves several (down to STEP_FAST_PX);
- * - holding still at the end of a swipe keeps repeating that arrow;
- * - a tap sends OK; a long press without moving is a long OK.
+ * Touchpad, a joystick around the point the finger lands on:
+ * - a swipe is one move: leaving the dead zone (ZONE_PX) around that point
+ *   sends one arrow, its way (the larger of the two axes);
+ * - staying out there repeats it after HOLD_START_MS, faster the farther the
+ *   finger is (REPEAT_SLOW_MS at the zone's edge, REPEAT_FAST_MS at FAR_PX);
+ * - back in the dead zone it stops; out the other side, one arrow that way;
+ * - a tap sends OK; holding LONG_OK_MS inside the dead zone is a long OK
+ *   (not LVGL's long press: a finger resting before a swipe isn't one).
  */
 #include <stdlib.h>
 #include <string.h>
 #include "ui_internal.h"
 
-#define STEP_SLOW_PX   UI_S(40)   /* px per arrow when moving slowly */
-#define STEP_FAST_PX   UI_S(14)   /* px per arrow at FAST_PX_PER_MS and above */
-#define SLOW_PX_PER_MS (0.25f * UI_H / UI_DESIGN_H)
-#define FAST_PX_PER_MS (1.5f * UI_H / UI_DESIGN_H)
-#define LOCK_PX        UI_S(12)   /* travel before the axis is decided */
-#define PAUSE_MS       180  /* a pause this long unlocks the axis */
-#define STILL_PX       UI_S(6)
+#define ZONE_PX        UI_S(28)  /* the dead zone around where the finger landed */
+#define ZONE_BACK_PX   UI_S(20)  /* back inside this: the zone again (no flicker at its edge) */
+#define FAR_PX         UI_S(110) /* this far out, the fastest repeat */
 #define HOLD_START_MS  450
-#define HOLD_REPEAT_MS 110
+#define LONG_OK_MS     600
+#define REPEAT_SLOW_MS 220
+#define REPEAT_FAST_MS 70
 #define FLASH_MS       140
 #define TILE           UI_S(22)
 
@@ -34,17 +33,13 @@ static lv_obj_t *s_toggle_label[2];
 static lv_obj_t *s_chev[4]; /* indexed by key - UI_KEY_DPAD_UP: up, down, left, right */
 static lv_timer_t *s_flash_timer;
 
-static lv_point_t s_anchor;
-static lv_point_t s_last;
-static lv_point_t s_prev;      /* last sample, for the speed */
-static uint32_t s_prev_ms;
-static float s_speed;          /* px/ms, smoothed */
-static int s_axis;             /* 0 none, 1 horizontal, 2 vertical */
-static bool s_moved;
+static lv_point_t s_origin;     /* where the finger landed */
+static bool s_moved;            /* an arrow was sent: no OK on release */
 static bool s_long_ok;
-static int s_last_dir;
+static int s_dir;               /* the arrow held: 0 in the dead zone */
+static uint32_t s_dir_since_ms; /* when the finger left the zone that way */
 static uint32_t s_last_step_ms;
-static uint32_t s_last_motion_ms;
+static uint32_t s_press_ms;
 
 /* Background dot grid: one 22x22 ARGB tile, repeated. */
 static uint32_t s_tile_px[TILE * TILE];
@@ -84,8 +79,34 @@ static void step(int key, uint32_t now)
     ui_emit_key(key, UI_DIR_SHORT);
     flash(key);
     s_moved = true;
-    s_last_dir = key;
     s_last_step_ms = now;
+}
+
+/* The arrow for the finger's offset from where it landed, 0 in the dead
+ * zone. While an arrow is held, its axis wins ties, and the zone ends a bit
+ * further in, so the edge doesn't flicker. */
+static int dir_for(int32_t dx, int32_t dy, int held)
+{
+    int32_t ax = abs(dx), ay = abs(dy);
+    int32_t out = ax > ay ? ax : ay;
+    if (out < (held ? ZONE_BACK_PX : ZONE_PX)) {
+        return 0;
+    }
+    bool held_x = held == UI_KEY_DPAD_LEFT || held == UI_KEY_DPAD_RIGHT;
+    bool horizontal = held ? (held_x ? ax * 3 >= ay * 2 : ax * 2 > ay * 3) : ax >= ay;
+    if (horizontal) {
+        return dx > 0 ? UI_KEY_DPAD_RIGHT : UI_KEY_DPAD_LEFT;
+    }
+    return dy > 0 ? UI_KEY_DPAD_DOWN : UI_KEY_DPAD_UP;
+}
+
+/* The repeat interval: slower near the zone, faster further out. */
+static uint32_t repeat_ms(int32_t dx, int32_t dy)
+{
+    int32_t out = abs(dx) > abs(dy) ? abs(dx) : abs(dy);
+    float t = (float)(out - ZONE_PX) / (float)(FAR_PX - ZONE_PX);
+    t = t < 0 ? 0 : (t > 1 ? 1 : t);
+    return (uint32_t)(REPEAT_SLOW_MS - t * (REPEAT_SLOW_MS - REPEAT_FAST_MS));
 }
 
 static void pad_event_cb(lv_event_t *e)
@@ -101,71 +122,36 @@ static void pad_event_cb(lv_event_t *e)
 
     switch (code) {
     case LV_EVENT_PRESSED:
-        s_anchor = p;
-        s_last = p;
-        s_prev = p;
-        s_prev_ms = now;
-        s_speed = 0;
-        s_axis = 0;
+        s_origin = p;
+        s_press_ms = now;
         s_moved = false;
         s_long_ok = false;
-        s_last_dir = 0;
-        s_last_motion_ms = now;
+        s_dir = 0;
         break;
 
     case LV_EVENT_PRESSING: {
-        if (abs(p.x - s_last.x) > STILL_PX || abs(p.y - s_last.y) > STILL_PX) {
-            s_last_motion_ms = now;
-            s_last = p;
+        if (s_long_ok) {
+            break; /* a long OK: moving doesn't add arrows to it */
         }
-        if (now > s_prev_ms) {
-            float inst = (float)(abs(p.x - s_prev.x) + abs(p.y - s_prev.y)) / (float)(now - s_prev_ms);
-            s_speed = 0.6f * s_speed + 0.4f * inst;
-            s_prev = p;
-            s_prev_ms = now;
+        int32_t dx = p.x - s_origin.x;
+        int32_t dy = p.y - s_origin.y;
+        int dir = dir_for(dx, dy, s_dir);
+        if (!dir && !s_moved && now - s_press_ms >= LONG_OK_MS) {
+            ui_emit_key(UI_KEY_DPAD_CENTER, UI_DIR_START_LONG);
+            s_long_ok = true;
+            break;
         }
-        /* After a pause the next movement may pick a new axis. */
-        if (s_axis && now - s_last_motion_ms > PAUSE_MS) {
-            s_axis = 0;
-            s_anchor = p;
-        }
-        int32_t dx = p.x - s_anchor.x;
-        int32_t dy = p.y - s_anchor.y;
-        if (!s_axis && (abs(dx) >= LOCK_PX || abs(dy) >= LOCK_PX)) {
-            s_axis = abs(dx) >= abs(dy) ? 1 : 2;
-        }
-        float t = (s_speed - SLOW_PX_PER_MS) / (FAST_PX_PER_MS - SLOW_PX_PER_MS);
-        t = t < 0 ? 0 : (t > 1 ? 1 : t);
-        int32_t step_px = (int32_t)(STEP_SLOW_PX - t * (STEP_SLOW_PX - STEP_FAST_PX));
-        if (s_axis == 1) {
-            while (abs(dx) >= step_px) {
-                step(dx > 0 ? UI_KEY_DPAD_RIGHT : UI_KEY_DPAD_LEFT, now);
-                s_anchor.x += dx > 0 ? step_px : -step_px;
-                dx = p.x - s_anchor.x;
+        if (dir != s_dir) {
+            s_dir = dir;
+            s_dir_since_ms = now;
+            if (dir) {
+                step(dir, now); /* out of the zone, or across to another way: one arrow */
             }
-            s_anchor.y = p.y; /* movement across the axis is ignored */
-        } else if (s_axis == 2) {
-            while (abs(dy) >= step_px) {
-                step(dy > 0 ? UI_KEY_DPAD_DOWN : UI_KEY_DPAD_UP, now);
-                s_anchor.y += dy > 0 ? step_px : -step_px;
-                dy = p.y - s_anchor.y;
-            }
-            s_anchor.x = p.x;
-        }
-        /* Holding still after a swipe: keep scrolling that way. */
-        if (s_moved && s_last_dir && now - s_last_motion_ms > HOLD_START_MS &&
-            now - s_last_step_ms > HOLD_REPEAT_MS) {
-            step(s_last_dir, now);
+        } else if (dir && now - s_dir_since_ms >= HOLD_START_MS && now - s_last_step_ms >= repeat_ms(dx, dy)) {
+            step(dir, now); /* held out there: again */
         }
         break;
     }
-
-    case LV_EVENT_LONG_PRESSED:
-        if (!s_moved) {
-            ui_emit_key(UI_KEY_DPAD_CENTER, UI_DIR_START_LONG);
-            s_long_ok = true;
-        }
-        break;
 
     case LV_EVENT_RELEASED:
     case LV_EVENT_PRESS_LOST:

@@ -20,6 +20,12 @@ import java.util.Map;
  * download, then upload, each for a few seconds. One test at a time, on its
  * own thread (never Android's main thread). Progress and the result go to
  * the remote as {"speed":{...}} events.
+ *
+ * Connections are reused from request to request (a fully read answer
+ * leaves its connection in the pool), and only the transfer is timed: on a
+ * slow or lossy link a new TLS handshake can take seconds, which counted
+ * in, made a download of a few Mbit/s look like a fraction of one
+ * (before 0.9).
  */
 final class SpeedTest {
     private static final String TAG = "HubmoteSpeed";
@@ -140,23 +146,24 @@ final class SpeedTest {
             }
             long t0 = SystemClock.elapsedRealtimeNanos();
             HttpURLConnection c = open("/__down?measId=" + measId + "&bytes=0");
+            boolean whole = false; /* answered and read: the connection serves the next ping */
             try {
-                if (c.getResponseCode() != 200) {
-                    throw new IOException("HTTP " + c.getResponseCode());
-                }
+                int status = c.getResponseCode();
                 double took = (SystemClock.elapsedRealtimeNanos() - t0) / 1e6 - serverMs(c);
-                try (InputStream in = c.getInputStream()) {
-                    while (in.read() >= 0) {
-                        /* empty; read so the connection can be used again */
-                    }
+                if (status != 200) {
+                    throw new IOException("HTTP " + status);
                 }
-                if (i > 0) {
+                drain(c);
+                whole = true;
+                if (i > 0) { /* the first one carried the connection's handshake */
                     ms.add(Math.max(0, took));
                 }
             } catch (IOException e) {
                 last = e; /* a lost sample; the others count */
             } finally {
-                c.disconnect();
+                if (!whole) {
+                    c.disconnect();
+                }
             }
             report("latency", 10 * (i + 1) / PINGS, false);
         }
@@ -202,6 +209,11 @@ final class SpeedTest {
      * what was measured, or the test if nothing was. The result is the 90th
      * percentile of the requests that took 200 ms or more (a single slow
      * start doesn't count), in Mbit/s.
+     *
+     * Each request is timed from its first byte: a download's from its
+     * answer's headers, an upload's from its connection being up. PHASE_MS
+     * starts the same way, with the first request, so a slow handshake
+     * doesn't use it up.
      */
     private double transfer(boolean up, int fromProgress, int toProgress) throws IOException {
         List<Double> speeds = new ArrayList<>();
@@ -209,14 +221,16 @@ final class SpeedTest {
         int top = up ? UP_TOP : LADDER.length - 1;
         int refused = 0;
         long moved = 0;
-        long start = SystemClock.elapsedRealtime();
+        long timed = 0; /* ns the finished requests took, for a line too fast to time one */
+        long start = 0; /* the phase's clock: from the first request's first byte */
         byte[] buf = new byte[64 * 1024];
-        while (SystemClock.elapsedRealtime() - start < PHASE_MS && moved < PHASE_BYTES) {
+        while ((start == 0 || SystemClock.elapsedRealtime() - start < PHASE_MS) && moved < PHASE_BYTES) {
             checkStopped();
             long size = LADDER[rung];
-            long t0 = SystemClock.elapsedRealtimeNanos();
+            long t0 = 0;
             long done = 0;
-            boolean cut = false; /* stopped at PHASE_MS */
+            boolean cut = false;   /* stopped at PHASE_MS */
+            boolean whole = false; /* answered and read: the connection serves the next request */
             HttpURLConnection c = open((up ? "/__up?measId=" + measId : "/__down?measId=" + measId + "&bytes=" + size));
             try {
                 try {
@@ -225,6 +239,11 @@ final class SpeedTest {
                         c.setRequestMethod("POST");
                         c.setRequestProperty("Content-Type", "application/octet-stream");
                         c.setFixedLengthStreamingMode(size);
+                        c.connect(); /* the handshake, if any, before the clock */
+                        t0 = SystemClock.elapsedRealtimeNanos();
+                        if (start == 0) {
+                            start = SystemClock.elapsedRealtime();
+                        }
                         try (OutputStream out = c.getOutputStream()) {
                             while (done < size) {
                                 if (over(start) || stopped) {
@@ -247,17 +266,25 @@ final class SpeedTest {
                             rung = Math.max(0, rung - 1);
                             continue;
                         }
+                        drain(c);
+                        whole = true;
                     } else {
                         if (refused(c.getResponseCode(), ++refused)) {
                             top = Math.min(top, Math.max(0, rung - 1));
                             rung = Math.max(0, rung - 1);
                             continue;
                         }
+                        t0 = SystemClock.elapsedRealtimeNanos(); /* the answer's headers are in */
+                        if (start == 0) {
+                            start = SystemClock.elapsedRealtime();
+                        }
+                        whole = true;
                         try (InputStream in = c.getInputStream()) {
                             for (int n; (n = in.read(buf)) > 0; ) {
                                 done += n;
                                 live(up, done, t0, start, fromProgress, toProgress);
                                 if (over(start) || stopped) {
+                                    whole = false; /* the rest stays unread: this connection goes */
                                     break; /* counted below, as far as it got */
                                 }
                             }
@@ -271,10 +298,13 @@ final class SpeedTest {
                     break;
                 }
             } finally {
-                c.disconnect();
+                if (!whole) {
+                    c.disconnect();
+                }
             }
             refused = 0;
             double seconds = (SystemClock.elapsedRealtimeNanos() - t0) / 1e9;
+            timed += SystemClock.elapsedRealtimeNanos() - t0;
             moved += done;
             measure(speeds, done, t0);
             if (seconds < 1.0 && rung < top) {
@@ -282,6 +312,10 @@ final class SpeedTest {
             }
         }
         checkStopped();
+        if (speeds.isEmpty() && moved > 0 && timed > 0) {
+            /* every request was too quick to time alone: all of them together */
+            return moved * 8 / (timed / 1e9) / 1e6;
+        }
         if (speeds.isEmpty()) {
             throw new IOException("no measurement");
         }
@@ -290,7 +324,18 @@ final class SpeedTest {
     }
 
     private static boolean over(long start) {
-        return SystemClock.elapsedRealtime() - start >= PHASE_MS;
+        return start != 0 && SystemClock.elapsedRealtime() - start >= PHASE_MS;
+    }
+
+    /** Reads an answer to its end and closes it, which leaves its
+     * connection in the pool for the next request. */
+    private static void drain(HttpURLConnection c) throws IOException {
+        try (InputStream in = c.getInputStream()) {
+            byte[] skip = new byte[1024];
+            while (in.read(skip) >= 0) {
+                /* the answer itself isn't needed */
+            }
+        }
     }
 
     /** A request's speed, if it ran long enough (200 ms) to tell. */
@@ -329,7 +374,7 @@ final class SpeedTest {
                 downMbps = mbps;
             }
         }
-        long ran = Math.min(PHASE_MS, now - start);
+        long ran = start == 0 ? 0 : Math.min(PHASE_MS, now - start);
         report(up ? "upload" : "download", fromProgress + (int) ((toProgress - fromProgress) * ran / PHASE_MS), false);
     }
 }

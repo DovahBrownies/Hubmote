@@ -37,6 +37,10 @@ what.
 - **0.8:** the speed test copes with a poor connection: a stalled request
   ends that part with what was measured, latency skips lost samples, and
   a remote that reconnects is told how the test went.
+- **0.9:** the speed test reuses its connections and times only the
+  transfers, so a slow handshake on a poor link no longer drags the
+  download (and latency) down; its 6 seconds start once the first request
+  is answered.
 
 ## Files
 
