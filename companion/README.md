@@ -387,6 +387,32 @@ It runs `aapt2` (resources and manifest), then `javac --release 8` against
   an APK whose certificate isn't the one in `release-cert.txt`. Its other
   builds sign with a throwaway key that `companion.json` marks as debug.
 
+## Trying the speed test on the TV, without installing
+
+`SpeedTest.java` can run on the Streamer by itself, over ADB, with the
+TV's own networking and Wi-Fi, without installing anything or touching
+the installed companion (whose key a local build doesn't have):
+
+1. Put `SpeedTest.java`, a `CompanionService` with an empty
+   `void speedChanged(String json)`, and a `Main` that calls
+   `new SpeedTest(new CompanionService()).start()` and prints `json()`
+   until it says `done` or `failed`, in `io/github/dovahbrownies/hubmote/`.
+2. Compile them against the SDK's `platforms/android-35/android.jar`
+   (`javac -source 11 -target 11`), then make a dex with JDK 17:
+   `java -cp build-tools/35.0.0/lib/d8.jar com.android.tools.r8.D8
+   --min-api 26 --lib android.jar --output out <classes>`.
+3. Run it, then remove it:
+
+   ```sh
+   adb push out/classes.dex /data/local/tmp/st.dex
+   adb shell CLASSPATH=/data/local/tmp/st.dex app_process /data/local/tmp io.github.dovahbrownies.hubmote.Main
+   adb logcat -d -s HubmoteSpeed
+   adb shell rm /data/local/tmp/st.dex
+   ```
+
+Built from another version's `SpeedTest.java`, it compares versions on
+the same link. A test moves up to about 500 MB on a fast line.
+
 ## Trying an update from the remote
 
 Before a release, you can try an update from a site on the PC. Run these

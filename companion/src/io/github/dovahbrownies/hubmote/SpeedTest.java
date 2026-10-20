@@ -294,6 +294,9 @@ final class SpeedTest {
                         }
                     }
                 } catch (IOException e) {
+                    if (cut && !speeds.isEmpty()) {
+                        break; /* an upload cut at PHASE_MS: closing its short body fails, as expected */
+                    }
                     if (speeds.isEmpty()) {
                         throw e;
                     }
