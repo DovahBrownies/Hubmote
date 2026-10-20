@@ -967,8 +967,11 @@ static void send_ping_response(ctx_t *c, int32_t val1)
 
 static void control_on_message(ctx_t *c, const uint8_t *buf, size_t len)
 {
-    /* Only what the TV sends counts as activity: our own keys would keep a
-     * dead connection "alive" for as long as the user presses them. */
+    /* The TV's messages count as activity, and so do our own commands
+     * (handle_cmd): the Streamer doesn't ping while it gets keys, so with
+     * only its messages counting, steady swiping dropped the connection
+     * every 16 s (2026-10-18). A dead link still shows: writes fail once
+     * TCP gives up. */
     c->last_activity_us = now_us();
     atv_remote_msg_t *m = &c->rmsg;
     if (!atv_parse_remote(buf, len, m)) {
@@ -1350,6 +1353,7 @@ static void handle_cmd(ctx_t *c, cmd_t *cmd)
             ESP_LOGW(TAG, "key %d dropped: not connected", (int)cmd->key);
             break;
         }
+        c->last_activity_us = now_us();
         TX_BEGIN(c, w);
         {
             bool ok = atv_msg_key_inject(&w, cmd->key, cmd->dir);
@@ -1363,6 +1367,7 @@ static void handle_cmd(ctx_t *c, cmd_t *cmd)
             ESP_LOGW(TAG, "app link dropped: not connected");
             break;
         }
+        c->last_activity_us = now_us();
         TX_BEGIN(c, w);
         {
             bool ok = atv_msg_app_link(&w, cmd->str);
@@ -1376,6 +1381,7 @@ static void handle_cmd(ctx_t *c, cmd_t *cmd)
             ESP_LOGW(TAG, "text dropped: not connected");
             break;
         }
+        c->last_activity_us = now_us();
         TX_BEGIN(c, w);
         {
             bool ok = atv_msg_ime_batch_edit(&w, c->ime_counter, c->field_counter, cmd->str);

@@ -14,6 +14,7 @@
 #include "esp_log.h"
 #include "esp_lvgl_port.h"
 #include "esp_sleep.h"
+#include "esp_system.h"
 #include "net.h"
 #include "netlog.h"
 #include "nvs_flash.h"
@@ -29,9 +30,38 @@ static void *json_malloc(size_t size)
     return heap_caps_malloc_prefer(size, 2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT, MALLOC_CAP_DEFAULT);
 }
 
+/* Why the remote last restarted, for the log: a crash and an update look
+ * alike to someone holding it. */
+static void log_reset_reason(void)
+{
+    esp_reset_reason_t r = esp_reset_reason();
+    switch (r) {
+    case ESP_RST_PANIC:
+        ESP_LOGE(TAG, "restarted after a crash (panic)");
+        break;
+    case ESP_RST_INT_WDT:
+    case ESP_RST_TASK_WDT:
+    case ESP_RST_WDT:
+        ESP_LOGE(TAG, "restarted after a crash (watchdog %d)", (int)r);
+        break;
+    case ESP_RST_BROWNOUT:
+        ESP_LOGW(TAG, "restarted after a brownout (low battery or supply)");
+        break;
+    case ESP_RST_SW:
+        ESP_LOGI(TAG, "restarted by the firmware (an update, or Settings)");
+        break;
+    case ESP_RST_DEEPSLEEP:
+        break; /* woken: said below */
+    default:
+        ESP_LOGI(TAG, "started (reset reason %d)", (int)r);
+        break;
+    }
+}
+
 void app_main(void)
 {
     netlog_init(); /* from here on, log lines are kept for the Wi-Fi log */
+    log_reset_reason();
     cJSON_Hooks hooks = {.malloc_fn = json_malloc, .free_fn = free};
     cJSON_InitHooks(&hooks);
     esp_sleep_wakeup_cause_t wake = esp_sleep_get_wakeup_cause();
