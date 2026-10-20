@@ -346,6 +346,10 @@ untested: their facts and sources are in their headers in
   HDMI-CEC (Anynet+ on Samsung). With the wrong
   setting the keys arrive but nothing happens, and the TV reports
   `volume 0/0`.
+- **Keepalive.** The Streamer pings about every 5 s, but not while it gets
+  keys. `atv_remote.c` closes the connection after 16 s without activity,
+  and our own commands count as activity: with only the TV's messages
+  counting, steady swiping dropped the connection every 16 s (2026-10-18).
 - **Power keys.** The Streamer ignores KEYCODE_SLEEP and KEYCODE_WAKEUP
   sent over the remote protocol (2026-10-17, awake or on its
   screensaver; over ADB they work), so modules' TV off and
