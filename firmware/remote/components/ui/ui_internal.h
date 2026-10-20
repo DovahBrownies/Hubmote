@@ -220,6 +220,7 @@ void ui_settings_set_about(const ui_about_t *about);
 const char *ui_settings_version_text(void);
 void ui_settings_modules_changed(void);
 void ui_settings_set_time_zone(const char *name);
+void ui_settings_set_clock(bool h12);
 /* Opens the time-zone picker: the regions (region NULL), or one region's
  * zones ("Europe"). */
 void ui_settings_pick_time_zone(const char *region);

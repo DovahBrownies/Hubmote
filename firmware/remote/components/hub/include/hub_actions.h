@@ -168,8 +168,8 @@ typedef struct {
 typedef bool (*hub_action_handler_t)(const hub_action_t *action);
 void hub_set_action_handler(hub_action_handler_t handler);
 
-/* HUB_ACTION_UI_CALL, on the controller task: hands the call to the LVGL
- * task, waiting for LVGL's lock as long as it takes. */
+/* HUB_ACTION_UI_CALL, on the controller task: makes the call there with
+ * LVGL's lock held, waiting for the lock as long as it takes. */
 void hub_ui_call(const hub_action_t *action);
 
 /* The companion's news, from the controller task: what is playing (NULL:

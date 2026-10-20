@@ -30,7 +30,7 @@ import java.util.Map;
 final class SpeedTest {
     private static final String TAG = "HubmoteSpeed";
     private static final String BASE = "https://speed.cloudflare.com";
-    private static final int PINGS = 11;              /* the first, with the TLS handshake, is dropped */
+    private static final int PINGS = 11;              /* those on a new connection (its handshake) are dropped */
     private static final int PINGS_MIN = 3;           /* enough to report, on a poor line */
     private static final long PING_MS = 6000;         /* the latency's time once it has PINGS_MIN */
     private static final long PING_MAX_MS = 20000;    /* and at most, with whatever it has */
@@ -138,6 +138,7 @@ final class SpeedTest {
         List<Double> ms = new ArrayList<>();
         long start = SystemClock.elapsedRealtime();
         IOException last = null;
+        boolean warm = false; /* the last ping left its connection open: this one reuses it */
         for (int i = 0; i < PINGS; i++) {
             checkStopped();
             long ran = SystemClock.elapsedRealtime() - start;
@@ -155,14 +156,16 @@ final class SpeedTest {
                 }
                 drain(c);
                 whole = true;
-                if (i > 0) { /* the first one carried the connection's handshake */
+                if (warm) { /* a ping on a new connection timed its handshake too */
                     ms.add(Math.max(0, took));
                 }
+                warm = true;
             } catch (IOException e) {
                 last = e; /* a lost sample; the others count */
             } finally {
                 if (!whole) {
                     c.disconnect();
+                    warm = false;
                 }
             }
             report("latency", 10 * (i + 1) / PINGS, false);

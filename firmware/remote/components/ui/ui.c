@@ -557,8 +557,10 @@ void ui_ime_show(const char *value, const char *label)
     strlcpy(s_field_value, value ? value : "", sizeof(s_field_value));
     strlcpy(s_field_label, label ? label : "", sizeof(s_field_label));
     /* Not over another device's screen or a module, nor over the remote's
-     * own typing (a Wi-Fi password must never go to the TV's field). */
-    if (s_main && tv_on_top() && !ui_kb_is_local()) {
+     * own typing while it is open (a Wi-Fi password must never go to the
+     * TV's field). The keyboard keeps its last mode once closed, so a
+     * closed local keyboard mustn't count. */
+    if (s_main && tv_on_top() && !(s_view == VIEW_KEYBOARD && ui_kb_is_local())) {
         ui_topbar_set_context("Typing");
         ui_kb_open(UI_KB_FIELD, s_field_value, s_field_label);
     }
@@ -767,6 +769,13 @@ void ui_set_time_zone(const char *name)
 {
     LOCK();
     ui_settings_set_time_zone(name);
+    UNLOCK();
+}
+
+void ui_set_clock(bool h12)
+{
+    LOCK();
+    ui_settings_set_clock(h12);
     UNLOCK();
 }
 

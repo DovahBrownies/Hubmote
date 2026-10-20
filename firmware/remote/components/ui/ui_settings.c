@@ -1039,7 +1039,20 @@ static void on_mset_text_cancel(void)
 
 static void on_mset_network(const char *ssid, bool secure)
 {
+    mod_setting_t *ms = s_mset_editing;
     on_mset_text_done(ssid);
+    if (!ms || secure || !ms->setting->wifi_open) {
+        return;
+    }
+    /* An open network: its password setting goes, or the module would keep
+     * the old one (Guest Wi-Fi's QR code would ask for it). */
+    for (size_t i = 0; i < s_mset_count; i++) {
+        mod_setting_t *o = &s_mset[i];
+        if (o->module == ms->module && strcmp(o->setting->key, ms->setting->wifi_open) == 0) {
+            mset_paint(o, "");
+            mset_emit(o, 0, "");
+        }
+    }
 }
 
 static void on_mset_text(lv_event_t *e)
@@ -1357,6 +1370,13 @@ static void clock_paint(bool h12)
         bool on = (i == 0) == h12;
         lv_obj_set_style_bg_color(s_clock_seg[i], on ? COL_SURFACE3 : COL_SURFACE1, 0);
         lv_obj_set_style_text_color(lv_obj_get_child(s_clock_seg[i], 0), on ? COL_ACCENT_TEXT : COL_TEXT2, 0);
+    }
+}
+
+void ui_settings_set_clock(bool h12)
+{
+    if (s_clock_seg[0]) {
+        clock_paint(h12);
     }
 }
 

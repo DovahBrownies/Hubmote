@@ -611,6 +611,7 @@ static void controller_task(void *arg)
     hub_modules_init();
     load_home_layout();
     ui_set_time_zone(hub_time_zone());
+    ui_set_clock(hub_time_12h()); /* read by hub_modules_init(), after Settings was built */
     controller_log_heap("after modules");
 
     ctrl_setup_start(on_net);

@@ -286,6 +286,8 @@ void ui_set_board_caps(bool dims, bool battery);
 void ui_set_hostname(const char *name);
 /* The time zone in Settings > Modules: an IANA name, "" = Automatic. */
 void ui_set_time_zone(const char *name);
+/* The clock setting, once read at start-up (the row is built before). */
+void ui_set_clock(bool h12);
 /* Settings > About: the token updates and developer tools need (shown on
  * request). */
 void ui_set_update_token(const char *token);

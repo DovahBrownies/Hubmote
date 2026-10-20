@@ -25,8 +25,9 @@ The companion asks Cloudflare's speed test (speed.cloudflare.com):
 
 - **Latency:** the median time of empty requests over one connection,
   less the time Cloudflare reports spending on them. It sends up to 11 and
-  drops the first (it opens the connection); it stops after 6 seconds once
-  it has 3, and after 20 seconds in any case.
+  drops those that opened a connection (the first, and any after a lost
+  one); it stops after 6 seconds once it has 3, and after 20 seconds in any
+  case.
 - **Download and upload:** requests that grow (1, 2.5, 10, 25, then 50 MB;
   uploads stop at 25 MB) until each takes about a second, for 6 seconds or
   250 MB each. The 6 seconds cut the last request short. A size Cloudflare

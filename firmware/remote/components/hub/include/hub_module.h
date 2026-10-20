@@ -82,6 +82,8 @@ typedef struct {
     const char *zero;           /* NUMBER: shown instead of 0 ("Off"), or NULL */
     size_t max_len;             /* TEXT: the longest value, 63 at most */
     bool wifi;                  /* TEXT: a Wi-Fi network's name, picked from the networks around (or typed) */
+    const char *wifi_open;      /* TEXT with wifi: the key of the TEXT setting cleared when an open network
+                                 * is picked (its password), or NULL */
 } hub_setting_t;
 
 /* A one-line summary for the top bar and the switcher, e.g. a weather icon
@@ -159,10 +161,11 @@ void hub_set_modules_listener(void (*listener)(void));
 void hub_glance_changed(void);
 void hub_set_glance_listener(void (*listener)(void));
 
-/* Runs fn(arg) on the LVGL task with the LVGL lock held, soon. Any task,
- * esp_timer callbacks included: it doesn't wait for the LVGL lock. Calls
- * run in order unless LVGL is busy when one is made; false only when there
- * was no memory for it (then fn never runs: free what arg holds). */
+/* Runs fn(arg) soon with the LVGL lock held: on the LVGL task, or on the
+ * controller task when LVGL was busy. Any task, esp_timer callbacks
+ * included: it doesn't wait for the LVGL lock. Calls run in order unless
+ * LVGL is busy when one is made; false only when there was no memory for
+ * it (then fn never runs: free what arg holds). */
 bool hub_ui_async(void (*fn)(void *arg), void *arg);
 
 #ifdef __cplusplus

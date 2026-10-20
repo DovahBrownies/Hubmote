@@ -334,7 +334,9 @@ static const hub_module_t s_module = {
   instead of 0, such as "Off") and
   `HUB_SETTING_TEXT` (typed on the remote's keyboard, `max_len`
   characters, 63 at most; with `.wifi = true` it is a Wi-Fi network's
-  name, picked from the networks around the remote or typed).
+  name, picked from the networks around the remote or typed; `.wifi_open`
+  names the setting cleared when an open network is picked, such as its
+  password).
 - **Messages on the TV:** add `HUB_SETTING_SHOW_ON_TV` to the list, and
   [`hub_notify()`](#messages) follows it.
 - **Reading them:** `hub_setting_i32(module, key)` gives the saved value
@@ -488,7 +490,7 @@ follow its theme ([themes.md](themes.md)). `#include "ui_kit.h"` gives:
 - **Fonts** (`ui_fonts.h`), each size in one weight: `font_sora_11`,
   `_12`, `_13m`, `_15m`, `_16sb`, `_18b`, `_20sb`, `_22m`, `_24m`,
   `_26m`; `font_mono_11` and `_12` (IBM Plex Mono); and `font_sora_88n`
-  for big numbers (digits, `-`, `−`, `°` and space only).
+  for big numbers (digits, `-`, `.`, `−`, `°` and space only).
 - **Icons** (`ui_icons.h`): `ICON_*` strings for the
   `font_icons_16/20/24/28` fonts (Lucide). `font_weather_96` has the large
   weather icons.

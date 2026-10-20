@@ -21,7 +21,8 @@
 static const char *TAG = "guest_wifi";
 
 static const hub_setting_t k_settings[] = {
-    {.key = "ssid", .label = "Network name", .type = HUB_SETTING_TEXT, .max_len = SSID_MAX, .wifi = true},
+    {.key = "ssid", .label = "Network name", .type = HUB_SETTING_TEXT, .max_len = SSID_MAX, .wifi = true,
+     .wifi_open = "pass"},
     {.key = "pass", .label = "Password", .type = HUB_SETTING_TEXT, .max_len = PASS_MAX},
 };
 

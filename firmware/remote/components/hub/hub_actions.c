@@ -60,10 +60,10 @@ bool hub_ui_async(void (*fn)(void *arg), void *arg)
 
 void hub_ui_call(const hub_action_t *action)
 {
+    /* Here, with the lock: nothing to allocate, so nothing to fail (true
+     * from hub_ui_async() means fn runs). */
     if (lvgl_port_lock(0)) {
-        if (lv_async_call(action->fn, action->arg) != LV_RESULT_OK) {
-            ESP_LOGE("hub", "no memory for a UI call");
-        }
+        action->fn(action->arg);
         lvgl_port_unlock();
     }
 }
