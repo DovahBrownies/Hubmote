@@ -154,9 +154,16 @@ void hub_release_awake(void)
 {
 }
 
+static const char *s_off_id; /* a module shown switched off: sim_module_off() */
+
+void sim_module_off(const char *id)
+{
+    s_off_id = id;
+}
+
 bool hub_module_enabled(const hub_module_t *module)
 {
-    return module != NULL;
+    return module != NULL && !(s_off_id && strcmp(module->id, s_off_id) == 0);
 }
 
 void hub_module_set_enabled(const char *id, bool on)

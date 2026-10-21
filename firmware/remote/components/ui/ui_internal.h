@@ -199,7 +199,9 @@ void ui_kb_close(void);
 typedef enum { SEC_REMOTES, SEC_WIFI, SEC_SCREEN, SEC_APPEARANCE, SEC_MODULES, SEC_ABOUT, SEC_COUNT } ui_section_t;
 lv_obj_t *ui_settings_create(lv_obj_t *parent);
 void ui_settings_show_section(ui_section_t section);
-void ui_settings_shown(void);
+/* Settings is showing; entered: from elsewhere, not back from one of its
+ * own keyboards or pickers. */
+void ui_settings_shown(bool entered);
 void ui_settings_show_remotes(void);
 void ui_settings_show_appearance(void);
 void ui_settings_set_tv(const char *name, ui_link_t link);

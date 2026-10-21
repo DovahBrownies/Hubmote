@@ -208,7 +208,8 @@ under Google TV's Home, or **HDMI switch** in the switcher.
 ## Modules
 
 Each module has a card on the Modules tab. **Settings > Modules** switches
-modules on and off. A module's settings, such as Weather's **Units**, show
+modules on and off, and lists them in the Modules tab's order, those
+switched off last. A module's settings, such as Weather's **Units**, show
 under it while it is on.
 
 **Arrange the Modules tab.** Press and hold any card, or tap **Settings >

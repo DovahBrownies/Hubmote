@@ -20,6 +20,7 @@
 #include "hub_time.h"
 
 void sim_show_demo_module(bool on); /* sim_hub.c */
+void sim_module_off(const char *id);
 
 void sim_weather_load(void);
 void weather_ui_update(void *arg);
@@ -289,6 +290,14 @@ static void screens(void)
     ui_modal("Turn off the remote?", "Touch the screen or press BOOT to turn it on again.", dialog_buttons, 2, NULL, NULL);
     shot("modal");
     ui_modal_close();
+    /* Settings > Modules in the Modules tab's order, one switched off: last */
+    sim_module_off("weather");
+    ui_set_home_layout("sleep_timer:M,screen_time:M,weather:L,speed_test:M,guest_wifi:M");
+    ui_show_view(VIEW_DASH);
+    ui_settings_show_section(SEC_MODULES);
+    shot("settings_modules_order");
+    sim_module_off(NULL);
+    ui_set_home_layout("");
     sim_show_demo_module(false);
     ui_settings_modules_changed();
 

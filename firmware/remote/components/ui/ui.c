@@ -163,7 +163,7 @@ void ui_show_view(ui_view_t view)
     }
     if (view == VIEW_SETTINGS) {
         ui_topbar_set_context(ui_settings_version_text());
-        ui_settings_shown();
+        ui_settings_shown(s_view != VIEW_SETTINGS && s_view != VIEW_KEYBOARD && s_view != VIEW_WIFI_PICK);
     }
     for (int i = 0; i < VIEW_COUNT; i++) {
         lv_obj_set_hidden(s_views[i], i != (int)view);

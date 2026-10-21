@@ -199,6 +199,7 @@ static lv_obj_t *icon_box(lv_obj_t *parent, const char *icon, lv_color_t color)
 
 static void about_refresh(void);
 static void module_settings_refresh(void);
+static void module_reorder(void);
 
 static void select_section(ui_section_t sec)
 {
@@ -235,9 +236,12 @@ static void on_done(lv_event_t *e)
     ui_remote_return();
 }
 
-void ui_settings_shown(void)
+void ui_settings_shown(bool entered)
 {
     s_token_shown = false; /* hidden again each time Settings opens */
+    if (entered) {
+        module_reorder(); /* not on the way back from a setting's keyboard or picker */
+    }
     select_section(s_section);
 }
 
@@ -1135,21 +1139,44 @@ static void mset_row(lv_obj_t *box, mod_setting_t *ms)
     }
 }
 
-/* Called whenever the modules or their on/off state change. The rows are
- * built once the module list is final (after the modules started). */
-void ui_settings_modules_changed(void)
+/* The modules as the Modules tab orders them, those switched off last. */
+static size_t module_order(const hub_module_t **out)
 {
-    size_t n = hub_module_count();
-    bool same = n == s_mod_count;
-    for (size_t i = 0; same && i < n; i++) {
-        same = s_mod_of[i] == hub_module_get(i);
+    size_t n = 0, total = ui_home_module_count();
+    for (int on = 1; on >= 0; on--) {
+        for (size_t i = 0; i < total && n < HUB_MODULES_MAX; i++) {
+            const hub_module_t *m = ui_home_module(i);
+            if (m && hub_module_enabled(m) == (bool)on) {
+                out[n++] = m;
+            }
+        }
     }
-    if (!same) {
+    return n;
+}
+
+static void module_states(void)
+{
+    for (size_t i = 0; i < s_mod_count; i++) {
+        bool on = hub_module_enabled(s_mod_of[i]);
+        lv_obj_set_state(s_mod_switch[i], LV_STATE_CHECKED, on);
+        if (s_mod_settings[i]) {
+            lv_obj_set_hidden(s_mod_settings[i], !on);
+        }
+    }
+    lv_obj_set_hidden(s_mod_none, s_mod_count > 0);
+}
+
+/* (Re)builds a card per module, in order. The setting rows are made anew,
+ * so no setting may be on the keyboard or the network picker meanwhile. */
+static void build_module_rows(const hub_module_t *const *order, size_t n)
+{
+    {
         lv_obj_clean(s_mod_list);
         s_mset_count = 0;
+        s_mset_editing = NULL;
         s_mod_count = n < HUB_MODULES_MAX ? n : HUB_MODULES_MAX;
         for (size_t i = 0; i < s_mod_count; i++) {
-            const hub_module_t *m = hub_module_get(i);
+            const hub_module_t *m = order[i];
             s_mod_of[i] = m;
             lv_obj_t *card = ui_box(s_mod_list);
             lv_obj_set_size(card, LV_PCT(100), LV_SIZE_CONTENT);
@@ -1185,14 +1212,36 @@ void ui_settings_modules_changed(void)
         }
         module_settings_refresh();
     }
-    for (size_t i = 0; i < s_mod_count; i++) {
-        bool on = hub_module_enabled(s_mod_of[i]);
-        lv_obj_set_state(s_mod_switch[i], LV_STATE_CHECKED, on);
-        if (s_mod_settings[i]) {
-            lv_obj_set_hidden(s_mod_settings[i], !on);
-        }
+    module_states();
+}
+
+/* Called whenever the modules or their on/off state change. The cards are
+ * built once the module list is final (after the modules started); a
+ * module switched on or off stays where it is until Settings is opened
+ * again (ui_settings_shown()), so its row doesn't jump under the finger. */
+void ui_settings_modules_changed(void)
+{
+    if (hub_module_count() != s_mod_count) {
+        const hub_module_t *order[HUB_MODULES_MAX];
+        build_module_rows(order, module_order(order));
+        return;
     }
-    lv_obj_set_hidden(s_mod_none, s_mod_count > 0);
+    module_states();
+}
+
+/* Opening Settings: the cards follow the Modules tab's order again, those
+ * switched off last. */
+static void module_reorder(void)
+{
+    const hub_module_t *order[HUB_MODULES_MAX];
+    size_t n = module_order(order);
+    bool same = n == s_mod_count;
+    for (size_t i = 0; same && i < n; i++) {
+        same = s_mod_of[i] == order[i];
+    }
+    if (!same) {
+        build_module_rows(order, n);
+    }
 }
 
 /* --- Time zone (at the top of Modules) -------------------------------------------- */
