@@ -133,6 +133,7 @@ typedef struct {
     int32_t dir;
     char code[8];
     char *str; /* heap copy (app link / text), freed by the task */
+    int64_t at_us; /* when it was queued (post()) */
 } cmd_t;
 
 typedef enum {
@@ -1360,6 +1361,14 @@ static void handle_cmd(ctx_t *c, cmd_t *cmd)
             ESP_LOGD(TAG, "tx remote_key_inject key_code=%d direction=%s", (int)cmd->key, dir_name(cmd->dir));
             tx_flush(c, &w, ok);
         }
+        {
+            /* This task can be busy (a TLS write that waits, a reconnect):
+             * a key that waited here is worth a line. */
+            int64_t took_ms = (now_us() - cmd->at_us) / 1000;
+            if (took_ms > 100) {
+                ESP_LOGW(TAG, "key %d written %d ms after it was queued", (int)cmd->key, (int)took_ms);
+            }
+        }
         break;
 
     case CMD_APP_LINK:
@@ -1513,6 +1522,7 @@ static void atv_task(void *arg)
 
 static esp_err_t post(cmd_t *cmd)
 {
+    cmd->at_us = now_us();
     TickType_t wait = (xTaskGetCurrentTaskHandle() == s.task) ? 0 : pdMS_TO_TICKS(50);
     if (xQueueSend(s.queue, cmd, wait) != pdTRUE) {
         ESP_LOGW(TAG, "command queue full");

@@ -33,6 +33,7 @@ typedef struct {
     int index;
     char text[128];
     char name[36]; /* fits a 32-byte Wi-Fi name */
+    int64_t at_us; /* when the UI asked (esp_timer), to see slow keys */
 } ctrl_ui_t;
 
 /* --- ctrl_setup.c ------------------------------------------------------------------ */

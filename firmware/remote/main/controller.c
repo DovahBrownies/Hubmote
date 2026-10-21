@@ -61,6 +61,7 @@ _Static_assert(NET_SCAN_MAX <= UI_WIFI_APS_MAX, "the UI must hold every scanned 
 #define NVS_HIDDEN_APPS "hidden_apps"
 #define NVS_APP_ORDER   "app_order"
 #define NVS_HOME_LAYOUT "home" /* the Modules tab's module cards: ui_home_layout() */
+#define SLOW_KEY_MS     100    /* a key this long from the touch to atv_remote is logged as slow */
 
 typedef enum { MSG_UI, MSG_ATV, MSG_NET, MSG_COMPANION, MSG_UPDATE, MSG_HUB } msg_kind_t;
 
@@ -107,6 +108,7 @@ static void on_ui(const ui_action_t *a, void *ctx)
     m.ui.dir = a->dir;
     m.ui.index = a->index;
     strlcpy(m.ui.text, a->text ? a->text : "", sizeof(m.ui.text));
+    m.ui.at_us = esp_timer_get_time();
     if (!post(&m, false)) {
         ESP_LOGW(TAG, "queue full, dropped ui action %d", a->type);
     }
@@ -379,9 +381,17 @@ static void handle_ui(const ctrl_ui_t *a)
             ir_ctl_key(a->key, a->dir);
         } else {
             esp_err_t err = atv_send_key((atv_keycode_t)a->key, (atv_direction_t)a->dir);
-            /* One line per key: shows what reached the TV when a key "does nothing". */
-            ESP_LOGI(TAG, "key %d %s%s: %s", a->key, a->dir <= UI_DIR_SHORT ? dirs[a->dir] : "?",
-                     volume ? " (volume)" : "", esp_err_to_name(err));
+            /* One line per key: shows what reached the TV when a key "does nothing",
+             * and how long it waited here when that was long (a busy controller). */
+            int waited_ms = (int)((esp_timer_get_time() - a->at_us) / 1000);
+            if (waited_ms > SLOW_KEY_MS) {
+                ESP_LOGW(TAG, "key %d %s%s: %s, %d ms after the touch", a->key,
+                         a->dir <= UI_DIR_SHORT ? dirs[a->dir] : "?", volume ? " (volume)" : "", esp_err_to_name(err),
+                         waited_ms);
+            } else {
+                ESP_LOGI(TAG, "key %d %s%s: %s", a->key, a->dir <= UI_DIR_SHORT ? dirs[a->dir] : "?",
+                         volume ? " (volume)" : "", esp_err_to_name(err));
+            }
         }
         return;
     }

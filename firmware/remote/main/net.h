@@ -40,6 +40,12 @@ const char *net_ssid(void);
  * ever. cb runs on the event task when the link comes up and after every
  * failed or dropped attempt. */
 void net_start(net_cb_t cb, void *ctx);
+/* Wi-Fi power save (modem sleep): on saves battery, but the radio naps
+ * between the router's beacons, so replies (and the ARP lookups before a
+ * send) wait up to a beacon interval or more. The screen's state sets it:
+ * off while the screen is on (keys go out at once), on once it dims.
+ * Kept until the radio starts if it hasn't yet. */
+void net_set_power_save(bool on);
 /* Joins another network now; it is saved once it connects. */
 esp_err_t net_join(const char *ssid, const char *password);
 /* Looks for networks (2 to 3 s). One scan at a time. */

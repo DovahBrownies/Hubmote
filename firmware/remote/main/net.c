@@ -21,6 +21,7 @@ static net_cb_t s_cb;
 static void *s_ctx;
 static volatile bool s_up;
 static bool s_started;
+static bool s_power_save = true; /* the mode wanted, applied once the radio starts */
 static char s_ssid[33];
 static char s_pass[65];
 static bool s_unsaved;   /* s_ssid/s_pass aren't in NVS yet: save them once up */
@@ -193,10 +194,22 @@ void net_start(net_cb_t cb, void *ctx)
     }
     s_started = true;
     ESP_ERROR_CHECK(apply());
-    /* Modem sleep: the radio naps between beacons; the TV's 5 s pings
-     * still get through. Tuned after the power measurements. */
-    esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
+    /* Modem sleep while the screen is dark (net_set_power_save()): the
+     * radio naps between beacons; the TV's 5 s pings still get through. */
+    esp_wifi_set_ps(s_power_save ? WIFI_PS_MIN_MODEM : WIFI_PS_NONE);
     ESP_ERROR_CHECK(esp_wifi_start());
+}
+
+void net_set_power_save(bool on)
+{
+    if (on == s_power_save) {
+        return;
+    }
+    s_power_save = on;
+    if (s_started) {
+        esp_err_t err = esp_wifi_set_ps(on ? WIFI_PS_MIN_MODEM : WIFI_PS_NONE);
+        ESP_LOGI(TAG, "power save %s: %s", on ? "on" : "off", esp_err_to_name(err));
+    }
 }
 
 esp_err_t net_join(const char *ssid, const char *password)

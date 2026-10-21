@@ -16,6 +16,7 @@
 #include "esp_timer.h"
 #include "hub.h"
 #include "kv.h"
+#include "net.h"
 #include "sdkconfig.h"
 #include "ui.h"
 
@@ -130,6 +131,9 @@ void ctrl_screen_tick(int64_t now)
                  : BOARD_BACKLIGHT_DIMMABLE && dim_s && idle >= dim_s * 1000 ? 1
                                                                              : 0;
     static int s_refresh_ticks;
+    /* Keys go out without the radio's naps while the screen is on, and it
+     * saves battery once the screen dims. */
+    net_set_power_save(screen != 0);
     if (screen != s_screen) {
         ESP_LOGI(TAG, "screen %s -> %s (idle %lu ms)", names[s_screen], names[screen], (unsigned long)idle);
         if (screen == 2 || s_screen == 2) {

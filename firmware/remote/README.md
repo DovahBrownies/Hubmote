@@ -376,7 +376,9 @@ UI then leaves out what can't work (`ui_set_ir_caps()`).
     hours, the theme restart and the battery readout.
 - **`main/net.c`** is the Wi-Fi station: the network from NVS (or from
   `secrets.env` the first time), scanning and joining another network. It
-  also sets up the `hubmote.local` mDNS name.
+  also sets up the `hubmote.local` mDNS name. Its power save (modem sleep)
+  follows the screen (`ctrl_screen.c`): off while the screen is on, so
+  keys aren't held up by the radio's naps, on once it dims.
 - **`main/netlog.c`** is the log over Wi-Fi: a ring buffer plus a TCP
   server on port 2323, for a client that answers its challenge with the
   update token (an HMAC; the protocol is at the top of the file).

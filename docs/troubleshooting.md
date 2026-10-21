@@ -86,6 +86,18 @@ settings. In the [log](#logs), this problem shows as
 The companion app isn't installed, paired or reachable. See the
 [companion app's problems](companion.md#problems).
 
+### Keys are sometimes slow to reach the TV
+
+The remote keeps its Wi-Fi fully awake while its screen is on, so keys go
+out at once. If one still arrives late, look in the [log](#logs):
+
+- `key ... ms after the touch` (from `ctrl:`) or `key ... written ... ms
+  after it was queued` (from `atv:`) means the remote itself was busy:
+  please report it, with the lines around it.
+- No such line means the delay was on the network, most often a packet
+  resent on a busy Wi-Fi band. The Streamer on Ethernet, or on 5 GHz Wi-Fi
+  rather than 2.4 GHz, helps most.
+
 ## Typing
 
 ### The keyboard doesn't open in an app
@@ -230,6 +242,8 @@ adb logcat -s HubmoteCompanion
 | `ctrl: tv volume N/M` | The Streamer's volume. `0/0` means it isn't controlling the TV's |
 | `ctrl: app: <package>` | The app on the TV |
 | `ctrl: key <code> <tap\|down\|up>: ESP_OK` | A key went to the Streamer |
+| `ctrl: key ... ms after the touch`, `atv: key ... written ... ms after it was queued` | A key took over 100 ms inside the remote |
+| `net: power save on` / `off` | Wi-Fi naps (screen dimmed or off) or stays awake (screen on) |
 | `companion: online`, `companion: N apps`, `companion: field: text (N)` | The companion app |
 | `ctrl: text (N chars) via companion: ESP_OK` | Typing through the companion (lengths only, never the text) |
 | `ir_ctl: tv <key> (...): ESP_OK` | An IR code was sent |
